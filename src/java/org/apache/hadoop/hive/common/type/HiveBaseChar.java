@@ -32,6 +32,7 @@ public abstract class HiveBaseChar {
    */
   public void setValue(String val, int maxLength) {
     characterLength = -1;
+    //对value进行最大unicode字符限制处理
     value = HiveBaseChar.enforceMaxLength(val, maxLength);
   }
 
@@ -47,11 +48,12 @@ public abstract class HiveBaseChar {
     }
   }
 
+  //截取val最多允许maxLength个unicode字符
   public static String enforceMaxLength(String val, int maxLength) {
     String value = val;
 
     if (maxLength > 0) {
-      int valLength = val.codePointCount(0, val.length());
+      int valLength = val.codePointCount(0, val.length());//计算val的unicode字符个数
       if (valLength > maxLength) {
         // Truncate the excess trailing spaces to fit the character length.
         // Also make sure we take supplementary chars into account.
@@ -65,6 +67,9 @@ public abstract class HiveBaseChar {
     return value;
   }
 
+  /**
+   * 计算当前value的unicode字符个数
+   */
   public int getCharacterLength() {
     if (characterLength < 0) {
       characterLength = value.codePointCount(0, value.length());
