@@ -35,7 +35,7 @@ import org.apache.thrift.transport.TTransportException;
 
 /**
  * SessionState for hive cli.
- *
+ * cli命令解析出来的结果
  */
 public class CliSessionState extends SessionState {
   /**

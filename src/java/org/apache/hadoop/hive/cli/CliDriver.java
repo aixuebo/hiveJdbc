@@ -80,11 +80,11 @@ public class CliDriver {
 
   public static String prompt = null;
   public static String prompt2 = null; // when ';' is not yet seen
-  public static final int LINES_TO_FETCH = 40; // number of lines to fetch in batch from remote hive server
+  public static final int LINES_TO_FETCH = 40; // number of lines to fetch in batch from remote hive server 每次到远程机器上去抓取的行数
 
-  public static final String HIVERCFILE = ".hiverc";
+  public static final String HIVERCFILE = ".hiverc";//$user.home/.hiverc,$HIVE_CONF_DIR/.hiverc,$HIVE_HOME/bin/.hiverc三个地方都可以有该脚本,作为初始化脚本
 
-  private final LogHelper console;
+  private final LogHelper console;//日志帮助类
   private Configuration conf;
 
   public CliDriver() {
@@ -94,15 +94,17 @@ public class CliDriver {
     console = new LogHelper(LOG);
   }
 
+  //处理命令行输入参数,返回命令返回码
   public int processCmd(String cmd) {
     CliSessionState ss = (CliSessionState) SessionState.get();
     // Flush the print stream, so it doesn't include output from the last command
     ss.err.flush();
     String cmd_trimmed = cmd.trim();
+    //按照空格拆分
     String[] tokens = tokenizeCmd(cmd_trimmed);
-    int ret = 0;
+    int ret = 0;//命令返回码
 
-    if (cmd_trimmed.toLowerCase().equals("quit") || cmd_trimmed.toLowerCase().equals("exit")) {
+    if (cmd_trimmed.toLowerCase().equals("quit") || cmd_trimmed.toLowerCase().equals("exit")) {//退出命令
 
       // if we have come this far - either the previous commands
       // are all successful or this is command line. in either case
@@ -110,9 +112,11 @@ public class CliDriver {
       ss.close();
       System.exit(0);
 
-    } else if (tokens[0].equalsIgnoreCase("source")) {
+    } else if (tokens[0].equalsIgnoreCase("source")) {//source file执行一个脚本文件
+      //去除cmd的前length字符,即移除source
       String cmd_1 = getFirstCmd(cmd_trimmed, tokens[0].length());
-
+      
+      //文件路径
       File sourceFile = new File(cmd_1);
       if (! sourceFile.isFile()){
         console.printError("File: "+ cmd_1 + " is not a file.");
@@ -126,10 +130,10 @@ public class CliDriver {
           ret = 1;
         }
       }
-    } else if (cmd_trimmed.startsWith("!")) {
+    } else if (cmd_trimmed.startsWith("!")) {//从Hive shell执行一个shell命令
 
-      String shell_cmd = cmd_trimmed.substring(1);
-      shell_cmd = new VariableSubstitution().substitute(ss.getConf(), shell_cmd);
+      String shell_cmd = cmd_trimmed.substring(1);//获取!后面的字符串
+      shell_cmd = new VariableSubstitution().substitute(ss.getConf(), shell_cmd);//将变量设置成具体的值
 
       // shell_cmd = "/bin/bash -c \'" + shell_cmd + "\'";
       try {
@@ -168,20 +172,20 @@ public class CliDriver {
           ss.out.println(StringUtils.join(s, "\n"));
         }
       }
-    } else if (ss.isRemoteMode()) { // remote mode -- connecting to remote hive server
+    } else if (ss.isRemoteMode()) { // remote mode -- connecting to remote hive server 连接到远程的hive 服务器获取命令
       HiveClient client = ss.getClient();
       PrintStream out = ss.out;
       PrintStream err = ss.err;
 
       try {
-        client.execute(cmd_trimmed);
+        client.execute(cmd_trimmed);//执行该命令
         List<String> results;
         do {
-          results = client.fetchN(LINES_TO_FETCH);
-          for (String line : results) {
+          results = client.fetchN(LINES_TO_FETCH);//每次抓取数据
+          for (String line : results) {//将抓取的数据打印出来
             out.println(line);
           }
-        } while (results.size() == LINES_TO_FETCH);
+        } while (results.size() == LINES_TO_FETCH);//直到每次抓取的数据不再是设置的大小,说明已经数据抓取完成
       } catch (HiveServerException e) {
         ret = e.getErrorCode();
         if (ret != 0) { // OK if ret == 0 -- reached the EOF
@@ -229,11 +233,13 @@ public class CliDriver {
 
   /**
    * Extract and clean up the first command in the input.
+   * 去除cmd的前length字符
    */
   private String getFirstCmd(String cmd, int length) {
     return cmd.substring(length).trim();
   }
 
+  //按照空格拆分
   private String[] tokenizeCmd(String cmd) {
     return cmd.split("\\s+");
   }
@@ -344,25 +350,28 @@ public class CliDriver {
     }
   }
 
+  /**
+   * 根据命令行执行命令
+   */
   public int processLine(String line) {
     return processLine(line, false);
   }
 
   /**
    * Processes a line of semicolon separated commands
-   *
+   * 根据命令行执行命令
    * @param line
-   *          The commands to process
+   *          The commands to process 命令行,每一行用\n分隔好了
    * @param allowInterupting
    *          When true the function will handle SIG_INT (Ctrl+C) by interrupting the processing and
-   *          returning -1
+   *          returning -1 true表示支持ctrl+C终止程序
    * @return 0 if ok
    */
   public int processLine(String line, boolean allowInterupting) {
     SignalHandler oldSignal = null;
     Signal interupSignal = null;
 
-    if (allowInterupting) {
+    if (allowInterupting) {//设置ctrl+c终止程序线程
       // Remember all threads that were running at the time we started line processing.
       // Hook up the custom Ctrl+C handler while processing this line
       interupSignal = new Signal("INT");
@@ -394,13 +403,13 @@ public class CliDriver {
       });
     }
 
+    //执行line命令行,按照;拆分,分别执行每一个命令
     try {
       int lastRet = 0, ret = 0;
 
       String command = "";
       for (String oneCmd : line.split(";")) {
-
-        if (StringUtils.endsWith(oneCmd, "\\")) {
+        if (StringUtils.endsWith(oneCmd, "\\")) {//说明命令还没有输入完成,还可以继续输入
           command += StringUtils.chop(oneCmd) + ";";
           continue;
         } else {
@@ -410,13 +419,14 @@ public class CliDriver {
           continue;
         }
 
+        //处理命令行输入参数,返回命令返回码
         ret = processCmd(command);
         //wipe cli query state
         SessionState ss = SessionState.get();
         ss.setCommandType(null);
-        command = "";
+        command = "";//重置命令为空
         lastRet = ret;
-        boolean ignoreErrors = HiveConf.getBoolVar(conf, HiveConf.ConfVars.CLIIGNOREERRORS);
+        boolean ignoreErrors = HiveConf.getBoolVar(conf, HiveConf.ConfVars.CLIIGNOREERRORS);//是否忽略异常
         if (ret != 0 && !ignoreErrors) {
           CommandProcessorFactory.clean((HiveConf) conf);
           return ret;
@@ -432,6 +442,12 @@ public class CliDriver {
     }
   }
 
+  /**
+   * --开头的说明是注释,不进行脚本解析
+   * @param r 将输入源的数据,每行用\n拆分组成一个字符串
+   * @return
+   * @throws IOException
+   */
   public int processReader(BufferedReader r) throws IOException {
     String line;
     StringBuilder qsb = new StringBuilder();
@@ -446,6 +462,9 @@ public class CliDriver {
     return (processLine(qsb.toString()));
   }
 
+  /**
+   * 处理命令 source 对应的文件名,执行一个脚本文件
+   */
   public int processFile(String fileName) throws IOException {
     FileReader fileReader = null;
     BufferedReader bufferReader = null;
@@ -462,16 +481,23 @@ public class CliDriver {
     return rc;
   }
 
+  /**
+   * 初始化.hiverc脚本文件以及初始化一系列自定义脚本文件
+   */
   public void processInitFiles(CliSessionState ss) throws IOException {
     boolean saveSilent = ss.getIsSilent();
     ss.setIsSilent(true);
+    //依次执行每一个初始化文件脚本,遇到一个不正常退出的脚本,则直接返回不再执行
     for (String initFile : ss.initFiles) {
       int rc = processFile(initFile);
-      if (rc != 0) {
+      if (rc != 0) {//如果不是正常执行完成,则退出
         System.exit(rc);
       }
     }
     if (ss.initFiles.size() == 0) {
+    	
+      //$HIVE_HOME/bin/.hiverc获取该脚本,是属于全局配置文件,但是他已经过期了,应该在$HIVE_CONF_DIR/.hiverc下存在该文件
+      //如果有该文件则执行该文件
       if (System.getenv("HIVE_HOME") != null) {
         String hivercDefault = System.getenv("HIVE_HOME") + File.separator +
           "bin" + File.separator + HIVERCFILE;
@@ -485,6 +511,8 @@ public class CliDriver {
                              "use $HIVE_CONF_DIR/.hiverc instead.");
         }
       }
+      
+      //$HIVE_CONF_DIR/.hiverc下如果存在初始化脚本,则执行该脚本
       if (System.getenv("HIVE_CONF_DIR") != null) {
         String hivercDefault = System.getenv("HIVE_CONF_DIR") + File.separator
           + HIVERCFILE;
@@ -495,6 +523,7 @@ public class CliDriver {
           }
         }
       }
+      //$user.home/.hiverc有该文件,则执行该脚本文件为初始化
       if (System.getProperty("user.home") != null) {
         String hivercUser = System.getProperty("user.home") + File.separator +
           HIVERCFILE;
@@ -615,9 +644,11 @@ public class CliDriver {
     System.exit(ret);
   }
 
+  //入口主函数
   public  int run(String[] args) throws Exception {
 
     OptionsProcessor oproc = new OptionsProcessor();
+    //解析第一阶段参数
     if (!oproc.process_stage1(args)) {
       return 1;
     }
@@ -643,6 +674,7 @@ public class CliDriver {
       return 3;
     }
 
+    //解析第二阶段
     if (!oproc.process_stage2(ss)) {
       return 2;
     }
@@ -821,6 +853,7 @@ public class CliDriver {
    *
    * @param s String for which to generate equivalent whitespace
    * @return  Whitespace
+   * 按照s字符串的长度,设置多少个空格,例如字符串传递是3个字符长度,则返回值是3个空格
    */
   private static String spacesForString(String s) {
     if (s == null || s.length() == 0) {

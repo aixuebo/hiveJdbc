@@ -40,12 +40,14 @@ public class OptionsProcessor {
   protected static final Log l4j = LogFactory.getLog(OptionsProcessor.class.getName());
   private final Options options = new Options();
   private org.apache.commons.cli.CommandLine commandLine;
+  
+  //-d --define定义的参数属性值
   Map<String, String> hiveVariables = new HashMap<String, String>();
 
   @SuppressWarnings("static-access")
   public OptionsProcessor() {
 
-    // -database database
+    // -database database数据库
     options.addOption(OptionBuilder
         .hasArg()
         .withArgName("databasename")
@@ -53,28 +55,28 @@ public class OptionsProcessor {
         .withDescription("Specify the database to use")
         .create());
 
-    // -e 'quoted-query-string'
+    // -e 'quoted-query-string' 查询sql
     options.addOption(OptionBuilder
         .hasArg()
         .withArgName("quoted-query-string")
         .withDescription("SQL from command line")
         .create('e'));
 
-    // -f <query-file>
+    // -f <query-file> 查询sql的文件
     options.addOption(OptionBuilder
         .hasArg()
         .withArgName("filename")
         .withDescription("SQL from files")
         .create('f'));
 
-    // -i <init-query-file>
+    // -i <init-query-file> 初始化sql集合
     options.addOption(OptionBuilder
         .hasArg()
         .withArgName("filename")
         .withDescription("Initialization SQL file")
         .create('i'));
 
-    // -hiveconf x=y
+    // -hiveconf x=y  设置长名称为--hiveconf,为property配置文件,作用:设置环境变量System.setProperty
     options.addOption(OptionBuilder
         .withValueSeparator()
         .hasArgs(2)
@@ -97,7 +99,7 @@ public class OptionsProcessor {
         .withDescription("connecting to Hive Server on port number")
         .create('p'));
 
-    // Substitution option -d, --define
+    // Substitution option -d, --define,作用:向hiveVariables中添加信息
     options.addOption(OptionBuilder
         .withValueSeparator()
         .hasArgs(2)
@@ -121,19 +123,22 @@ public class OptionsProcessor {
     // [-v|--verbose]
     options.addOption(new Option("v", "verbose", false, "Verbose mode (echo executed SQL to the console)"));
 
-    // [-H|--help]
+    // [-H|--help] 帮助命令
     options.addOption(new Option("H", "help", false, "Print help information"));
 
   }
 
+  //仅仅解析全局的key-value参数,属于解析的第一阶段
   public boolean process_stage1(String[] argv) {
     try {
       commandLine = new GnuParser().parse(options, argv);
+      //设置环境变量System.setProperty
       Properties confProps = commandLine.getOptionProperties("hiveconf");
       for (String propKey : confProps.stringPropertyNames()) {
         System.setProperty(propKey, confProps.getProperty(propKey));
       }
 
+      //向hiveVariables中添加信息
       Properties hiveVars = commandLine.getOptionProperties("define");
       for (String propKey : hiveVars.stringPropertyNames()) {
         hiveVariables.put(propKey, hiveVars.getProperty(propKey));
@@ -151,10 +156,11 @@ public class OptionsProcessor {
     return true;
   }
 
+  //解析的第二阶段,向CliSessionState对象重新设置属性值
   public boolean process_stage2(CliSessionState ss) {
     ss.getConf();
 
-    if (commandLine.hasOption('H')) {
+    if (commandLine.hasOption('H')) {//帮助命令
       printUsage();
       return false;
     }
