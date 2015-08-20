@@ -62,6 +62,7 @@ import org.apache.thrift.transport.TMemoryBuffer;
  * QueryPlan can be serialized to disk so that we can restart/resume the
  * progress of it in the future, either within or outside of the current
  * jvm.
+ * 将查询计划序列化到磁盘上,我们可以再未来去重新启动该查询计划即可
  */
 public class QueryPlan implements Serializable {
   private static final long serialVersionUID = 1L;

@@ -29,6 +29,7 @@ package org.apache.hadoop.hive.ql;
  * a join clause, a group by clause, an order by clause, a sort by
  * clause, a group by clause following a join clause, and whether
  * the query uses a script for mapping/reducing
+ * 定义查询属性,解析查询语句的时候.将包含这些的属性设置为true即可
  */
 public class QueryProperties {
 

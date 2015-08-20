@@ -177,7 +177,7 @@ public class HiveConf extends Configuration {
   public static enum ConfVars {
     // QL execution stuff
     SCRIPTWRAPPER("hive.exec.script.wrapper", null),
-    PLAN("hive.exec.plan", ""),
+    PLAN("hive.exec.plan", ""),//计划的path路径
     SCRATCHDIR("hive.exec.scratchdir", "/tmp/hive-" + System.getProperty("user.name")),
     LOCALSCRATCHDIR("hive.exec.local.scratchdir", System.getProperty("java.io.tmpdir") + File.separator + System.getProperty("user.name")),// /tmp/user默认hive的本地目录
     SCRATCHDIRPERMISSION("hive.scratch.dir.permission", "700"),

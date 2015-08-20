@@ -32,9 +32,9 @@ import org.apache.hadoop.mapred.Counters.Counter;
 public class MapRedStats {
   int numMap;
   int numReduce;
-  long cpuMSec;
+  long cpuMSec;	//cpu消耗时间
   Counters counters = null;
-  boolean success;
+  boolean success;//是否该任务成功完成
 
   String jobId;
 

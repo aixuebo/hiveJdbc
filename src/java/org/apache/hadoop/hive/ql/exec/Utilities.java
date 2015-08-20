@@ -521,6 +521,7 @@ public final class Utilities {
     }
   }
 
+  //获取该conf对应的plan下的name路径
   private static Path getPlanPath(Configuration conf, String name) {
     Path planPath = getPlanPath(conf);
     if (planPath == null) {
@@ -529,6 +530,7 @@ public final class Utilities {
     return new Path(planPath, name);
   }
 
+  //如果该conf没有配置plan路径,则设置为hiveScratchDir/uuid为该conf的plan路径
   private static void setPlanPath(Configuration conf, String hiveScratchDir) throws IOException {
     if (getPlanPath(conf) == null) {
       // this is the unique conf ID, which is kept in JobConf as part of the plan file name
@@ -540,6 +542,7 @@ public final class Utilities {
     }
   }
 
+  //获取该conf配置的plan的路径
   private static Path getPlanPath(Configuration conf) {
     String plan = HiveConf.getVar(conf, HiveConf.ConfVars.PLAN);
     if (plan != null && !plan.isEmpty()) {
