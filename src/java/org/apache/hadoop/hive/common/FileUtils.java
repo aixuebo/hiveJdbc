@@ -147,6 +147,7 @@ public final class FileUtils {
    * @param lbCols The skewed keys' names
    * @param vals The skewed values
    * @return An escaped, valid list bucketing directory name.
+   * 返回编码后的lbCols=vals/lbCols=vals
    */
   public static String makeListBucketingDirName(List<String> lbCols, List<String> vals) {
     StringBuilder name = new StringBuilder();
@@ -175,7 +176,7 @@ public final class FileUtils {
   // a special char that you want to start escaping, and then you try dropping
   // the partition with a hive version that now escapes the special char using
   // the list below, then the drop partition fails to work.
-
+  //需要转义的字符,需要转义的字符的acsii一定是小于128的
   static BitSet charToEscape = new BitSet(128);
   static {
     for (char c = 0; c < ' '; c++) {
@@ -208,6 +209,7 @@ public final class FileUtils {
 
   }
 
+  //判断该c字符是否需要转义
   static boolean needsEscaping(char c) {
     return c >= 0 && c < charToEscape.size() && charToEscape.get(c);
   }
@@ -222,6 +224,7 @@ public final class FileUtils {
    * @param defaultPath
    *          The default name for the path, if the given path is empty or null.
    * @return An escaped path name.
+   * 对字符串进行编码,遇到一些可疑的字符,将其转换为16进制
    */
   public static String escapePathName(String path, String defaultPath) {
 
@@ -240,9 +243,10 @@ public final class FileUtils {
     StringBuilder sb = new StringBuilder();
     for (int i = 0; i < path.length(); i++) {
       char c = path.charAt(i);
-      if (needsEscaping(c)) {
+      if (needsEscaping(c)) {//需要转义
+    	//%+c进行16进制转换,最后是2位返回
         sb.append('%');
-        sb.append(String.format("%1$02X", (int) c));
+        sb.append(String.format("%1$02X", (int) c));//%1$02X含义:%1$ 表示获取第一个参数,02表示第一个参数转换后仅仅获取2位数,x表示用16进制表示第一个参数
       } else {
         sb.append(c);
       }
@@ -250,6 +254,7 @@ public final class FileUtils {
     return sb.toString();
   }
 
+  //将字符串进行反解析,与escapePathName相反,对16进制的字符转换成字符串
   public static String unescapePathName(String path) {
     StringBuilder sb = new StringBuilder();
     for (int i = 0; i < path.length(); i++) {
@@ -257,11 +262,12 @@ public final class FileUtils {
       if (c == '%' && i + 2 < path.length()) {
         int code = -1;
         try {
+        	//将%后面的两位获取出来,按照16进制转换成10进制数
           code = Integer.valueOf(path.substring(i + 1, i + 3), 16);
         } catch (Exception e) {
           code = -1;
         }
-        if (code >= 0) {
+        if (code >= 0) {//将转换的10进制数转换成char字符,添加到字符串中
           sb.append((char) code);
           i += 2;
           continue;
@@ -284,6 +290,7 @@ public final class FileUtils {
    *
    * @param results
    *          receives enumeration of all files found
+   * 递归fileStatus,查找所有的文件,都添加到results集合中       
    */
   public static void listStatusRecursively(FileSystem fs, FileStatus fileStatus,
       List<FileStatus> results) throws IOException {

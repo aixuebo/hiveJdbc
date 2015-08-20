@@ -39,6 +39,7 @@ import org.apache.commons.logging.LogFactory;
  * priority.
  *
  * Originally taken from o.a.hadoop.util.ShutdownHookManager
+ * shutDown时候的钩子服务管理
  */
 public class ShutdownHookManager {
 
@@ -46,6 +47,7 @@ public class ShutdownHookManager {
 
   private static final Log LOG = LogFactory.getLog(ShutdownHookManager.class);
 
+  //注册钩子,当关闭的时候依次按照顺序关闭钩子中的每一个服务
   static {
     Runtime.getRuntime().addShutdownHook(
       new Thread() {
@@ -68,6 +70,7 @@ public class ShutdownHookManager {
 
   /**
    * Private structure to store ShutdownHook and its priority.
+   * 定义每一个服务和该服务的优先级
    */
   private static class HookEntry {
     Runnable hook;
@@ -96,9 +99,11 @@ public class ShutdownHookManager {
 
   }
 
+  //存储所有的钩子服务
   private final Set<HookEntry> hooks =
     Collections.synchronizedSet(new HashSet<HookEntry>());
 
+  //钩子服务是否已经运行了
   private final AtomicBoolean shutdownInProgress = new AtomicBoolean(false);
 
   //private to constructor to ensure singularity
@@ -115,6 +120,7 @@ public class ShutdownHookManager {
     return MGR.getShutdownHooksInOrderInternal();
   }
 
+  //按照优先级排序HookEntry集合
   List<Runnable> getShutdownHooksInOrderInternal() {
     List<HookEntry> list;
     synchronized (MGR.hooks) {
@@ -143,6 +149,7 @@ public class ShutdownHookManager {
    *
    * @param shutdownHook shutdownHook <code>Runnable</code>
    * @param priority priority of the shutdownHook.
+   * 注册一个钩子服务和优先级
    */
   public static void addShutdownHook(Runnable shutdownHook, int priority) {
     MGR.addShutdownHookInternal(shutdownHook, priority);

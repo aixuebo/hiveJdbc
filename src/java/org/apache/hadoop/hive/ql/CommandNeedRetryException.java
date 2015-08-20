@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hive.ql;
 
+//命令需要重新连接异常
 public class CommandNeedRetryException extends Exception {
 
   private static final long serialVersionUID = 1L;

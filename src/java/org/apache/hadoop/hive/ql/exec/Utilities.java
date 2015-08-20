@@ -1113,6 +1113,7 @@ public final class Utilities {
 
   /**
    * Shamelessly cloned from GenericOptionsParser.
+   * 格式化newFile文件路径,如果不存在该路径,则返回null
    */
   public static String realFile(String newFile, Configuration conf) throws IOException {
     Path path = new Path(newFile);
@@ -1675,6 +1676,7 @@ public final class Utilities {
    *
    * @param newPaths
    *          Array of classpath elements
+   *  将newPaths文件集合加载到cloader中
    */
   public static ClassLoader addToClassPath(ClassLoader cloader, String[] newPaths) throws Exception {
     URLClassLoader loader = (URLClassLoader) cloader;
@@ -1690,12 +1692,12 @@ public final class Utilities {
     for (String onestr : newPaths) {
       // special processing for hadoop-17. file:// needs to be removed
       if (StringUtils.indexOf(onestr, "file://") == 0) {
-        onestr = StringUtils.substring(onestr, 7);
+        onestr = StringUtils.substring(onestr, 7);//获取本地路径
       }
 
       URL oneurl = (new File(onestr)).toURL();
       if (!curPath.contains(oneurl)) {
-        curPath.add(oneurl);
+        curPath.add(oneurl);//将其加载到集合中
       }
     }
 
@@ -1707,6 +1709,7 @@ public final class Utilities {
    *
    * @param pathsToRemove
    *          Array of classpath elements
+   * 将pathsToRemove文件集合从cloader中移除          
    */
   public static void removeFromClassPath(String[] pathsToRemove) throws Exception {
     Thread curThread = Thread.currentThread();

@@ -69,10 +69,10 @@ public class CliSessionState extends SessionState {
   protected String host;
   protected int port;
 
-  private boolean remoteMode;
+  private boolean remoteMode;//true表示开启了thrift远程模式
 
   private TTransport transport;
-  private HiveClient client;
+  private HiveClient client;//远程thrift服务
 
   public CliSessionState(HiveConf conf) {
     super(conf);
@@ -86,8 +86,8 @@ public class CliSessionState extends SessionState {
     transport = new TSocket(host, port);
     TProtocol protocol = new TBinaryProtocol(transport);
     client = new HiveClient(protocol);
-    transport.open();
-    remoteMode = true;
+    transport.open();//开启thrift
+    remoteMode = true;//设置true,因为开启了远程thrift服务
   }
 
   public void setHost(String host) {

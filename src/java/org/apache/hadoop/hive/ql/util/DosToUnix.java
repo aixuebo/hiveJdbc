@@ -28,6 +28,7 @@ import java.io.InputStreamReader;
 
 public class DosToUnix {
 
+	//表示windos目录转化到unix目录需要转换一下
   public static String convertWindowsScriptToUnix(File windowsScriptFile) throws Exception {
     String windowsScriptFilename = windowsScriptFile.getName();
     String unixScriptFilename = getUnixScriptNameFor(windowsScriptFilename);
@@ -74,6 +75,7 @@ public class DosToUnix {
     return unixScriptFilename;
   }
 
+  //该脚本文件是否是在windos上
   public static boolean isWindowsScript(File file) {
     BufferedReader reader = null;
     try {
@@ -85,7 +87,7 @@ public class DosToUnix {
           switch(buffer[i]) {
           case '\r':
             return true;
-          case '\n':
+          case '\n'://linux上不存在\n换行符
             return false;
           }
         }

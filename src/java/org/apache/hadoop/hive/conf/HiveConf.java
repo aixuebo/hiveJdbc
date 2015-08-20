@@ -50,8 +50,8 @@ import org.apache.hadoop.util.Shell;
  */
 public class HiveConf extends Configuration {
 
-  protected String hiveJar;
-  protected Properties origProp;
+  protected String hiveJar;//主要运行class的jar包路径
+  protected Properties origProp;//原始的Configuration配置Properties对象
   protected String auxJars;
   private static final Log l4j = LogFactory.getLog(HiveConf.class);
   private static URL hiveDefaultURL = null;
@@ -59,6 +59,7 @@ public class HiveConf extends Configuration {
   private static byte[] confVarByteArray = null;
 
   private static final Map<String, ConfVars> vars = new HashMap<String, ConfVars>();
+  //该集合的key是不允许修改的,只允许读操作
   private final List<String> restrictList = new ArrayList<String>();
 
   static {
@@ -178,7 +179,7 @@ public class HiveConf extends Configuration {
     SCRIPTWRAPPER("hive.exec.script.wrapper", null),
     PLAN("hive.exec.plan", ""),
     SCRATCHDIR("hive.exec.scratchdir", "/tmp/hive-" + System.getProperty("user.name")),
-    LOCALSCRATCHDIR("hive.exec.local.scratchdir", System.getProperty("java.io.tmpdir") + File.separator + System.getProperty("user.name")),
+    LOCALSCRATCHDIR("hive.exec.local.scratchdir", System.getProperty("java.io.tmpdir") + File.separator + System.getProperty("user.name")),// /tmp/user默认hive的本地目录
     SCRATCHDIRPERMISSION("hive.scratch.dir.permission", "700"),
     SUBMITVIACHILD("hive.exec.submitviachild", false),
     SCRIPTERRORLIMIT("hive.exec.script.maxerrsize", 100000),
@@ -205,7 +206,7 @@ public class HiveConf extends Configuration {
     DYNAMICPARTITIONMAXPARTSPERNODE("hive.exec.max.dynamic.partitions.pernode", 100),
     MAXCREATEDFILES("hive.exec.max.created.files", 100000L),
     DOWNLOADED_RESOURCES_DIR("hive.downloaded.resources.dir",
-        System.getProperty("java.io.tmpdir") + File.separator  + "${hive.session.id}_resources"),
+        System.getProperty("java.io.tmpdir") + File.separator  + "${hive.session.id}_resources"),//资源下载存储的目录 /tmp/sessionId_resources/
     DEFAULTPARTITIONNAME("hive.exec.default.partition.name", "__HIVE_DEFAULT_PARTITION__"),
     DEFAULT_ZOOKEEPER_PARTITION_NAME("hive.lockmgr.zookeeper.default.partition.name", "__HIVE_DEFAULT_ZOOKEEPER_PARTITION__"),
     // Whether to show a link to the most failed task + debugging tips
@@ -255,7 +256,7 @@ public class HiveConf extends Configuration {
     // Metastore stuff. Be sure to update HiveConf.metaVars when you add
     // something here!
     METASTOREDIRECTORY("hive.metastore.metadb.dir", ""),
-    METASTOREWAREHOUSE("hive.metastore.warehouse.dir", "/user/hive/warehouse"),
+    METASTOREWAREHOUSE("hive.metastore.warehouse.dir", "/user/hive/warehouse"),//hive的表数据存储地方
     METASTOREURIS("hive.metastore.uris", ""),
     // Number of times to retry a connection to a Thrift metastore server
     METASTORETHRIFTCONNECTIONRETRIES("hive.metastore.connect.retries", 3),
@@ -378,16 +379,16 @@ public class HiveConf extends Configuration {
     CLIPROMPT("hive.cli.prompt", "hive"),
     CLIPRETTYOUTPUTNUMCOLS("hive.cli.pretty.output.num.cols", -1),
 
-    HIVE_METASTORE_FS_HANDLER_CLS("hive.metastore.fs.handler.class", "org.apache.hadoop.hive.metastore.HiveMetaStoreFsImpl"),
+    HIVE_METASTORE_FS_HANDLER_CLS("hive.metastore.fs.handler.class", "org.apache.hadoop.hive.metastore.HiveMetaStoreFsImpl"),//删除指定Path的实现类
 
     // Things we log in the jobconf
 
-    // session identifier
+    // session identifier 每一个session标示
     HIVESESSIONID("hive.session.id", ""),
-    // whether session is running in silent mode or not
+    // whether session is running in silent mode or not 是否是静默模式.true表示不会再输出中打印ok和消耗时间等
     HIVESESSIONSILENT("hive.session.silent", false),
 
-    // Whether to enable history for this session
+    // Whether to enable history for this session 是否记录该session信息,即HiveHistoryImpl日志是否开启
     HIVE_SESSION_HISTORY_ENABLED("hive.session.history.enabled", false),
 
     // query being executed (multiple per session)
@@ -402,7 +403,7 @@ public class HiveConf extends Configuration {
     HIVEJOBNAMELENGTH("hive.jobname.length", 50),
 
     // hive jar
-    HIVEJAR("hive.jar.path", ""),
+    HIVEJAR("hive.jar.path", ""),//jar包路径
     HIVEAUXJARS("hive.aux.jars.path", ""),
 
     // hive added files and jars
@@ -772,7 +773,7 @@ public class HiveConf extends Configuration {
     HIVE_SERVER2_TABLE_TYPE_MAPPING("hive.server2.table.type.mapping", "CLASSIC"),
     HIVE_SERVER2_SESSION_HOOK("hive.server2.session.hook", ""),
 
-    HIVE_CONF_RESTRICTED_LIST("hive.conf.restricted.list", null),
+    HIVE_CONF_RESTRICTED_LIST("hive.conf.restricted.list", null),//不允许运行期间修改的属性key,该value用逗号拆分
 
     // If this is set all move tasks at the end of a multi-insert query will only begin once all
     // outputs are ready
@@ -815,7 +816,7 @@ public class HiveConf extends Configuration {
     HIVE_TYPE_CHECK_ON_INSERT("hive.typecheck.on.insert", true),
     ;
 
-    public final String varname;
+    public final String varname;//key
     public final String defaultVal;
     public final int defaultIntVal;
     public final long defaultLongVal;
@@ -893,6 +894,7 @@ public class HiveConf extends Configuration {
       return varname;
     }
 
+    //找到hadoop的bin/hadoop文件位置
     private static String findHadoopBinary() {
       String val = System.getenv("HADOOP_HOME");
       // In Hadoop 1.X and Hadoop 2.X HADOOP_HOME is gone and replaced with HADOOP_PREFIX
@@ -918,10 +920,12 @@ public class HiveConf extends Configuration {
       BOOLEAN { @Override
       void checkType(String value) throws Exception { Boolean.valueOf(value); } };
 
+      //仅仅做了校验操作
       boolean isType(String value) {
         try { checkType(value); } catch (Exception e) { return false; }
         return true;
       }
+      //返回枚举类型的name
       String typeString() { return name().toUpperCase();}
       abstract void checkType(String value) throws Exception;
     }
@@ -946,8 +950,10 @@ public class HiveConf extends Configuration {
         // Create a Hadoop configuration without inheriting default settings.
         Configuration conf = new Configuration(false);
 
+        //设置不为null的属性默认值
         applyDefaultNonNullConfVars(conf);
 
+        //将设置默认值的信息保存起来
         ByteArrayOutputStream confVarBaos = new ByteArrayOutputStream();
         conf.writeXml(confVarBaos);
         confVarByteArray = confVarBaos.toByteArray();
@@ -1111,6 +1117,7 @@ public class HiveConf extends Configuration {
     return getProperties(this);
   }
 
+  //将conf配置文件转化成Properties对象
   private static Properties getProperties(Configuration conf) {
     Iterator<Map.Entry<String, String>> iter = conf.iterator();
     Properties p = new Properties();
@@ -1122,6 +1129,7 @@ public class HiveConf extends Configuration {
   }
 
   private void initialize(Class<?> cls) {
+	//运行job的主class,通过该class可以设置对应的jar包
     hiveJar = (new JobConf(cls)).getJar();
 
     // preserve the original configuration
@@ -1136,6 +1144,7 @@ public class HiveConf extends Configuration {
     }
 
     // Overlay the values of any system properties whose names appear in the list of ConfVars
+    //设置,并且获取system系统设置的属性name-value集合,并且覆盖原有key-value
     applySystemProperties();
 
     if(this.get("hive.metastore.local", null) != null) {
@@ -1159,13 +1168,14 @@ public class HiveConf extends Configuration {
       setBoolVar(ConfVars.METASTORE_FIXED_DATASTORE, true);
     }
 
-    // setup list of conf vars that are not allowed to change runtime
+    // setup list of conf vars that are not allowed to change runtime 不允许运行期间修改的属性key
     String restrictListStr = this.get(ConfVars.HIVE_CONF_RESTRICTED_LIST.toString());
     if (restrictListStr != null) {
       for (String entry : restrictListStr.split(",")) {
         restrictList.add(entry);
       }
     }
+    //运行期间也不允许修改HIVE_CONF_RESTRICTED_LIST的key
     restrictList.add(ConfVars.HIVE_CONF_RESTRICTED_LIST.toString());
   }
 
@@ -1175,7 +1185,9 @@ public class HiveConf extends Configuration {
    * and the value is non-null and not an empty string.
    */
   private void applySystemProperties() {
+	 //获取System中设置的key-value属性
     Map<String, String> systemProperties = getConfSystemProperties();
+    //将system中设置的属性 覆盖掉以前默认的属性
     for (Entry<String, String> systemProperty : systemProperties.entrySet()) {
       this.set(systemProperty.getKey(), systemProperty.getValue());
     }
@@ -1184,6 +1196,7 @@ public class HiveConf extends Configuration {
   /**
    * This method returns a mapping from config variable name to its value for all config variables
    * which have been set using System properties
+   * 设置,并且获取system系统设置的属性name-value集合
    */
   public static Map<String, String> getConfSystemProperties() {
     Map<String, String> systemProperties = new HashMap<String, String>();
@@ -1201,6 +1214,7 @@ public class HiveConf extends Configuration {
 
   /**
    * Overlays ConfVar properties with non-null values
+   * 设置不为null的属性默认值
    */
   private static void applyDefaultNonNullConfVars(Configuration conf) {
     for (ConfVars var : ConfVars.values()) {
@@ -1271,6 +1285,10 @@ public class HiveConf extends Configuration {
     return "_col" + pos;
   }
 
+  /**
+   * @param internalName _col105
+   * @return 105
+   */
   public static int getPositionFromInternalName(String internalName) {
     Pattern internalPattern = Pattern.compile("_col([0-9]+)");
     Matcher m = internalPattern.matcher(internalName);

@@ -34,6 +34,10 @@ public class HiveMetaStoreFsImpl implements MetaStoreFS {
   public static final Log LOG = LogFactory
       .getLog("hive.metastore.hivemetastoressimpl");
 
+  /**
+   * 删除f目录
+   * recursive 表示是否递归删除,该方法不需要递归删除,直接把整个目录都删除掉即可
+   */
   @Override
   public boolean deleteDir(FileSystem fs, Path f, boolean recursive,
       Configuration conf) throws MetaException {

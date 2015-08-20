@@ -54,6 +54,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * This class represents a warehouse where data of Hive tables is stored
+ * 该类是代表一个仓库,存储hive的表数据的地方
  */
 public class Warehouse {
   private Path whRoot;
@@ -62,13 +63,13 @@ public class Warehouse {
 
   public static final Log LOG = LogFactory.getLog("hive.metastore.warehouse");
 
-  private MetaStoreFS fsHandler = null;
+  private MetaStoreFS fsHandler = null;//操作删除hdfs上的目录操作
   private boolean storageAuthCheck = false;
   private boolean inheritPerms = false;
 
   public Warehouse(Configuration conf) throws MetaException {
     this.conf = conf;
-    whRootString = HiveConf.getVar(conf, HiveConf.ConfVars.METASTOREWAREHOUSE);
+    whRootString = HiveConf.getVar(conf, HiveConf.ConfVars.METASTOREWAREHOUSE);//获取存储表数据的地方
     if (StringUtils.isBlank(whRootString)) {
       throw new MetaException(HiveConf.ConfVars.METASTOREWAREHOUSE.varname
           + " is not set in the config or blank");
@@ -80,6 +81,7 @@ public class Warehouse {
         HiveConf.ConfVars.HIVE_WAREHOUSE_SUBDIR_INHERIT_PERMS);
   }
 
+  //实例化一个删除指定Path路径的实现类
   private MetaStoreFS getMetaStoreFsHandler(Configuration conf)
       throws MetaException {
     String handlerClassStr = HiveConf.getVar(conf,
@@ -99,6 +101,7 @@ public class Warehouse {
 
   /**
    * Helper functions to convert IOException to MetaException
+   * 获取f对应的文件系统
    */
   public FileSystem getFs(Path f) throws MetaException {
     try {
@@ -109,6 +112,7 @@ public class Warehouse {
     return null;
   }
 
+  //关闭文件系统
   public static void closeFs(FileSystem fs) throws MetaException {
     try {
       if (fs != null) {
@@ -221,6 +225,7 @@ public class Warehouse {
     return fsHandler.deleteDir(fs, f, recursive, conf);
   }
 
+  //校验path是否有可写权限
   public boolean isWritable(Path path) throws IOException {
     if (!storageAuthCheck) {
       // no checks for non-secure hadoop installations
@@ -292,10 +297,12 @@ public class Warehouse {
   }
   */
 
+  //对path路径进行特殊字符16进制处理
   static String escapePathName(String path) {
     return FileUtils.escapePathName(path);
   }
 
+  //对Path中16进制的特殊字符进行反序列化
   static String unescapePathName(String path) {
     return FileUtils.unescapePathName(path);
   }
@@ -315,9 +322,10 @@ public class Warehouse {
   /**
    * Makes a partition name from a specification
    * @param spec
-   * @param addTrailingSeperator if true, adds a trailing separator e.g. 'ds=1/'
+   * @param addTrailingSeperator if true, adds a trailing separator e.g. 'ds=1/' true表示在最后要添加一个/字符
    * @return partition name
    * @throws MetaException
+   * 解析map对象为key=value形式,以/进行分隔
    */
   public static String makePartName(Map<String, String> spec,
       boolean addTrailingSeperator)

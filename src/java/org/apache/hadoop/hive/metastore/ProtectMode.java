@@ -36,6 +36,7 @@ public class ProtectMode {
     return new ProtectMode(sourceString);
   }
 
+  //½âÎösourceString
   private ProtectMode(String sourceString) {
     String[] tokens = sourceString.split(",");
     for (String token: tokens) {

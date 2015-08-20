@@ -66,6 +66,7 @@ public class HiveStringUtils {
    * Make a string representation of the exception.
    * @param e The exception to stringify
    * @return A string with exception name and call stack.
+   * 将异常转化成字符串
    */
   public static String stringifyException(Throwable e) {
     StringWriter stm = new StringWriter();
@@ -79,6 +80,7 @@ public class HiveStringUtils {
    * Given a full hostname, return the word upto the first dot.
    * @param fullHostname the full hostname
    * @return the hostname to the first dot
+   * retrun,例如www.baidu.com 返回www
    */
   public static String simpleHostname(String fullHostname) {
     int offset = fullHostname.indexOf('.');
@@ -96,6 +98,7 @@ public class HiveStringUtils {
    * It uses the bases 'k', 'm', and 'g' for 1024, 1024**2, and 1024**3.
    * @param number the number to format
    * @return a human readable form of the integer
+   * 将number转化成多少k/M/g
    */
   public static String humanReadableInt(long number) {
     long absNumber = Math.abs(number);
@@ -138,8 +141,8 @@ public class HiveStringUtils {
    * @param strs Array of strings
    * @return Empty string if strs.length is 0, comma separated list of strings
    * otherwise
+   * 将数组转换成字符串,用逗号拆分
    */
-
   public static String arrayToString(String[] strs) {
     if (strs.length == 0) { return ""; }
     StringBuilder sbuf = new StringBuilder();
@@ -190,7 +193,7 @@ public class HiveStringUtils {
     return bts;
   }
   /**
-   *
+   * 将url对象集合组装成字符串,用逗号拆分
    * @param uris
    */
   public static String uriToString(URI[] uris){
@@ -212,6 +215,7 @@ public class HiveStringUtils {
    *         equivalent to str.
    * @throws IllegalArgumentException
    *           If any string in str violates RFC&nbsp;2396.
+   * 将字符串集合转换成URI集合          
    */
   public static URI[] stringToURI(String[] str){
     if (str == null) {
@@ -230,7 +234,7 @@ public class HiveStringUtils {
   }
 
   /**
-   *
+   * 将字符串转换成Path对象
    * @param str
    */
   public static Path[] stringToPath(String[] str){
@@ -251,6 +255,7 @@ public class HiveStringUtils {
    *
    * @param finishTime finish time
    * @param startTime start time
+   * 计算时间差
    */
   public static String formatTimeDiff(long finishTime, long startTime){
     long timeDiff = finishTime - startTime;
@@ -262,15 +267,17 @@ public class HiveStringUtils {
    * Given the time in long milliseconds, returns a
    * String in the format Xhrs, Ymins, Z sec.
    *
-   * @param timeDiff The time difference to format
+   * @param timeDiff The time difference to format 参数是毫秒数
+   * 格式化时间差
+   * 计算结果是差距xxxhrs,xxxmins,xxxsec
    */
   public static String formatTime(long timeDiff){
     StringBuilder buf = new StringBuilder();
-    long hours = timeDiff / (60*60*1000);
-    long rem = (timeDiff % (60*60*1000));
-    long minutes =  rem / (60*1000);
-    rem = rem % (60*1000);
-    long seconds = rem / 1000;
+    long hours = timeDiff / (60*60*1000);//小时
+    long rem = (timeDiff % (60*60*1000));//抛出小时后,剩余多少毫秒
+    long minutes =  rem / (60*1000);//转换成分
+    rem = rem % (60*1000);//再抛弃分后,剩余多少毫秒
+    long seconds = rem / 1000;//转换成多少秒
 
     if (hours != 0){
       buf.append(hours);
@@ -294,6 +301,7 @@ public class HiveStringUtils {
    * @param finishTime fnish time
    * @param startTime start time
    * @return formatted value.
+   * 打印完成时间,以及运行了多久
    */
   public static String getFormattedTimeWithDiff(DateFormat dateFormat,
                                                 long finishTime, long startTime){
@@ -311,6 +319,7 @@ public class HiveStringUtils {
    * Returns an arraylist of strings.
    * @param str the comma seperated string values
    * @return the arraylist of the comma seperated string values
+   * 将字符串转化成数组,参数是用逗号拆分的字符串
    */
   public static String[] getStrings(String str){
     Collection<String> values = getStringCollection(str);
@@ -324,6 +333,7 @@ public class HiveStringUtils {
    * Returns a collection of strings.
    * @param str comma seperated string values
    * @return an <code>ArrayList</code> of string values
+   * 将参数按照逗号拆分,返回集合
    */
   public static Collection<String> getStringCollection(String str){
     List<String> values = new ArrayList<String>();
@@ -342,6 +352,7 @@ public class HiveStringUtils {
    * Splits a comma separated value <code>String</code>, trimming leading and trailing whitespace on each value.
    * @param str a comma separated <String> with values
    * @return a <code>Collection</code> of <code>String</code> values
+   * 将字符串按照逗号拆分,并且trim去除两边空格
    */
   public static Collection<String> getTrimmedStringCollection(String str){
     return new ArrayList<String>(
@@ -352,6 +363,7 @@ public class HiveStringUtils {
    * Splits a comma separated value <code>String</code>, trimming leading and trailing whitespace on each value.
    * @param str a comma separated <String> with values
    * @return an array of <code>String</code> values
+   * 将字符串按照逗号拆分,并且trim去除两边空格
    */
   public static String[] getTrimmedStrings(String str){
     if (null == str || "".equals(str.trim())) {
@@ -370,6 +382,7 @@ public class HiveStringUtils {
    * Split a string using the default separator
    * @param str a string that may have escaped separator
    * @return an array of strings
+   * 按照逗号拆分str字符串,转义字符是\
    */
   public static String[] split(String str) {
     return split(str, ESCAPE_CHAR, COMMA);
@@ -381,6 +394,7 @@ public class HiveStringUtils {
    * @param escapeChar a char that be used to escape the separator
    * @param separator a separator char
    * @return an array of strings
+   * 按照separator拆分str,期间escapeChar是转义字符
    */
   public static String[] split(
       String str, char escapeChar, char separator) {
@@ -398,7 +412,7 @@ public class HiveStringUtils {
     strList.add(split.toString());
     // remove trailing empty split(s)
     int last = strList.size(); // last split
-    while (--last>=0 && "".equals(strList.get(last))) {
+    while (--last>=0 && "".equals(strList.get(last))) {//移除""字符串
       strList.remove(last);
     }
     return strList.toArray(new String[strList.size()]);
@@ -483,7 +497,7 @@ public class HiveStringUtils {
     return escapeString(str, escapeChar, new char[] {charToEscape});
   }
 
-  // check if the character array has the character
+  // check if the character array has the character查看chars里面是否包含character字符
   private static boolean hasChar(char[] chars, char character) {
     for (char target : chars) {
       if (character == target) {

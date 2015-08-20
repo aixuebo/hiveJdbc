@@ -26,7 +26,7 @@ import org.apache.hive.common.HiveVersionAnnotation;
 
 /**
  * HiveVersionInfo.
- *
+ * 打印该hive的版本信息
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -39,6 +39,7 @@ public class HiveVersionInfo {
   static {
     myPackage = HiveVersionAnnotation.class.getPackage();
     version = myPackage.getAnnotation(HiveVersionAnnotation.class);
+    System.out.println(version.getClass().getName());
   }
 
   /**
