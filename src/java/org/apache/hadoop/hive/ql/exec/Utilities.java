@@ -521,7 +521,6 @@ public final class Utilities {
     }
   }
 
-  //获取该conf对应的plan下的name路径
   private static Path getPlanPath(Configuration conf, String name) {
     Path planPath = getPlanPath(conf);
     if (planPath == null) {
@@ -530,7 +529,6 @@ public final class Utilities {
     return new Path(planPath, name);
   }
 
-  //如果该conf没有配置plan路径,则设置为hiveScratchDir/uuid为该conf的plan路径
   private static void setPlanPath(Configuration conf, String hiveScratchDir) throws IOException {
     if (getPlanPath(conf) == null) {
       // this is the unique conf ID, which is kept in JobConf as part of the plan file name
@@ -542,7 +540,6 @@ public final class Utilities {
     }
   }
 
-  //获取该conf配置的plan的路径
   private static Path getPlanPath(Configuration conf) {
     String plan = HiveConf.getVar(conf, HiveConf.ConfVars.PLAN);
     if (plan != null && !plan.isEmpty()) {
@@ -1116,7 +1113,6 @@ public final class Utilities {
 
   /**
    * Shamelessly cloned from GenericOptionsParser.
-   * 格式化newFile文件路径,如果不存在该路径,则返回null
    */
   public static String realFile(String newFile, Configuration conf) throws IOException {
     Path path = new Path(newFile);
@@ -1679,7 +1675,6 @@ public final class Utilities {
    *
    * @param newPaths
    *          Array of classpath elements
-   *  将newPaths文件集合加载到cloader中
    */
   public static ClassLoader addToClassPath(ClassLoader cloader, String[] newPaths) throws Exception {
     URLClassLoader loader = (URLClassLoader) cloader;
@@ -1695,12 +1690,12 @@ public final class Utilities {
     for (String onestr : newPaths) {
       // special processing for hadoop-17. file:// needs to be removed
       if (StringUtils.indexOf(onestr, "file://") == 0) {
-        onestr = StringUtils.substring(onestr, 7);//获取本地路径
+        onestr = StringUtils.substring(onestr, 7);
       }
 
       URL oneurl = (new File(onestr)).toURL();
       if (!curPath.contains(oneurl)) {
-        curPath.add(oneurl);//将其加载到集合中
+        curPath.add(oneurl);
       }
     }
 
@@ -1712,7 +1707,6 @@ public final class Utilities {
    *
    * @param pathsToRemove
    *          Array of classpath elements
-   * 将pathsToRemove文件集合从cloader中移除          
    */
   public static void removeFromClassPath(String[] pathsToRemove) throws Exception {
     Thread curThread = Thread.currentThread();

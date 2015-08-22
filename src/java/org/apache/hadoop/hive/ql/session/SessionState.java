@@ -72,7 +72,7 @@ public class SessionState {
   protected HiveConf conf;
 
   /**
-   * silent mode.是否是静默模式,该默认不会打印ok,和消耗时间等信息
+   * silent mode.
    */
   protected boolean isSilent;
 
@@ -82,7 +82,7 @@ public class SessionState {
   protected boolean isVerbose;
 
   /*
-   * HiveHistory Object HiveHistoryImpl实现类
+   * HiveHistory Object
    */
   protected HiveHistory hiveHist;
 
@@ -105,7 +105,6 @@ public class SessionState {
   /**
    * Temporary file name used to store results of non-Hive commands (e.g., set, dfs)
    * and HiveServer.fetch*() function will read results from this file
-   * 默认/tmp/user/sessionIdxxxxx.pipeout为临时文件
    */
   protected File tmpOutputFile;
 
@@ -196,9 +195,8 @@ public class SessionState {
     isSilent = conf.getBoolVar(HiveConf.ConfVars.HIVESESSIONSILENT);
     ls = new LineageState();
     overriddenConfigurations = new HashMap<String, String>();
-    //设置,并且获取system系统设置的属性name-value集合
     overriddenConfigurations.putAll(HiveConf.getConfSystemProperties());
-    // if there isn't already a session name, go ahead and create it. 每一个session标示,没有则创建一个
+    // if there isn't already a session name, go ahead and create it.
     if (StringUtils.isEmpty(conf.getVar(HiveConf.ConfVars.HIVESESSIONID))) {
       conf.setVar(HiveConf.ConfVars.HIVESESSIONID, makeSessionId());
     }
@@ -236,7 +234,7 @@ public class SessionState {
 
   /**
    * Singleton Session object per thread.
-   * 每个线程绑定一个SessionState对象
+   *
    **/
   private static ThreadLocal<SessionState> tss = new ThreadLocal<SessionState>();
 
@@ -256,11 +254,10 @@ public class SessionState {
    */
   public static SessionState start(SessionState startSs) {
 
-	  //为该线程绑定该SessionState对象
     tss.set(startSs);
 
     if(startSs.hiveHist == null){
-      if (startSs.getConf().getBoolVar(HiveConf.ConfVars.HIVE_SESSION_HISTORY_ENABLED)) {//是否记录该session信息,即HiveHistoryImpl日志是否开启
+      if (startSs.getConf().getBoolVar(HiveConf.ConfVars.HIVE_SESSION_HISTORY_ENABLED)) {
         startSs.hiveHist = new HiveHistoryImpl(startSs);
       }else {
         //Hive history is disabled, create a no-op proxy
@@ -268,7 +265,6 @@ public class SessionState {
       }
     }
 
-    //创建临时文件
     if (startSs.getTmpOutputFile() == null) {
       // set temp file containing results to be sent to HiveClient
       try {
@@ -297,10 +293,8 @@ public class SessionState {
    * @param conf
    * @return per-session temp file
    * @throws IOException
-   * 创建临时文件 /tmp/user/sessionIdxxxxx.pipeout
    */
   private static File createTempFile(HiveConf conf) throws IOException {
-	///tmp/user默认hive的本地目录 
     String lScratchDir =
         HiveConf.getVar(conf, HiveConf.ConfVars.LOCALSCRATCHDIR);
 
@@ -317,15 +311,13 @@ public class SessionState {
         }
       }
     }
-    ///tmp/user/sessionIdxxxxx.pipeout,createTempFile方法会自动产生一个文件名
     File tmpFile = File.createTempFile(sessionID, ".pipeout", tmpDir);
-    tmpFile.deleteOnExit();//文件退出的时候删除他
+    tmpFile.deleteOnExit();
     return tmpFile;
   }
 
   /**
    * get the current session.
-   * 获取该线程对应的SessionState对象
    */
   public static SessionState get() {
     return tss.get();
@@ -344,7 +336,6 @@ public class SessionState {
    * Create a session ID. Looks like:
    *   $user_$pid@$host_$date
    * @return the unique string
-   *  每一个session标示
    */
   private static String makeSessionId() {
     return UUID.randomUUID().toString();
@@ -365,8 +356,8 @@ public class SessionState {
    */
   public static class LogHelper {
 
-    protected Log LOG;//log对象
-    protected boolean isSilent;//是否静态模式,忽略ok和消耗时间信息
+    protected Log LOG;
+    protected boolean isSilent;
 
     public LogHelper(Log LOG) {
       this(LOG, false);
@@ -442,14 +433,12 @@ public class SessionState {
     return _console;
   }
 
-  // 格式化newFile文件路径,如果不存在该路径,则返回null
   public static String validateFile(Set<String> curFiles, String newFile) {
     SessionState ss = SessionState.get();
-    LogHelper console = getConsole();//获取LOG日志文件
+    LogHelper console = getConsole();
     Configuration conf = (ss == null) ? new Configuration() : ss.getConf();
 
     try {
-    	//格式化newFile文件路径,如果不存在该路径,则返回null
       if (Utilities.realFile(newFile, conf) != null) {
         return newFile;
       } else {
@@ -464,12 +453,10 @@ public class SessionState {
     }
   }
 
-  //将newPaths文件集合加载到cloader中,newJar可以用逗号拆分
   public static boolean registerJar(String newJar) {
     LogHelper console = getConsole();
     try {
       ClassLoader loader = Thread.currentThread().getContextClassLoader();
-      //将newPaths文件集合加载到cloader中
       ClassLoader newLoader = Utilities.addToClassPath(loader, StringUtils.split(newJar, ","));
       Thread.currentThread().setContextClassLoader(newLoader);
       SessionState.get().getConf().setClassLoader(newLoader);
@@ -483,7 +470,6 @@ public class SessionState {
     }
   }
 
-  //将pathsToRemove文件集合从cloader中移除    ,jarsToUnregister可以用逗号拆分
   public static boolean unregisterJar(String jarsToUnregister) {
     LogHelper console = getConsole();
     try {
@@ -564,7 +550,7 @@ public class SessionState {
     } catch (IllegalArgumentException e) {
     }
 
-    // try singular 过滤单词的复数
+    // try singular
     if (s.endsWith("S")) {
       s = s.substring(0, s.length() - 1);
     } else {
@@ -578,51 +564,41 @@ public class SessionState {
     return null;
   }
 
-  //每一个类型的文件集合对应关系
-  private final HashMap<ResourceType, Set<String>> resource_map = new HashMap<ResourceType, Set<String>>();
+  private final HashMap<ResourceType, Set<String>> resource_map =
+      new HashMap<ResourceType, Set<String>>();
 
   public String add_resource(ResourceType t, String value) {
     // By default don't convert to unix
     return add_resource(t, value, false);
   }
 
-  /**
-   * 下载一个非本地资源value,到ResourceType类型对应的文件集合中
-   * 返回本地下载后的文件路径
-   */
   public String add_resource(ResourceType t, String value, boolean convertToUnix) {
     try {
-    	//下载非本地资源到本地,value返回值是本地资源下载后的路径
       value = downloadResource(value, convertToUnix);
     } catch (Exception e) {
       getConsole().printError(e.getMessage());
       return null;
     }
 
-    //获取该类型的文件集合
     Set<String> resourceMap = getResourceMap(t);
 
     String fnlVal = value;
     if (t.hook != null) {
-    	//校验value文件是否存在
       fnlVal = t.hook.preHook(resourceMap, value);
       if (fnlVal == null) {
         return fnlVal;
       }
     }
     getConsole().printInfo("Added resource: " + fnlVal);
-    //将该value文件添加到该类型对应的文件集合上
     resourceMap.add(fnlVal);
 
     return fnlVal;
   }
 
-  //将value添加到ResourceType对应的文件集合中
   public void add_builtin_resource(ResourceType t, String value) {
     getResourceMap(t).add(value);
   }
 
-  //返回该类型的资源文件集合
   private Set<String> getResourceMap(ResourceType t) {
     Set<String> result = resource_map.get(t);
     if (result == null) {
@@ -634,7 +610,6 @@ public class SessionState {
 
   /**
    * Returns  true if it is from any external File Systems except local
-   * true 表示该value对应的文件不是本地文件系统,是其他外部文件系统,例如HDFS
    */
   public static boolean canDownloadResource(String value) {
     // Allow to download resources from any external FileSystem.
@@ -643,27 +618,20 @@ public class SessionState {
     return (scheme != null) && !scheme.equalsIgnoreCase("file");
   }
 
-  /**
-   * 下载value对应的文件资源
-   * @param value
-   * @param convertToUnix true表示windos目录转化到unix目录需要转换一下
-   */
   private String downloadResource(String value, boolean convertToUnix) {
-    if (canDownloadResource(value)) {//判断是否需要下载value文件资源
+    if (canDownloadResource(value)) {
       getConsole().printInfo("converting to local " + value);
-      ////资源下载存储的目录 /tmp/sessionId_resources/
       File resourceDir = new File(getConf().getVar(HiveConf.ConfVars.DOWNLOADED_RESOURCES_DIR));
       String destinationName = new Path(value).getName();
-      File destinationFile = new File(resourceDir, destinationName);//资源下载后存储的目录+名称
-      if (resourceDir.exists() && ! resourceDir.isDirectory()) {//判断该存储下载资源的目录必须存在,并且是目录
+      File destinationFile = new File(resourceDir, destinationName);
+      if (resourceDir.exists() && ! resourceDir.isDirectory()) {
         throw new RuntimeException("The resource directory is not a directory, resourceDir is set to" + resourceDir);
       }
-      if (!resourceDir.exists() && !resourceDir.mkdirs()) {//如果目录不存在,则创建
+      if (!resourceDir.exists() && !resourceDir.mkdirs()) {
         throw new RuntimeException("Couldn't create directory " + resourceDir);
       }
       try {
         FileSystem fs = FileSystem.get(new URI(value), conf);
-        //将value从其他机器拷贝到本地机器
         fs.copyToLocalFile(new Path(value), new Path(destinationFile.getCanonicalPath()));
         value = destinationFile.getCanonicalPath();
         if (convertToUnix && DosToUnix.isWindowsScript(destinationFile)) {
@@ -681,7 +649,6 @@ public class SessionState {
     return value;
   }
 
-  //从资源池中删除该value资源
   public boolean delete_resource(ResourceType t, String value) {
     if (resource_map.get(t) == null) {
       return false;
@@ -694,10 +661,6 @@ public class SessionState {
     return (resource_map.get(t).remove(value));
   }
 
-  /**
-   * 从t资源池中获取资源,该资源一定要在filter资源集合中
-   * 如果filter中是null则说明不过滤,将所有t的资源都返回即可
-   */
   public Set<String> list_resource(ResourceType t, List<String> filter) {
     if (resource_map.get(t) == null) {
       return null;
@@ -716,7 +679,6 @@ public class SessionState {
     }
   }
 
-  //删除ResourceType的所有对应的资源文件
   public void delete_resource(ResourceType t) {
     if (resource_map.get(t) != null) {
       for (String value : resource_map.get(t)) {
@@ -819,13 +781,11 @@ public class SessionState {
     this.currentDatabase = currentDatabase;
   }
 
-  //
   public void close() throws IOException {
     File resourceDir =
-        new File(getConf().getVar(HiveConf.ConfVars.DOWNLOADED_RESOURCES_DIR));////资源下载存储的目录 /tmp/sessionId_resources/
+        new File(getConf().getVar(HiveConf.ConfVars.DOWNLOADED_RESOURCES_DIR));
     LOG.debug("Removing resource dir " + resourceDir);
     try {
-    	//将该资源信息都删除掉
       if (resourceDir.exists()) {
         FileUtils.deleteDirectory(resourceDir);
       }
