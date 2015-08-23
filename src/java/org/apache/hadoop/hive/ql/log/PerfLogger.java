@@ -33,8 +33,8 @@ import org.apache.hadoop.hive.ql.session.SessionState;
  */
 public class PerfLogger {
   public static final String ACQUIRE_READ_WRITE_LOCKS = "acquireReadWriteLocks";
-  public static final String COMPILE = "compile";
-  public static final String PARSE = "parse";
+  public static final String COMPILE = "compile";//计算开始编译时间
+  public static final String PARSE = "parse";//开始解析的时间
   public static final String ANALYZE = "semanticAnalyze";
   public static final String DO_AUTHORIZATION = "doAuthorization";
   public static final String DRIVER_EXECUTE = "Driver.execute";
@@ -51,11 +51,13 @@ public class PerfLogger {
   public static final String PRE_HOOK = "PreHook.";
   public static final String POST_HOOK = "PostHook.";
   public static final String FAILURE_HOOK = "FailureHook.";
-  public static final String DRIVER_RUN = "Driver.run";
-  public static final String TIME_TO_SUBMIT = "TimeToSubmit";
+  public static final String DRIVER_RUN = "Driver.run";//hive的一个drive启动时间
+  public static final String TIME_TO_SUBMIT = "TimeToSubmit";//hive的一个jib提交的时间
 
+  //每一个线程一个该日志对象
   protected static final ThreadLocal<PerfLogger> perfLogger = new ThreadLocal<PerfLogger>();
 
+  //存储每一个method方法对应的开始时间以及结束时间
   protected final Map<String, Long> startTimes = new HashMap<String, Long>();
   protected final Map<String, Long> endTimes = new HashMap<String, Long>();
 
@@ -103,6 +105,7 @@ public class PerfLogger {
    * @param _log
    * @param method
    * @return long duration  the difference between now and startTime, or -1 if startTime is null
+   * 打印method方法的开始时间和结束时间,以及时间差
    */
   public long PerfLogEnd(Log _log, String method) {
     Long startTime = startTimes.get(method);

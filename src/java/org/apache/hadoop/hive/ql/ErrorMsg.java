@@ -166,11 +166,11 @@ public enum ErrorMsg {
   VIEW_PARTITION_TOTAL(10092, "At least one non-partitioning column must be present in view"),
   VIEW_PARTITION_MISMATCH(10093, "Rightmost columns in view output do not match "
       + "PARTITIONED ON clause"),
-  PARTITION_DYN_STA_ORDER(10094, "Dynamic partition cannot be the parent of a static partition"),
+  PARTITION_DYN_STA_ORDER(10094, "Dynamic partition cannot be the parent of a static partition"),//校验必须静态分区在最前面,然后后面跟着的是动态分区
   DYNAMIC_PARTITION_DISABLED(10095, "Dynamic partition is disabled. Either enable it by setting "
       + "hive.exec.dynamic.partition=true or specify partition column values"),
   DYNAMIC_PARTITION_STRICT_MODE(10096, "Dynamic partition strict mode requires at least one "
-      + "static partition column. To turn this off set hive.exec.dynamic.partition.mode=nonstrict"),
+      + "static partition column. To turn this off set hive.exec.dynamic.partition.mode=nonstrict"),//严格要求时,要求至少要有一个静态分区
   NONEXISTPARTCOL(10098, "Non-Partition column appears in the partition specification: "),
   UNSUPPORTED_TYPE(10099, "DATETIME type isn't supported yet. Please use "
       + "DATE or TIMESTAMP instead"),

@@ -61,7 +61,7 @@ public class Table implements org.apache.thrift.TBase<Table, Table._Fields>, jav
   private int lastAccessTime; // required
   private int retention; // required
   private StorageDescriptor sd; // required
-  private List<FieldSchema> partitionKeys; // required
+  private List<FieldSchema> partitionKeys; // required 总分区字段数
   private Map<String,String> parameters; // required
   private String viewOriginalText; // required
   private String viewExpandedText; // required

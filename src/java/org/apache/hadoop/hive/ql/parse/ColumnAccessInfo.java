@@ -26,6 +26,7 @@ import java.util.Set;
 public class ColumnAccessInfo {
   /**
    * Map of table name to names of accessed columns
+   * 一个table可以访问哪些属性
    */
   private final Map<String, Set<String>> tableToColumnAccessMap;
 

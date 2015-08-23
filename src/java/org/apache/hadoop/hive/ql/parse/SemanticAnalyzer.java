@@ -10313,12 +10313,12 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     int childCount = selNode.getChildCount();
     for (int i = 0; i < childCount; i++) {
       ASTNode selExpr = (ASTNode) selNode.getChild(i);
-      if (selExpr.getType() != HiveParser.TOK_SELEXPR) {
+      if (selExpr.getType() != HiveParser.TOK_SELEXPR) {//selexpr,必须是select查语句
         throw new SemanticException(String.format(
             "Only Select expressions supported in dynamic select list: %s", selectExprStr));
       }
       ASTNode expr = (ASTNode) selExpr.getChild(0);
-      if (expr.getType() == HiveParser.TOK_ALLCOLREF) {
+      if (expr.getType() == HiveParser.TOK_ALLCOLREF) {//不允许是select * 
         throw new SemanticException(
             String.format("'%s' column not allowed in dynamic select list", selectExprStr));
       }

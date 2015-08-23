@@ -83,18 +83,27 @@ public class ImportSemanticAnalyzer extends BaseSemanticAnalyzer {
       Tree fromTree = ast.getChild(0);
       // initialize load path
       String tmpPath = stripQuotes(fromTree.getText());
+      /**
+   * 格式化目标路径tmpPath
+   * 1.校验scheme必须在白名单中,即该scheme可用
+   * 2.权如果不存在,则用默认的权限
+   * 3.path如果不是以/开头,则要以/user/userxxx/开头,即允许相对路径不设置/,程序自行转换
+       */
       URI fromURI = EximUtil.getValidatedURI(conf, tmpPath);
 
       FileSystem fs = FileSystem.get(fromURI, conf);
-      String dbname = null;
-      CreateTableDesc tblDesc = null;
+      String dbname = null;///当前数据库
+      CreateTableDesc tblDesc = null;//表的描述
       List<AddPartitionDesc> partitionDescs = new ArrayList<AddPartitionDesc>();
       Path fromPath = new Path(fromURI.getScheme(), fromURI.getAuthority(),
           fromURI.getPath());
       try {
-        Path metadataPath = new Path(fromPath, METADATA_NAME);
+    	  //读取_metadata文件,生成table和分区对象
+        Path metadataPath = new Path(fromPath, METADATA_NAME);//读取_metadata文件
         Map.Entry<org.apache.hadoop.hive.metastore.api.Table,
         List<Partition>> rv =  EximUtil.readMetaData(fs, metadataPath);
+        
+        //当前数据库
         dbname = SessionState.get().getCurrentDatabase();
         org.apache.hadoop.hive.metastore.api.Table table = rv.getKey();
         tblDesc =  new CreateTableDesc(
@@ -122,6 +131,7 @@ public class ImportSemanticAnalyzer extends BaseSemanticAnalyzer {
                 .getSkewedColValues());
         tblDesc.setStoredAsSubDirectories(table.getSd().isStoredAsSubDirectories());
 
+        //设置table的分区信息
         List<FieldSchema> partCols = tblDesc.getPartCols();
         List<String> partColNames = new ArrayList<String>(partCols.size());
         for (FieldSchema fsc : partCols) {
@@ -147,14 +157,16 @@ public class ImportSemanticAnalyzer extends BaseSemanticAnalyzer {
       } catch (IOException e) {
         throw new SemanticException(ErrorMsg.INVALID_PATH.getMsg(), e);
       }
+      
+      //设置其他属性
       LOG.debug("metadata read and parsed");
       for (int i = 1; i < ast.getChildCount(); ++i) {
         ASTNode child = (ASTNode) ast.getChild(i);
         switch (child.getToken().getType()) {
-        case HiveParser.KW_EXTERNAL:
+        case HiveParser.KW_EXTERNAL://是否是外部表
           tblDesc.setExternal(true);
           break;
-        case HiveParser.TOK_TABLELOCATION:
+        case HiveParser.TOK_TABLELOCATION://数据存放位置
           String location = unescapeSQLString(child.getChild(0).getText());
           location = EximUtil.relativeToAbsolutePath(conf, location);
           tblDesc.setLocation(location);
@@ -202,6 +214,8 @@ public class ImportSemanticAnalyzer extends BaseSemanticAnalyzer {
           }
         }
       }
+      
+      //为每一个分区设置表名字
       if (tblDesc.getTableName() == null) {
         throw new SemanticException(ErrorMsg.NEED_TABLE_SPECIFICATION.getMsg());
       } else {
@@ -210,6 +224,7 @@ public class ImportSemanticAnalyzer extends BaseSemanticAnalyzer {
           addPartitionDesc.setTableName(tblDesc.getTableName());
         }
       }
+      
       Warehouse wh = new Warehouse(conf);
       try {
         Table table = db.getTable(tblDesc.getTableName());
@@ -359,6 +374,7 @@ public class ImportSemanticAnalyzer extends BaseSemanticAnalyzer {
     }
   }
 
+  //将分区参数转化成key=value,key=value形式字符串
   private static String partSpecToString(Map<String, String> partSpec) {
     StringBuilder sb = new StringBuilder();
     boolean firstTime = true;

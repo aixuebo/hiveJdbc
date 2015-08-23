@@ -35,7 +35,7 @@ import org.apache.hadoop.hive.ql.Context;
 
 /**
  * ParseDriver.
- *
+ * 对sql进行编码,到.g文件中找到匹配的信息后进行转换
  */
 public class ParseDriver {
 
@@ -58,10 +58,12 @@ public class ParseDriver {
   //do not have the ANTLRNoCaseStringStream implementation.
   public class ANTLRNoCaseStringStream extends ANTLRStringStream {
 
+	  //命令行作为参数
     public ANTLRNoCaseStringStream(String input) {
       super(input);
     }
 
+    //依次从命令行中获取一个字符,将其转换为大写字母
     @Override
     public int LA(int i) {
 

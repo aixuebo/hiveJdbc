@@ -31,6 +31,9 @@ import java.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * 表示数据库表的一个属性,包含name、类型、注释
+ */
 public class FieldSchema implements org.apache.thrift.TBase<FieldSchema, FieldSchema._Fields>, java.io.Serializable, Cloneable {
   private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("FieldSchema");
 

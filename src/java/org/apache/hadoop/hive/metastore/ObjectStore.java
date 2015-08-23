@@ -144,6 +144,7 @@ public class ObjectStore implements RawStore, Configurable {
     NO_STATE, OPEN, COMMITED, ROLLBACK
   }
 
+  //HiveConf.ConfVars.METASTORE_CACHE_PINOBJTYPES 远程通过thrift接口可以存储和访问的接口对象集合 Table,StorageDescriptor,SerDeInfo,Partition,Database,Type,FieldSchema,Order
   private static final Map<String, Class> PINCLASSMAP;
   static {
     Map<String, Class> map = new HashMap();
@@ -184,6 +185,7 @@ public class ObjectStore implements RawStore, Configurable {
     // Although an instance of ObjectStore is accessed by one thread, there may
     // be many threads with ObjectStore instances. So the static variables
     // pmf and prop need to be protected with locks.
+	//虽然ObjectStore实例是通过一个线程被访问的,但是他也可以被多个线程实例化,因此需要锁操作
     pmfPropLock.lock();
     try {
       isInitialized = false;
@@ -191,7 +193,7 @@ public class ObjectStore implements RawStore, Configurable {
       Properties propsFromConf = getDataSourceProps(conf);
       boolean propsChanged = !propsFromConf.equals(prop);
 
-      if (propsChanged) {
+      if (propsChanged) {//说明配置文件有所改动
         pmf = null;
         prop = null;
       }
@@ -208,6 +210,7 @@ public class ObjectStore implements RawStore, Configurable {
 
       initialize(propsFromConf);
 
+      //不被允许还没有被初始化完成
       if (!isInitialized) {
         throw new RuntimeException(
         "Unable to create persistence manager. Check dss.log for details");
@@ -227,6 +230,7 @@ public class ObjectStore implements RawStore, Configurable {
     }
   }
 
+  //根据配置属性进行初始化操作
   @SuppressWarnings("nls")
   private void initialize(Properties dsProps) {
     LOG.info("ObjectStore, initialize called");
@@ -241,7 +245,7 @@ public class ObjectStore implements RawStore, Configurable {
 
   /**
    * Properties specified in hive-default.xml override the properties specified
-   * in jpox.properties.
+     将配置文件中datanucleus和jdo的key都存储到Properties中
    */
   @SuppressWarnings("nls")
   private static Properties getDataSourceProps(Configuration conf) {
@@ -262,7 +266,7 @@ public class ObjectStore implements RawStore, Configurable {
 
     if (LOG.isDebugEnabled()) {
       for (Entry<Object, Object> e : prop.entrySet()) {
-        if (!e.getKey().equals(HiveConf.ConfVars.METASTOREPWD.varname)) {
+        if (!e.getKey().equals(HiveConf.ConfVars.METASTOREPWD.varname)) {//仅仅不打印密码这一项,其他key都要被打印
           LOG.debug(e.getKey() + " = " + e.getValue());
         }
       }
@@ -270,12 +274,14 @@ public class ObjectStore implements RawStore, Configurable {
     return prop;
   }
 
+  //获取实例化对象
   private static synchronized PersistenceManagerFactory getPMF() {
     if (pmf == null) {
       pmf = JDOHelper.getPersistenceManagerFactory(prop);
       DataStoreCache dsc = pmf.getDataStoreCache();
       if (dsc != null) {
         HiveConf conf = new HiveConf(ObjectStore.class);
+        //远程通过thrift接口可以存储和访问的接口对象集合 Table,StorageDescriptor,SerDeInfo,Partition,Database,Type,FieldSchema,Order
         String objTypes = HiveConf.getVar(conf, HiveConf.ConfVars.METASTORE_CACHE_PINOBJTYPES);
         LOG.info("Setting MetaStore object pin classes with hive.metastore.cache.pinobjtypes=\"" + objTypes + "\"");
         if (objTypes != null && objTypes.length() > 0) {
@@ -284,7 +290,7 @@ public class ObjectStore implements RawStore, Configurable {
           for (String type : typeTokens) {
             type = type.trim();
             if (PINCLASSMAP.containsKey(type)) {
-              dsc.pinAll(true, PINCLASSMAP.get(type));
+              dsc.pinAll(true, PINCLASSMAP.get(type));//对应的序列化和反序列化class
             }
             else {
               LOG.warn(type + " is not one of the pinnable object types: " + org.apache.commons.lang.StringUtils.join(PINCLASSMAP.keySet(), " "));
@@ -323,11 +329,11 @@ public class ObjectStore implements RawStore, Configurable {
       currentTransaction = pm.currentTransaction();
       currentTransaction.begin();
       transactionStatus = TXN_STATUS.OPEN;
-    } else {
+    } else {}
       // something is wrong since openTransactionCalls is greater than 1 but
       // currentTransaction is not active
       assert ((currentTransaction != null) && (currentTransaction.isActive()));
-    }
+    
     return currentTransaction.isActive();
   }
 

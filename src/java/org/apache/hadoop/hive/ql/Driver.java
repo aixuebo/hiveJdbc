@@ -373,6 +373,7 @@ public class Driver implements CommandProcessor {
     }
   }
 
+  //初始化一个session和命令
   public void saveSession(QueryState qs) {
     SessionState oldss = SessionState.get();
     if (oldss != null && oldss.getHiveOperation() != null) {
@@ -397,7 +398,7 @@ public class Driver implements CommandProcessor {
    */
   public int compile(String command, boolean resetTaskIds) {
     PerfLogger perfLogger = PerfLogger.getPerfLogger();
-    perfLogger.PerfLogBegin(LOG, PerfLogger.COMPILE);
+    perfLogger.PerfLogBegin(LOG, PerfLogger.COMPILE);//计算开始编译时间
 
     //holder for parent command type/string when executing reentrant queries
     QueryState queryState = new QueryState();
@@ -413,6 +414,7 @@ public class Driver implements CommandProcessor {
     saveSession(queryState);
 
     try {
+    	//对要编译的命令进行变量转换
       command = new VariableSubstitution().substitute(conf,command);
       ctx = new Context(conf);
       ctx.setTryCount(getTryCount());
@@ -420,13 +422,20 @@ public class Driver implements CommandProcessor {
       ctx.setHDFSCleanup(true);
 
       perfLogger.PerfLogBegin(LOG, PerfLogger.PARSE);
+      //对sql进行编码,到.g文件中找到匹配的信息后进行转换
       ParseDriver pd = new ParseDriver();
-      ASTNode tree = pd.parse(command, ctx);
+      ASTNode tree = pd.parse(command, ctx);//sql解析后的树对象
+      
+      
       tree = ParseUtils.findRootNonNullToken(tree);
-      perfLogger.PerfLogEnd(LOG, PerfLogger.PARSE);
+      perfLogger.PerfLogEnd(LOG, PerfLogger.PARSE);//结束解析
 
-      perfLogger.PerfLogBegin(LOG, PerfLogger.ANALYZE);
+      perfLogger.PerfLogBegin(LOG, PerfLogger.ANALYZE);//开始分析
+      
+      //基础分隔,分隔行的拆分符以及输入输出对象
       BaseSemanticAnalyzer sem = SemanticAnalyzerFactory.get(conf, tree);
+      
+      //获取监听hive的sql解析后,进行分析阶段的hook对象集合
       List<HiveSemanticAnalyzerHook> saHooks =
           getHooks(HiveConf.ConfVars.SEMANTIC_ANALYZER_HOOK,
               HiveSemanticAnalyzerHook.class);
@@ -447,19 +456,19 @@ public class Driver implements CommandProcessor {
         sem.analyze(tree, ctx);
       }
 
-      LOG.info("Semantic Analysis Completed");
+      LOG.info("Semantic Analysis Completed");//执行完分析阶段
 
       // validate the plan
-      sem.validate();
-      perfLogger.PerfLogEnd(LOG, PerfLogger.ANALYZE);
+      sem.validate();//对计划进行校验
+      perfLogger.PerfLogEnd(LOG, PerfLogger.ANALYZE);//完成分析
 
       plan = new QueryPlan(command, sem, perfLogger.getStartTime(PerfLogger.DRIVER_RUN));
 
-      // test Only - serialize the query plan and deserialize it
+      // test Only - serialize the query plan and deserialize it对查询计划进行序列化和反序列化
       if ("true".equalsIgnoreCase(System.getProperty("test.serialize.qplan"))) {
 
         String queryPlanFileName = ctx.getLocalScratchDir(true) + Path.SEPARATOR_CHAR
-            + "queryplan.xml";
+            + "queryplan.xml";//序列化文件的存储路径
         LOG.info("query plan = " + queryPlanFileName);
         queryPlanFileName = new Path(queryPlanFileName).toUri().getPath();
 
@@ -485,7 +494,7 @@ public class Driver implements CommandProcessor {
       // get the output schema
       schema = getSchema(sem, conf);
 
-      //do the authorization check
+      //do the authorization check 权限校验
       if (HiveConf.getBoolVar(conf,
           HiveConf.ConfVars.HIVE_AUTHORIZATION_ENABLED)) {
         try {
@@ -949,10 +958,12 @@ public class Driver implements CommandProcessor {
       return new CommandProcessorResponse(12, errorMessage, SQLState);
     }
 
+    //hive驱动的上下文
     HiveDriverRunHookContext hookContext = new HiveDriverRunHookContextImpl(conf, command);
     // Get all the driver run hooks and pre-execute them.
     List<HiveDriverRunHook> driverRunHooks;
     try {
+    	//逗号分隔的hook监听对象实现类集合
       driverRunHooks = getHooks(HiveConf.ConfVars.HIVE_DRIVER_RUN_HOOKS,
           HiveDriverRunHook.class);
       for (HiveDriverRunHook driverRunHook : driverRunHooks) {

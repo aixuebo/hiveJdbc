@@ -67,6 +67,10 @@ public class EximUtil {
   /**
    * Initialize the URI where the exported data collection is
    * to created for export, or is present for import
+   * 格式化目标路径dcPath
+   * 1.校验scheme必须在白名单中,即该scheme可用
+   * 2.权如果不存在,则用默认的权限
+   * 3.path如果不是以/开头,则要以/user/userxxx/开头,即允许相对路径不设置/,程序自行转换
    */
   static URI getValidatedURI(HiveConf conf, String dcPath) throws SemanticException {
     try {
@@ -96,7 +100,7 @@ public class EximUtil {
       }
 
       // if scheme is specified but not authority then use the default
-      // authority
+      // authority获取默认的权限
       if (StringUtils.isEmpty(authority)) {
         URI defaultURI = FileSystem.get(conf).getUri();
         authority = defaultURI.getAuthority();
@@ -105,7 +109,7 @@ public class EximUtil {
       LOG.debug("Scheme:" + scheme + ", authority:" + authority + ", path:" + path);
       Collection<String> eximSchemes = conf.getStringCollection(
           HiveConf.ConfVars.HIVE_EXIM_URI_SCHEME_WL.varname);
-      if (!eximSchemes.contains(scheme)) {
+      if (!eximSchemes.contains(scheme)) {//scheme必须有效
         throw new SemanticException(
             ErrorMsg.INVALID_PATH.getMsg(
                 "only the following file systems accepted for export/import : "
@@ -201,31 +205,44 @@ public class EximUtil {
     }
   }
 
-  public static Map.Entry<Table, List<Partition>>
-      readMetaData(FileSystem fs, Path metadataPath)
-      throws IOException, SemanticException {
+  /**
+   * 读取_metadata文件
+   * @param fs 文件系统
+   * @param metadataPath 读取_metadata文件文件路径 
+   * @return table和分区对象
+   * @throws IOException
+   * @throws SemanticException
+   */
+  public static Map.Entry<Table, List<Partition>> readMetaData(FileSystem fs, Path metadataPath) throws IOException, SemanticException {
     FSDataInputStream mdstream = null;
     try {
       mdstream = fs.open(metadataPath);
       byte[] buffer = new byte[1024];
+      //文件内容都写入该输出流
       ByteArrayOutputStream sb = new ByteArrayOutputStream();
       int read = mdstream.read(buffer);
       while (read != -1) {
         sb.write(buffer, 0, read);
         read = mdstream.read(buffer);
       }
+      //对文件的内容进行utf-8编码,转化成字符串
       String md = new String(sb.toByteArray(), "UTF-8");
+      //该内容是json格式的,因此转化为json对象
       JSONObject jsonContainer = new JSONObject(md);
+      
       String version = jsonContainer.getString("version");
       String fcversion = null;
       try {
         fcversion = jsonContainer.getString("fcversion");
       } catch (JSONException ignored) {}
       checkCompatibility(version, fcversion);
+      
       String tableDesc = jsonContainer.getString("table");
       Table table = new Table();
       TDeserializer deserializer = new TDeserializer(new TJSONProtocol.Factory());
       deserializer.deserialize(table, tableDesc, "UTF-8");
+      
+      
       JSONArray jsonPartitions = new JSONArray(jsonContainer.getString("partitions"));
       List<Partition> partitionsList = new ArrayList<Partition>(jsonPartitions.length());
       for (int i = 0; i < jsonPartitions.length(); ++i) {

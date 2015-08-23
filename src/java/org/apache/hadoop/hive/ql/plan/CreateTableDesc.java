@@ -44,34 +44,44 @@ import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoFactory;
 
 /**
  * CreateTableDesc.
- *
+ * CREATE [EXTERNAL] TABLE [IF NOT EXISTS] table_name
+  [(col_name data_type [COMMENT col_comment], ...)]
+  [COMMENT table_comment]
+  [PARTITIONED BY (col_name data_type
+    [COMMENT col_comment], ...)]
+  [CLUSTERED BY (col_name, col_name, ...)
+  [SORTED BY (col_name [ASC|DESC], ...)] 可以利用SORT BY 对数据进行排序
+  INTO num_buckets BUCKETS]
+  [ROW FORMAT row_format]
+  [STORED AS file_format]
+  [LOCATION hdfs_path]
  */
 @Explain(displayName = "Create Table")
 public class CreateTableDesc extends DDLDesc implements Serializable {
   private static final long serialVersionUID = 1L;
   private static Log LOG = LogFactory.getLog(CreateTableDesc.class);
-  String databaseName;
-  String tableName;
-  boolean isExternal;
-  ArrayList<FieldSchema> cols;
-  ArrayList<FieldSchema> partCols;
+  String databaseName;//表所在数据库名字
+  String tableName;//表名字
+  boolean isExternal;//是否是外部表
+  ArrayList<FieldSchema> cols;//该表的所有属性集合FieldSchema
+  ArrayList<FieldSchema> partCols;//分区字段集合
   ArrayList<String> bucketCols;
-  ArrayList<Order> sortCols;
+  ArrayList<Order> sortCols;//可以利用SORT BY 对数据进行排序
   int numBuckets;
-  String fieldDelim;
-  String fieldEscape;
-  String collItemDelim;
-  String mapKeyDelim;
-  String lineDelim;
-  String comment;
-  String inputFormat;
-  String outputFormat;
-  String location;
+  String fieldDelim;//每一个属性的拆分字符
+  String fieldEscape;//每一个属性的拆分字符 转义信息
+  String collItemDelim;//该表中集合对象的拆分字符
+  String mapKeyDelim;//该表中map对象的key-value之间拆分字符
+  String lineDelim;//换行拆分字符
+  String comment;//注释
+  String inputFormat;//输入格式
+  String outputFormat;//输出格式
+  String location;//该表数据的存储路径
   String serName;
   String storageHandler;
   Map<String, String> serdeProps;
   Map<String, String> tblProps;
-  boolean ifNotExists;
+  boolean ifNotExists;//是否设置了不存在属性
   List<String> skewedColNames;
   List<List<String>> skewedColValues;
   boolean isStoredAsSubDirectories = false;

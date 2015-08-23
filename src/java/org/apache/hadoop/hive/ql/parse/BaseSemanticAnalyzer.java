@@ -76,7 +76,7 @@ import org.apache.hadoop.mapred.TextInputFormat;
 
 /**
  * BaseSemanticAnalyzer.
- *
+ * 基础分隔,分隔行的拆分符以及输入输出对象
  */
 @SuppressWarnings("deprecation")
 public abstract class BaseSemanticAnalyzer {
@@ -107,6 +107,7 @@ public abstract class BaseSemanticAnalyzer {
    */
   protected LineageInfo linfo;
   protected TableAccessInfo tableAccessInfo;
+  //返回table可以访问哪些属性
   protected ColumnAccessInfo columnAccessInfo;
 
   protected static final String TEXTFILE_INPUT = TextInputFormat.class
@@ -128,12 +129,13 @@ public abstract class BaseSemanticAnalyzer {
   protected static final String ORCFILE_SERDE = OrcSerde.class
       .getName();
 
+  //设置行分隔符信息
   class RowFormatParams {
-    String fieldDelim = null;
-    String fieldEscape = null;
-    String collItemDelim = null;
-    String mapKeyDelim = null;
-    String lineDelim = null;
+    String fieldDelim = null;//分隔每一个属性
+    String fieldEscape = null;//分隔属性时候用的转义字符
+    String collItemDelim = null;//分隔集合,例arr数组,或者map中的每一个key-value
+    String mapKeyDelim = null;//分割map中的key-value
+    String lineDelim = null;//分隔每行数据,必须是\n
 
     protected void analyzeRowFormat(AnalyzeCreateCommonVars shared, ASTNode child) throws SemanticException {
       child = (ASTNode) child.getChild(0);
@@ -141,7 +143,7 @@ public abstract class BaseSemanticAnalyzer {
       for (int numC = 0; numC < numChildRowFormat; numC++) {
         ASTNode rowChild = (ASTNode) child.getChild(numC);
         switch (rowChild.getToken().getType()) {
-        case HiveParser.TOK_TABLEROWFORMATFIELD:
+        case HiveParser.TOK_TABLEROWFORMATFIELD://fieldDelim
           fieldDelim = unescapeSQLString(rowChild.getChild(0)
               .getText());
           if (rowChild.getChildCount() >= 2) {
@@ -149,15 +151,15 @@ public abstract class BaseSemanticAnalyzer {
                 .getChild(1).getText());
           }
           break;
-        case HiveParser.TOK_TABLEROWFORMATCOLLITEMS:
+        case HiveParser.TOK_TABLEROWFORMATCOLLITEMS://collItemDelim
           collItemDelim = unescapeSQLString(rowChild
               .getChild(0).getText());
           break;
-        case HiveParser.TOK_TABLEROWFORMATMAPKEYS:
+        case HiveParser.TOK_TABLEROWFORMATMAPKEYS://mapKeyDelim
           mapKeyDelim = unescapeSQLString(rowChild.getChild(0)
               .getText());
           break;
-        case HiveParser.TOK_TABLEROWFORMATLINES:
+        case HiveParser.TOK_TABLEROWFORMATLINES://lineDelim
           lineDelim = unescapeSQLString(rowChild.getChild(0)
               .getText());
           if (!lineDelim.equals("\n")
@@ -178,25 +180,34 @@ public abstract class BaseSemanticAnalyzer {
     Map<String, String> serdeProps = new HashMap<String, String>();
   }
 
+  /**
+   * 输入/输出的格式化类型
+   */
   class StorageFormat {
     String inputFormat = null;
     String outputFormat = null;
     String storageHandler = null;
 
+    /**
+     * 
+     * @param child
+     * @param shared 全局的参数集合
+     * @return
+     */
     protected boolean fillStorageFormat(ASTNode child, AnalyzeCreateCommonVars shared) {
       boolean storageFormat = false;
       switch(child.getToken().getType()) {
-      case HiveParser.TOK_TBLSEQUENCEFILE:
+      case HiveParser.TOK_TBLSEQUENCEFILE://SequenceFile
         inputFormat = SEQUENCEFILE_INPUT;
         outputFormat = SEQUENCEFILE_OUTPUT;
         storageFormat = true;
         break;
-      case HiveParser.TOK_TBLTEXTFILE:
+      case HiveParser.TOK_TBLTEXTFILE://textFile
         inputFormat = TEXTFILE_INPUT;
         outputFormat = TEXTFILE_OUTPUT;
         storageFormat = true;
         break;
-      case HiveParser.TOK_TBLRCFILE:
+      case HiveParser.TOK_TBLRCFILE://RCFile
         inputFormat = RCFILE_INPUT;
         outputFormat = RCFILE_OUTPUT;
         if (shared.serde == null) {
@@ -204,20 +215,28 @@ public abstract class BaseSemanticAnalyzer {
         }
         storageFormat = true;
         break;
-      case HiveParser.TOK_TBLORCFILE:
+      case HiveParser.TOK_TBLORCFILE://ORC
         inputFormat = ORCFILE_INPUT;
         outputFormat = ORCFILE_OUTPUT;
         shared.serde = ORCFILE_SERDE;
         storageFormat = true;
         break;
-      case HiveParser.TOK_TABLEFILEFORMAT:
+      case HiveParser.TOK_TABLEFILEFORMAT://自定义输入/输出格式
         inputFormat = unescapeSQLString(child.getChild(0).getText());
         outputFormat = unescapeSQLString(child.getChild(1).getText());
         storageFormat = true;
         break;
+        /**
+         * child:[storageHandler类名,
+         	[
+         	 [key,value],
+         	 [key,value]
+         	]
+         ]
+         */
       case HiveParser.TOK_STORAGEHANDLER:
         storageHandler = unescapeSQLString(child.getChild(0).getText());
-        if (child.getChildCount() == 2) {
+        if (child.getChildCount() == 2) {// 格式N个child子节点,每一个子节点有两个小节点,分频存储key-value
           readProps(
             (ASTNode) (child.getChild(1).getChild(0)),
             shared.serdeProps);
@@ -228,8 +247,9 @@ public abstract class BaseSemanticAnalyzer {
       return storageFormat;
     }
 
+    //设置默认的文件输入/输出类型
     protected void fillDefaultStorageFormat(AnalyzeCreateCommonVars shared) {
-      if ((inputFormat == null) && (storageHandler == null)) {
+      if ((inputFormat == null) && (storageHandler == null)) {//如果没有设置,则去设置
         if ("SequenceFile".equalsIgnoreCase(conf.getVar(HiveConf.ConfVars.HIVEDEFAULTFILEFORMAT))) {
           inputFormat = SEQUENCEFILE_INPUT;
           outputFormat = SEQUENCEFILE_OUTPUT;
@@ -250,6 +270,9 @@ public abstract class BaseSemanticAnalyzer {
 
   }
 
+  /**
+   * 基础分隔,分隔行的拆分符以及输入输出对象
+   */
   public BaseSemanticAnalyzer(HiveConf conf) throws SemanticException {
     try {
       this.conf = conf;
@@ -278,12 +301,14 @@ public abstract class BaseSemanticAnalyzer {
     this.ctx = ctx;
   }
 
+  //hive的sql解析完成后,进行分析阶段
   public void analyze(ASTNode ast, Context ctx) throws SemanticException {
     initCtx(ctx);
     init();
     analyzeInternal(ast);
   }
 
+  //对分析后的数据进行校验正确性
   public void validate() throws SemanticException {
     // Implementations may choose to override this
   }
@@ -311,6 +336,7 @@ public abstract class BaseSemanticAnalyzer {
     rootTasks = new ArrayList<Task<? extends Serializable>>();
   }
 
+  //去除``字符信息,该字符应用于数据库表名字
   public static String stripIdentifierQuotes(String val) {
     if ((val.charAt(0) == '`' && val.charAt(val.length() - 1) == '`')) {
       val = val.substring(1, val.length() - 1);
@@ -318,10 +344,12 @@ public abstract class BaseSemanticAnalyzer {
     return val;
   }
 
+  //去除单引号和双引号
   public static String stripQuotes(String val) {
     return PlanUtils.stripQuotes(val);
   }
 
+  //转码
   public static String charSetString(String charSetName, String charSetString)
       throws SemanticException {
     try {
@@ -359,19 +387,28 @@ public abstract class BaseSemanticAnalyzer {
    * Get dequoted name from a table/column node.
    * @param tableOrColumnNode the table or column node
    * @return for table node, db.tab or tab. for column node column.
+   * 获取数据库和表名字,并且将``删除掉,返回dbName + "." + tableName
+   * 或者获取列属性的名字,返回列名字
    */
   public static String getUnescapedName(ASTNode tableOrColumnNode) {
     return getUnescapedName(tableOrColumnNode, null);
   }
 
+  /**
+   * 获取数据库和表名字,并且将``删除掉,返回dbName + "." + tableName
+   * 或者获取列属性的名字,返回列名字
+   * @param tableOrColumnNode等待解析的对象
+   * @param currentDatabase 当前使用的数据库
+   */
   public static String getUnescapedName(ASTNode tableOrColumnNode, String currentDatabase) {
     if (tableOrColumnNode.getToken().getType() == HiveParser.TOK_TABNAME) {
       // table node
-      if (tableOrColumnNode.getChildCount() == 2) {
+      if (tableOrColumnNode.getChildCount() == 2) {///包含两个参数
         String dbName = unescapeIdentifier(tableOrColumnNode.getChild(0).getText());
         String tableName = unescapeIdentifier(tableOrColumnNode.getChild(1).getText());
         return dbName + "." + tableName;
       }
+      //否则说明仅仅包含table,使用的是默认的数据库
       String tableName = unescapeIdentifier(tableOrColumnNode.getChild(0).getText());
       if (currentDatabase != null) {
         return currentDatabase + "." + tableName;
@@ -392,11 +429,12 @@ public abstract class BaseSemanticAnalyzer {
    * @param node the table node
    * @return the table name without schema qualification
    *         (i.e., if name is "db.table" or "table", returns "table")
+   *   返回数据库表名字
    */
   public static String getUnescapedUnqualifiedTableName(ASTNode node) {
     assert node.getChildCount() <= 2;
 
-    if (node.getChildCount() == 2) {
+    if (node.getChildCount() == 2) {//说明包含数据库也包含表名字,因此获取第二个位置的表名字
       node = (ASTNode) node.getChild(1);
     }
 
@@ -408,6 +446,7 @@ public abstract class BaseSemanticAnalyzer {
    * Remove the encapsulating "`" pair from the identifier. We allow users to
    * use "`" to escape identifier for table names, column names and aliases, in
    * case that coincide with Hive language keywords.
+   * 去除``字符信息,该字符应用于数据库表名字
    */
   public static String unescapeIdentifier(String val) {
     if (val == null) {
@@ -423,8 +462,10 @@ public abstract class BaseSemanticAnalyzer {
    * Converts parsed key/value properties pairs into a map.
    *
    * @param prop ASTNode parent of the key/value pairs
+   *   格式N个child子节点,每一个子节点有两个小节点,分频存储key-value
    *
    * @param mapProp property map which receives the mappings
+   * 将prop中的每一个数据都会有key-value,将其存储早map中
    */
   public static void readProps(
     ASTNode prop, Map<String, String> mapProp) {
@@ -442,6 +483,9 @@ public abstract class BaseSemanticAnalyzer {
 
   private static final int[] multiplier = new int[] {1000, 100, 10, 1};
 
+  /**
+   * 转义sql
+   */
   @SuppressWarnings("nls")
   public static String unescapeSQLString(String b) {
 
@@ -454,6 +498,7 @@ public abstract class BaseSemanticAnalyzer {
     for (int i = 0; i < b.length(); i++) {
 
       char currentChar = b.charAt(i);
+      //过滤掉单引号和双引号
       if (enclosure == null) {
         if (currentChar == '\'' || b.charAt(i) == '\"') {
           enclosure = currentChar;
@@ -467,6 +512,7 @@ public abstract class BaseSemanticAnalyzer {
         continue;
       }
 
+      //如果是u+4位数字,表示unicode,将其转换成code字符串拼接
       if (currentChar == '\\' && (i + 6 < b.length()) && b.charAt(i + 1) == 'u') {
         int code = 0;
         int base = i + 2;
@@ -479,6 +525,7 @@ public abstract class BaseSemanticAnalyzer {
         continue;
       }
 
+      //如果是\+3位数字.表示asscii,则也进行处理
       if (currentChar == '\\' && (i + 4 < b.length())) {
         char i1 = b.charAt(i + 1);
         char i2 = b.charAt(i + 2);
@@ -495,6 +542,7 @@ public abstract class BaseSemanticAnalyzer {
         }
       }
 
+      //转义
       if (currentChar == '\\' && (i + 2 < b.length())) {
         char n = b.charAt(i + 1);
         switch (n) {
@@ -559,6 +607,7 @@ public abstract class BaseSemanticAnalyzer {
     return null;
   }
 
+  //获取所有的数据库属性集合
   protected List<FieldSchema> getColumns(ASTNode ast) throws SemanticException {
     return getColumns(ast, true);
   }
@@ -572,8 +621,11 @@ public abstract class BaseSemanticAnalyzer {
 
   /**
    * Get the list of FieldSchema out of the ASTNode.
+   * 获取数据库属性集合
+   * lowerCase:true,表示将name属性名字改成小写
    */
   public static List<FieldSchema> getColumns(ASTNode ast, boolean lowerCase) throws SemanticException {
+	  //FieldSchema 表示数据库表的一个属性,包含name、类型、注释
     List<FieldSchema> colList = new ArrayList<FieldSchema>();
     int numCh = ast.getChildCount();
     for (int i = 0; i < numCh; i++) {
@@ -601,6 +653,7 @@ public abstract class BaseSemanticAnalyzer {
     return colList;
   }
 
+  //仅仅获取数据库属性名称,并且输出都是小写的name
   protected List<String> getColumnNames(ASTNode ast) {
     List<String> colList = new ArrayList<String>();
     int numCh = ast.getChildCount();
@@ -611,6 +664,11 @@ public abstract class BaseSemanticAnalyzer {
     return colList;
   }
 
+  
+  /**
+   * 返回数据库属性组装成的Order对象,用于order by子句中使用
+   * 每一个Order对象包含属性name的小写,以及该属性的排序规则,倒序还是正序
+   */
   protected List<Order> getColumnNamesOrder(ASTNode ast) {
     List<Order> colList = new ArrayList<Order>();
     int numCh = ast.getChildCount();
@@ -627,6 +685,12 @@ public abstract class BaseSemanticAnalyzer {
     return colList;
   }
 
+  /**
+   * 格式化数据库的属性的类型
+   * @param typeNode 数据库属性类型节点
+   * @return
+   * @throws SemanticException
+   */
   protected static String getTypeStringFromAST(ASTNode typeNode)
       throws SemanticException {
     switch (typeNode.getType()) {
@@ -657,8 +721,8 @@ public abstract class BaseSemanticAnalyzer {
     StringBuilder buffer = new StringBuilder(typeStr);
     for (int i = 0; i < children; i++) {
       ASTNode child = (ASTNode) typeNode.getChild(i);
-      buffer.append(unescapeIdentifier(child.getChild(0).getText())).append(":");
-      buffer.append(getTypeStringFromAST((ASTNode) child.getChild(1)));
+      buffer.append(unescapeIdentifier(child.getChild(0).getText())).append(":");//属性name
+      buffer.append(getTypeStringFromAST((ASTNode) child.getChild(1)));//格式化数据库的属性的类型
       if (i < children - 1) {
         buffer.append(",");
       }
@@ -695,11 +759,11 @@ public abstract class BaseSemanticAnalyzer {
   public static class tableSpec {
     public String tableName;
     public Table tableHandle;
-    public Map<String, String> partSpec; // has to use LinkedHashMap to enforce order
+    public Map<String, String> partSpec; // has to use LinkedHashMap to enforce order按照设置分区的顺序,进行排序分区,key是属性,value是分区值
     public Partition partHandle;
-    public int numDynParts; // number of dynamic partition columns
+    public int numDynParts; // number of dynamic partition columns多少个动态分区属性
     public List<Partition> partitions; // involved partitions in TableScanOperator/FileSinkOperator
-    public static enum SpecType {TABLE_ONLY, STATIC_PARTITION, DYNAMIC_PARTITION};
+    public static enum SpecType {TABLE_ONLY, STATIC_PARTITION, DYNAMIC_PARTITION};//没有分区的数据库表,静态分区,动态分区
     public SpecType specType;
 
     public tableSpec(Hive db, HiveConf conf, ASTNode ast)
@@ -726,6 +790,7 @@ public abstract class BaseSemanticAnalyzer {
           tableName = conf.getVar(HiveConf.ConfVars.HIVETESTMODEPREFIX)
               + tableName;
         }
+        //非创建table
         if (ast.getToken().getType() != HiveParser.TOK_CREATETABLE) {
           tableHandle = db.getTable(tableName);
         }
@@ -737,27 +802,29 @@ public abstract class BaseSemanticAnalyzer {
             .getChild(childIndex), e.getMessage()), e);
       }
 
-      // get partition metadata if partition specified
+      // get partition metadata if partition specified 设置分区属性如果存在分区属性的话
       if (ast.getChildCount() == 2 && ast.getToken().getType() != HiveParser.TOK_CREATETABLE) {
         childIndex = 1;
         ASTNode partspec = (ASTNode) ast.getChild(1);
         partitions = new ArrayList<Partition>();
-        // partSpec is a mapping from partition column name to its value.
+        // partSpec is a mapping from partition column name to its value.设置分区
         partSpec = new LinkedHashMap<String, String>(partspec.getChildCount());
+        //解析分区信息
         for (int i = 0; i < partspec.getChildCount(); ++i) {
           ASTNode partspec_val = (ASTNode) partspec.getChild(i);
           String val = null;
           String colName = unescapeIdentifier(partspec_val.getChild(0).getText().toLowerCase());
-          if (partspec_val.getChildCount() < 2) { // DP in the form of T partition (ds, hr)
+          if (partspec_val.getChildCount() < 2) { // DP in the form of T partition (ds, hr) 仅仅设置了属性name,而没有设置值,因此是属于动态分区
             if (allowDynamicPartitionsSpec) {
               ++numDynParts;
             } else {
               throw new SemanticException(ErrorMsg.INVALID_PARTITION
                                                        .getMsg(" - Dynamic partitions not allowed"));
             }
-          } else { // in the form of T partition (ds="2010-03-03")
+          } else { // in the form of T partition (ds="2010-03-03") 静态分区,获取该属性对应的分区值2010-03-03
             val = stripQuotes(partspec_val.getChild(1).getText());
           }
+          //设置属性和分区值
           partSpec.put(colName, val);
         }
 
@@ -765,18 +832,21 @@ public abstract class BaseSemanticAnalyzer {
         validatePartSpec(tableHandle, partSpec, ast, conf);
 
         // check if the partition spec is valid
-        if (numDynParts > 0) {
-          List<FieldSchema> parts = tableHandle.getPartitionKeys();
-          int numStaPart = parts.size() - numDynParts;
+        if (numDynParts > 0) {//说明是动态分区
+          List<FieldSchema> parts = tableHandle.getPartitionKeys();//总分区字段数
+          int numStaPart = parts.size() - numDynParts;//有多少静态分区
+          //严格要求时,要求至少要有一个静态分区,因此不允许numStaPart=0,即numStaPart=0说明全都是动态分区
           if (numStaPart == 0 &&
               conf.getVar(HiveConf.ConfVars.DYNAMICPARTITIONINGMODE).equalsIgnoreCase("strict")) {
             throw new SemanticException(ErrorMsg.DYNAMIC_PARTITION_STRICT_MODE.getMsg());
           }
 
-          // check the partitions in partSpec be the same as defined in table schema
+          // check the partitions in partSpec be the same as defined in table schema分区数量一定是要匹配的
           if (partSpec.keySet().size() != parts.size()) {
             ErrorPartSpec(partSpec, parts);
           }
+          
+          //分区的顺序必须一致,以及分区的属性必须一致,即不仅仅是数量一致的就可以了
           Iterator<String> itrPsKeys = partSpec.keySet().iterator();
           for (FieldSchema fs: parts) {
             if (!itrPsKeys.next().toLowerCase().equals(fs.getName().toLowerCase())) {
@@ -785,9 +855,10 @@ public abstract class BaseSemanticAnalyzer {
           }
 
           // check if static partition appear after dynamic partitions
+          //校验必须静态分区在最前面,然后后面跟着的是动态分区
           for (FieldSchema fs: parts) {
             if (partSpec.get(fs.getName().toLowerCase()) == null) {
-              if (numStaPart > 0) { // found a DP, but there exists ST as subpartition
+              if (numStaPart > 0) { // found a DP, but there exists ST as subpartition,静态分区大于0,说明动态分区已经插入到静态分区前面了,因此出现异常
                 throw new SemanticException(
                     ErrorMsg.PARTITION_DYN_STA_ORDER.getMsg(ast.getChild(childIndex)));
               }
@@ -798,12 +869,12 @@ public abstract class BaseSemanticAnalyzer {
           }
           partHandle = null;
           specType = SpecType.DYNAMIC_PARTITION;
-        } else {
+        } else {//说明是静态分区
           try {
-            if (allowPartialPartitionsSpec) {
+            if (allowPartialPartitionsSpec) {//允许并行分区执行
               partitions = db.getPartitions(tableHandle, partSpec);
             } else {
-              // this doesn't create partition.
+              // this doesn't create partition.创建每一个分区的处理对象
               partHandle = db.getPartition(tableHandle, partSpec, false);
               if (partHandle == null) {
                 // if partSpec doesn't exists in DB, return a delegate one
@@ -819,7 +890,7 @@ public abstract class BaseSemanticAnalyzer {
           }
           specType = SpecType.STATIC_PARTITION;
         }
-      } else {
+      } else {//说明存在分区
         specType = SpecType.TABLE_ONLY;
       }
     }
@@ -898,6 +969,9 @@ public abstract class BaseSemanticAnalyzer {
     this.columnAccessInfo = columnAccessInfo;
   }
 
+  /**
+   * 获取分区信息,最终返回到map中,key是分区字段,value是分区值
+   */
   protected HashMap<String, String> extractPartitionSpecs(Tree partspec)
       throws SemanticException {
     HashMap<String, String> partSpec = new LinkedHashMap<String, String>();
@@ -914,16 +988,16 @@ public abstract class BaseSemanticAnalyzer {
    * partition cols, for table partitioned by ds, hr, min valid ones are
    * (ds='2008-04-08'), (ds='2008-04-08', hr='12'), (ds='2008-04-08', hr='12', min='30')
    * invalid one is for example (ds='2008-04-08', min='30')
-   * @param spec specification key-value map
+   * @param spec specification key-value map等待校验的数据,例如ds='2008-04-08', min='30',如果规则是ds, hr, min,则校验分区失败
    * @return true if the specification is prefix; never returns false, but throws
    * @throws HiveException
    */
   final public boolean isValidPrefixSpec(Table tTable, Map<String, String> spec)
  throws HiveException {
 
-    // TODO - types need to be checked.
+    // TODO - types need to be checked. 获取该table的总分区字段数
     List<FieldSchema> partCols = tTable.getPartitionKeys();
-    if (partCols == null || (partCols.size() == 0)) {
+    if (partCols == null || (partCols.size() == 0)) {//校验没有分区的情况
       if (spec != null) {
         throw new HiveException(
             "table is not partitioned but partition spec exists: "
@@ -939,15 +1013,18 @@ public abstract class BaseSemanticAnalyzer {
 
     Iterator<String> itrPsKeys = spec.keySet().iterator();
     for (FieldSchema fs: partCols) {
-      if(!itrPsKeys.hasNext()) {
+      if(!itrPsKeys.hasNext()) {//说明总分区比参数多,因此是可以的
         break;
       }
+      
+      //如果分区顺序不一致,则说明不允许
       if (!itrPsKeys.next().toLowerCase().equals(
               fs.getName().toLowerCase())) {
         ErrorPartSpec(spec, partCols);
       }
     }
 
+    //如果table定义的分区没有内容了,而参数还依然有,则说明也有问题
     if(itrPsKeys.hasNext()) {
       ErrorPartSpec(spec, partCols);
     }
@@ -955,6 +1032,12 @@ public abstract class BaseSemanticAnalyzer {
     return true;
   }
 
+  /**
+   * 打印错误信息
+   * @param partSpec 解析的分区数量
+   * @param parts 总的分区数量
+   * @throws SemanticException 两个分区数量不匹配
+   */
   private static void ErrorPartSpec(Map<String, String> partSpec,
       List<FieldSchema> parts) throws SemanticException {
     StringBuilder sb =
@@ -1011,7 +1094,7 @@ public abstract class BaseSemanticAnalyzer {
    *
    * use case:
    *   create table xyz list bucketed (col1) with skew (1,2,5)
-   *   AST Node is for (1,2,5)
+   *   AST Node is for (1,2,5) 获取1 2 5三个值的集合
    * @param ast
    * @return
    */
@@ -1036,7 +1119,7 @@ public abstract class BaseSemanticAnalyzer {
     List<String> result = null;
     Tree leafVNode = ((ASTNode) node).getChild(0);
     if (leafVNode == null) {
-      throw new SemanticException(
+      throw new SemanticException(//No skewed values.
           ErrorMsg.SKEWED_TABLE_NO_COLUMN_VALUE.getMsg());
     } else {
       ASTNode lVAstNode = (ASTNode) leafVNode;
@@ -1057,6 +1140,7 @@ public abstract class BaseSemanticAnalyzer {
    * @param child
    * @return
    * @throws SemanticException
+   * 获取分桶的属性集合
    */
   protected List<String> analyzeSkewedTablDDLColNames(List<String> skewedColNames, ASTNode child)
       throws SemanticException {
@@ -1161,6 +1245,7 @@ public abstract class BaseSemanticAnalyzer {
 
     Map<ASTNode, ExprNodeDesc> astExprNodeMap = new HashMap<ASTNode, ExprNodeDesc>();
 
+    //校验分区必须存在
     Utilities.validatePartSpec(tbl, partSpec);
 
     if (HiveConf.getBoolVar(conf, HiveConf.ConfVars.HIVE_TYPE_CHECK_ON_INSERT)) {

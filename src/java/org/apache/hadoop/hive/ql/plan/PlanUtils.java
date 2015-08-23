@@ -804,6 +804,7 @@ public final class PlanUtils {
     }
   }
 
+  //去除单引号和双引号
   public static String stripQuotes(String val) {
     if ((val.charAt(0) == '\'' && val.charAt(val.length() - 1) == '\'')
         || (val.charAt(0) == '\"' && val.charAt(val.length() - 1) == '\"')) {

@@ -32,8 +32,8 @@ public class AddPartitionDesc extends DDLDesc implements Serializable {
 
   private static final long serialVersionUID = 1L;
 
-  String tableName;
-  String dbName;
+  String tableName;//该分区属于哪个表
+  String dbName;//该分区属于哪个数据库
   String location;
   boolean ifNotExists;
   boolean expectView;

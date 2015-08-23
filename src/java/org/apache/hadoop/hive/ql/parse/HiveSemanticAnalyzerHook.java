@@ -35,6 +35,7 @@ import org.apache.hadoop.hive.ql.hooks.Hook;
  *
  * Note that the lifetime of an instantiated hook object is scoped to
  * the analysis of a single statement; hook instances are never reused.
+ * 监听hive的sql解析后,进行分析阶段的hook对象
  */
 public interface HiveSemanticAnalyzerHook extends Hook {
   /**

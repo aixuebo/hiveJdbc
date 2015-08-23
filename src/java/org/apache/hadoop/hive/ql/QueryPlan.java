@@ -91,7 +91,7 @@ public class QueryPlan implements Serializable {
 
   private HashMap<String, String> idToTableNameMap;
 
-  private String queryId;
+  private String queryId;//生成一个查询唯一ID,根据UUID和时间计算的该值
   private org.apache.hadoop.hive.ql.plan.api.Query query;
   private final Map<String, Map<String, Long>> counters =
       new ConcurrentHashMap<String, Map<String, Long>>();
@@ -108,6 +108,12 @@ public class QueryPlan implements Serializable {
     this.reducerTimeStatsPerJobList = new ArrayList<ReducerTimeStatsPerJob>();
   }
 
+  /**
+   * 
+   * @param queryString 命令
+   * @param sem 对table的解析
+   * @param startTime 开始时间
+   */
   public QueryPlan(String queryString, BaseSemanticAnalyzer sem, Long startTime) {
     this.queryString = queryString;
 
@@ -123,7 +129,7 @@ public class QueryPlan implements Serializable {
     columnAccessInfo = sem.getColumnAccessInfo();
     idToTableNameMap = new HashMap<String, String>(sem.getIdToTableNameMap());
 
-    queryId = makeQueryId();
+    queryId = makeQueryId();//生成查询唯一ID
     query = new org.apache.hadoop.hive.ql.plan.api.Query();
     query.setQueryId(queryId);
     query.putToQueryAttributes("queryString", this.queryString);
@@ -139,6 +145,7 @@ public class QueryPlan implements Serializable {
     return queryId;
   }
 
+  //生成一个查询唯一ID,根据UUID和时间计算的该值
   private String makeQueryId() {
     GregorianCalendar gc = new GregorianCalendar();
     String userid = System.getProperty("user.name");
@@ -170,10 +177,10 @@ public class QueryPlan implements Serializable {
     task.setOperatorGraph(new org.apache.hadoop.hive.ql.plan.api.Graph());
     task.getOperatorGraph().setNodeType(NodeType.OPERATOR);
 
-    Queue<Operator<? extends OperatorDesc>> opsToVisit =
-      new LinkedList<Operator<? extends OperatorDesc>>();
-    Set<Operator<? extends OperatorDesc>> opsVisited =
-      new HashSet<Operator<? extends OperatorDesc>>();
+    Queue<Operator<? extends OperatorDesc>> opsToVisit = new LinkedList<Operator<? extends OperatorDesc>>();
+      
+    Set<Operator<? extends OperatorDesc>> opsVisited = new HashSet<Operator<? extends OperatorDesc>>();
+      
     opsToVisit.addAll(topOps);
     while (opsToVisit.peek() != null) {
       Operator<? extends OperatorDesc> op = opsToVisit.remove();

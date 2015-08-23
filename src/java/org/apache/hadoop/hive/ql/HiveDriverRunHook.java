@@ -28,6 +28,7 @@ import org.apache.hadoop.hive.ql.hooks.Hook;
  *
  * Note that the lifetime of an instantiated hook object is scoped to
  * the analysis of a single statement; hook instances are never reused.
+ * ¼àÌý¶ÔÏó
  */
 public interface HiveDriverRunHook extends Hook {
   /**

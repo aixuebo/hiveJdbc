@@ -257,7 +257,7 @@ public class HiveConf extends Configuration {
     // something here!
     METASTOREDIRECTORY("hive.metastore.metadb.dir", ""),
     METASTOREWAREHOUSE("hive.metastore.warehouse.dir", "/user/hive/warehouse"),//hive的表数据存储地方
-    METASTOREURIS("hive.metastore.uris", ""),
+    METASTOREURIS("hive.metastore.uris", ""),//Thrift URI for the remote metastore. Used by metastore client to connect to remote metastore.
     // Number of times to retry a connection to a Thrift metastore server
     METASTORETHRIFTCONNECTIONRETRIES("hive.metastore.connect.retries", 3),
     // Number of times to retry a Thrift metastore call upon failure
@@ -317,6 +317,7 @@ public class HiveConf extends Configuration {
         "hive.cluster.delegation.token.store.zookeeper.znode", "/hive/cluster/delegation"),
     METASTORE_CLUSTER_DELEGATION_TOKEN_STORE_ZK_ACL(
         "hive.cluster.delegation.token.store.zookeeper.acl", ""),
+     //远程通过thrift接口可以存储和访问的接口对象集合   
     METASTORE_CACHE_PINOBJTYPES("hive.metastore.cache.pinobjtypes", "Table,StorageDescriptor,SerDeInfo,Partition,Database,Type,FieldSchema,Order"),
     METASTORE_CONNECTION_POOLING_TYPE("datanucleus.connectionPoolingType", "BONECP"),
     METASTORE_VALIDATE_TABLES("datanucleus.validateTables", false),
@@ -447,7 +448,7 @@ public class HiveConf extends Configuration {
     HIVEUDTFAUTOPROGRESS("hive.udtf.auto.progress", false),
 
     // Default file format for CREATE TABLE statement
-    // Options: TextFile, SequenceFile
+    // Options: TextFile, SequenceFile 默认的文件输入/输出类型
     HIVEDEFAULTFILEFORMAT("hive.default.fileformat", "TextFile"),
     HIVEQUERYRESULTFILEFORMAT("hive.query.result.fileformat", "TextFile"),
     HIVECHECKFILEFORMAT("hive.fileformat.check", true),
@@ -678,6 +679,7 @@ public class HiveConf extends Configuration {
 
     HIVECONFVALIDATION("hive.conf.validation", true),
 
+    //监听hive的sql解析后,进行分析阶段的hook对象集合
     SEMANTIC_ANALYZER_HOOK("hive.semantic.analyzer.hook", ""),
 
     HIVE_AUTHORIZATION_ENABLED("hive.security.authorization.enabled", false),
@@ -704,6 +706,7 @@ public class HiveConf extends Configuration {
 
     HIVE_INDEX_IGNORE_HDFS_LOC("hive.index.compact.file.ignore.hdfs", false),
 
+    //scheme的白名单,即允许哪些scheme存在使用,该属性值用逗号进行拆分
     HIVE_EXIM_URI_SCHEME_WL("hive.exim.uri.scheme.whitelist", "hdfs,pfile"),
     // temporary variable for testing. This is added just to turn off this feature in case of a bug in
     // deployment. It has not been documented in hive-default.xml intentionally, this should be removed
@@ -734,7 +737,7 @@ public class HiveConf extends Configuration {
 
     // A comma separated list of hooks which implement HiveDriverRunHook and will be run at the
     // beginning and end of Driver.run, these will be run in the order specified
-    HIVE_DRIVER_RUN_HOOKS("hive.exec.driver.run.hooks", ""),
+    HIVE_DRIVER_RUN_HOOKS("hive.exec.driver.run.hooks", ""),//逗号分隔的hook监听对象实现类集合
     HIVE_DDL_OUTPUT_FORMAT("hive.ddl.output.format", null),
     HIVE_ENTITY_SEPARATOR("hive.entity.separator", "@"),
 

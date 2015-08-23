@@ -87,11 +87,11 @@ public class HiveMetaStoreClient implements IMetaStoreClient {
   ThriftHiveMetastore.Iface client = null;
   private TTransport transport = null;
   private boolean isConnected = false;
-  private URI metastoreUris[];
+  private URI metastoreUris[];//localMetaStore为false的时候,表示外网存储metaStore的uri的IP集合
   private final HiveMetaHookLoader hookLoader;
   private final HiveConf conf;
   private String tokenStrForm;
-  private final boolean localMetaStore;
+  private final boolean localMetaStore;//是否本地存储metaStore信息
 
   // for thrift connects
   private int retries = 5;
@@ -129,6 +129,7 @@ public class HiveMetaStoreClient implements IMetaStoreClient {
 
     // user wants file store based configuration
     if (conf.getVar(HiveConf.ConfVars.METASTOREURIS) != null) {
+    	//localMetaStore为false的时候,表示外网存储metaStore的uri的IP集合
       String metastoreUrisString[] = conf.getVar(
           HiveConf.ConfVars.METASTOREURIS).split(",");
       metastoreUris = new URI[metastoreUrisString.length];

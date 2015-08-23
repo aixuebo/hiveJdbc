@@ -2154,6 +2154,9 @@ public final class Utilities {
     jobConf.set(serdeConstants.LIST_COLUMN_TYPES, columnTypesString);
   }
 
+  /**
+   * 校验分区必须存在
+   */
   public static void validatePartSpec(Table tbl, Map<String, String> partSpec)
       throws SemanticException {
 
