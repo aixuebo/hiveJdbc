@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.hive.metastore.model;
 
+/**
+ * 标示一个数据库的权限对象
+ */
 public class MDBPrivilege {
 
   private String principalName;

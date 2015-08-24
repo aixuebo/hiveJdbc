@@ -44,7 +44,7 @@ public class PrincipalPrivilegeSet implements org.apache.thrift.TBase<PrincipalP
     schemes.put(TupleScheme.class, new PrincipalPrivilegeSetTupleSchemeFactory());
   }
 
-  private Map<String,List<PrivilegeGrantInfo>> userPrivileges; // required
+  private Map<String,List<PrivilegeGrantInfo>> userPrivileges; // required该数据库表的权限,分user、group、role三种
   private Map<String,List<PrivilegeGrantInfo>> groupPrivileges; // required
   private Map<String,List<PrivilegeGrantInfo>> rolePrivileges; // required
 

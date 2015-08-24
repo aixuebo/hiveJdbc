@@ -18,15 +18,18 @@
 
 package org.apache.hadoop.hive.metastore.model;
 
+/**
+ * 每一个table对应的权限信息
+ */
 public class MTablePrivilege {
 
-  private String principalName;
+  private String principalName;//权限的key
 
-  private String principalType;
+  private String principalType;//user、group、role类型
 
-  private MTable table;
+  private MTable table;//数据库对象
 
-  private String privilege;
+  private String privilege;//PrivilegeGrantInfo.privilege
 
   private int createTime;
 

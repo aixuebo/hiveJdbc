@@ -23,11 +23,12 @@ package org.apache.hadoop.hive.metastore.model;
 
 /**
  * Represent a column or a type of a table or object
+ * 标示table表格的一个列信息
  */
 public class MFieldSchema {
-  private String name;
-  private String type;
-  private String comment;
+  private String name;//属性名字
+  private String type;//属性类型
+  private String comment;//备注
   public MFieldSchema() {}
 
   /**

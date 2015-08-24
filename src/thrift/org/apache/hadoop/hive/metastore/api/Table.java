@@ -66,7 +66,7 @@ public class Table implements org.apache.thrift.TBase<Table, Table._Fields>, jav
   private String viewOriginalText; // required
   private String viewExpandedText; // required
   private String tableType; // required
-  private PrincipalPrivilegeSet privileges; // optional
+  private PrincipalPrivilegeSet privileges; // optional 该数据库表的权限集合,分user、group、role三种
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {

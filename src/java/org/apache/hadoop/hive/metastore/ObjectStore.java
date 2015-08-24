@@ -132,6 +132,8 @@ import org.datanucleus.store.rdbms.exceptions.MissingTableException;
  * or in this file as former could be auto generated and this class would need
  * to be made into a interface that can read both from a database and a
  * filestore.
+ * 数据库定义查看conf/package.jdo文件
+ * 具体测试请查看maming.jdo.TestRun测试用例类
  */
 public class ObjectStore implements RawStore, Configurable {
   private static Properties prop = null;
@@ -152,9 +154,9 @@ public class ObjectStore implements RawStore, Configurable {
     map.put("storagedescriptor", MStorageDescriptor.class);
     map.put("serdeinfo", MSerDeInfo.class);
     map.put("partition", MPartition.class);
-    map.put("database", MDatabase.class);
+    map.put("database", MDatabase.class);//标示一个数据库对象
     map.put("type", MType.class);
-    map.put("fieldschema", MFieldSchema.class);
+    map.put("fieldschema", MFieldSchema.class);//标示table表格的一个列信息
     map.put("order", MOrder.class);
     PINCLASSMAP = Collections.unmodifiableMap(map);
   }
@@ -415,6 +417,9 @@ public class ObjectStore implements RawStore, Configurable {
     }
   }
 
+  /**
+   * 从数据库查询数据,直接返回对象即可
+   */
   @SuppressWarnings("nls")
   private MDatabase getMDatabase(String name) throws NoSuchObjectException {
     MDatabase mdb = null;
@@ -422,6 +427,10 @@ public class ObjectStore implements RawStore, Configurable {
     try {
       openTransaction();
       name = name.toLowerCase().trim();
+      /**
+       * 查询语句说明name == dbname 中name是MDatabase中的属性,dbname是变量
+       * query.execute(name);中的name是替换dbname的具体值
+       */
       Query query = pm.newQuery(MDatabase.class, "name == dbname");
       query.declareParameters("java.lang.String dbname");
       query.setUnique(true);
@@ -439,6 +448,9 @@ public class ObjectStore implements RawStore, Configurable {
     return mdb;
   }
 
+  /**
+   * 从数据库查询数据,返回thrift序列化对象
+   */
   public Database getDatabase(String name) throws NoSuchObjectException {
     MDatabase mdb = null;
     boolean commited = false;
@@ -462,10 +474,11 @@ public class ObjectStore implements RawStore, Configurable {
   /**
    * Alter the database object in metastore. Currently only the parameters
    * of the database can be changed.
-   * @param dbName the database name
-   * @param db the Hive Database object
+   * @param dbName the database name 数据库
+   * @param db the Hive Database object 更新后的所有属性
    * @throws MetaException
    * @throws NoSuchObjectException
+   * 将数据库当前Parameters全部更新
    */
   public boolean alterDatabase(String dbName, Database db)
     throws MetaException, NoSuchObjectException {
@@ -488,6 +501,9 @@ public class ObjectStore implements RawStore, Configurable {
     return true;
   }
 
+  /**
+   * 删除一个数据库
+   */
   public boolean dropDatabase(String dbname) throws NoSuchObjectException, MetaException {
     boolean success = false;
     LOG.info("Dropping database " + dbname + " along with all tables");
@@ -499,6 +515,7 @@ public class ObjectStore implements RawStore, Configurable {
       MDatabase db = getMDatabase(dbname);
       pm.retrieve(db);
       if (db != null) {
+    	  //查询该数据库的授权信息集合.将其删除
         List<MDBPrivilege> dbGrants = this.listDatabaseGrants(dbname);
         if (dbGrants != null && dbGrants.size() > 0) {
           pm.deletePersistentAll(dbGrants);
@@ -515,6 +532,9 @@ public class ObjectStore implements RawStore, Configurable {
   }
 
 
+  /**
+   * 根据正则表达式获取多个数据库表
+   */
   public List<String> getDatabases(String pattern) throws MetaException {
     boolean commited = false;
     List<String> databases = null;
@@ -552,10 +572,16 @@ public class ObjectStore implements RawStore, Configurable {
     return databases;
   }
 
+  /**
+   * 根据正则表达式获取全部数据库表
+   */
   public List<String> getAllDatabases() throws MetaException {
     return getDatabases(".*");
   }
 
+  /**
+   * 根据thrift传递的bean,转换为实体bean
+   */
   private MType getMType(Type type) {
     List<MFieldSchema> fields = new ArrayList<MFieldSchema>();
     if (type.getFields() != null) {
@@ -567,6 +593,9 @@ public class ObjectStore implements RawStore, Configurable {
     return new MType(type.getName(), type.getType1(), type.getType2(), fields);
   }
 
+  /**
+   * 将实体bean转换成thrift的bean
+   */
   private Type getType(MType mtype) {
     List<FieldSchema> fields = new ArrayList<FieldSchema>();
     if (mtype.getFields() != null) {
@@ -583,6 +612,9 @@ public class ObjectStore implements RawStore, Configurable {
     return ret;
   }
 
+  /**
+   * 根据thrift传递的bean,转换为实体bean,存储到数据库
+   */
   public boolean createType(Type type) {
     boolean success = false;
     MType mtype = getMType(type);
@@ -600,6 +632,9 @@ public class ObjectStore implements RawStore, Configurable {
     return success;
   }
 
+  /**
+   * 通过name获取type对象
+   */
   public Type getType(String typeName) {
     Type type = null;
     boolean commited = false;
@@ -622,6 +657,9 @@ public class ObjectStore implements RawStore, Configurable {
     return type;
   }
 
+  /**
+   * 通过name删除一个type
+   */
   public boolean dropType(String typeName) {
     boolean success = false;
     try {
@@ -646,6 +684,9 @@ public class ObjectStore implements RawStore, Configurable {
     return success;
   }
 
+  /**
+   * 根据thrift序列化对象转化成table对象,并且存储
+   */
   public void createTable(Table tbl) throws InvalidObjectException, MetaException {
     boolean commited = false;
     try {
@@ -653,6 +694,7 @@ public class ObjectStore implements RawStore, Configurable {
       MTable mtbl = convertToMTable(tbl);
       pm.makePersistent(mtbl);
       PrincipalPrivilegeSet principalPrivs = tbl.getPrivileges();
+      //该表对应的权限
       List<Object> toPersistPrivObjs = new ArrayList<Object>();
       if (principalPrivs != null) {
         int now = (int)(System.currentTimeMillis()/1000);
@@ -680,19 +722,19 @@ public class ObjectStore implements RawStore, Configurable {
    * them to the toPersistPrivObjs. These privilege objects will be persisted as
    * part of createTable.
    *
-   * @param mtbl
-   * @param toPersistPrivObjs
-   * @param now
-   * @param privMap
-   * @param type
+   * @param mtbl 数据库实体类
+   * @param toPersistPrivObjs 将最终的权限集合都添加到该集合中
+   * @param now 当前时间
+   * @param privMap 准备处理的权限对象,String,List<PrivilegeGrantInfo>,key是name,value是该名字对应的权限集合
+   * @param type 是user、group、role权限类别
    */
   private void putPersistentPrivObjects(MTable mtbl, List<Object> toPersistPrivObjs,
       int now, Map<String, List<PrivilegeGrantInfo>> privMap, PrincipalType type) {
     if (privMap != null) {
       for (Map.Entry<String, List<PrivilegeGrantInfo>> entry : privMap
           .entrySet()) {
-        String principalName = entry.getKey();
-        List<PrivilegeGrantInfo> privs = entry.getValue();
+        String principalName = entry.getKey();//name
+        List<PrivilegeGrantInfo> privs = entry.getValue();//该名字对应的权限集合
         for (int i = 0; i < privs.size(); i++) {
           PrivilegeGrantInfo priv = privs.get(i);
           if (priv == null) {
@@ -3832,6 +3874,11 @@ public class ObjectStore implements RawStore, Configurable {
     return mSecurityColList;
   }
 
+  /**
+   * 获取一个数据库的权限集合
+   * @param dbName
+   * @return
+   */
   @SuppressWarnings("unchecked")
   private List<MDBPrivilege> listDatabaseGrants(String dbName) {
     dbName = dbName.toLowerCase().trim();
