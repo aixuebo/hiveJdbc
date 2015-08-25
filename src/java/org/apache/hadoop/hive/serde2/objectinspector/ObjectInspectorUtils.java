@@ -347,6 +347,13 @@ public final class ObjectInspectorUtils {
     return sb.toString();
   }
 
+  /**
+   * 将fieldName对应的fields对象获取出来
+   * 其中参数fieldName可能是属性名字,也可能是属性下标
+   * @param fieldName
+   * @param fields
+   * @return
+   */
   public static StructField getStandardStructFieldRef(String fieldName,
       List<? extends StructField> fields) {
     fieldName = fieldName.toLowerCase();

@@ -44,9 +44,9 @@ public class StandardStructObjectInspector extends
 
   protected static class MyField implements StructField {
     protected int fieldID;
-    protected String fieldName;
-    protected ObjectInspector fieldObjectInspector;
-    protected String fieldComment;
+    protected String fieldName;//属性名字
+    protected ObjectInspector fieldObjectInspector;//该属性对应的类型对象
+    protected String fieldComment;//备注
 
     public MyField(int fieldID, String fieldName,
         ObjectInspector fieldObjectInspector) {
@@ -83,6 +83,7 @@ public class StandardStructObjectInspector extends
     }
   }
 
+  //组装成属性集合
   protected List<MyField> fields;
 
   public String getTypeName() {
@@ -99,6 +100,9 @@ public class StandardStructObjectInspector extends
 
   /**
   * Call ObjectInspectorFactory.getStandardListObjectInspector instead.
+  *@param structFieldNames 属性name
+   * @param structFieldObjectInspectors 属性对应的type类型
+   * @param structComments 属性对应的备注信息
   */
   protected StandardStructObjectInspector(List<String> structFieldNames,
       List<ObjectInspector> structFieldObjectInspectors,
@@ -106,6 +110,11 @@ public class StandardStructObjectInspector extends
     init(structFieldNames, structFieldObjectInspectors, structFieldComments);
   }
 
+  /**
+   * @param structFieldNames 属性name
+   * @param structFieldObjectInspectors 属性对应的type类型
+   * @param structComments 属性对应的备注信息
+   */
   protected void init(List<String> structFieldNames,
       List<ObjectInspector> structFieldObjectInspectors,
       List<String> structFieldComments) {
@@ -113,6 +122,7 @@ public class StandardStructObjectInspector extends
     assert (structFieldComments == null ||
             (structFieldNames.size() == structFieldComments.size()));
 
+    //组装成属性集合
     fields = new ArrayList<MyField>(structFieldNames.size());
     for (int i = 0; i < structFieldNames.size(); i++) {
       fields.add(new MyField(i, structFieldNames.get(i),
@@ -138,6 +148,10 @@ public class StandardStructObjectInspector extends
   }
 
   // Without Data
+  /**
+   * 将fieldName对应的fields对象获取出来
+   * 其中参数fieldName可能是属性名字,也可能是属性下标
+   */
   @Override
   public StructField getStructFieldRef(String fieldName) {
     return ObjectInspectorUtils.getStandardStructFieldRef(fieldName, fields);
@@ -186,6 +200,9 @@ public class StandardStructObjectInspector extends
     }
   }
 
+  /**
+   * 将数组转换为List集合
+   */
   @Override
   @SuppressWarnings("unchecked")
   public List<Object> getStructFieldsDataAsList(Object data) {

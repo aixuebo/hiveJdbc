@@ -30,6 +30,7 @@ import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector.Category;
  * 2. List objects (a list of objects of a single type) 3. Map objects (a map
  * from objects of one type to objects of another type) 4. Struct objects (a
  * list of fields with names and their own types) 5. Union objects
+ * 表示每一个属性的类型
  */
 public abstract class TypeInfo implements Serializable {
 
@@ -41,11 +42,15 @@ public abstract class TypeInfo implements Serializable {
   /**
    * The Category of this TypeInfo. Possible values are Primitive, List, Map,
    * Struct and Union, which corresponds to the 5 sub-classes of TypeInfo.
+   *   PRIMITIVE,//基础类型  
+    LIST, MAP, STRUCT, UNION之一
+    	分类:
    */
   public abstract Category getCategory();
 
   /**
    * A String representation of the TypeInfo.
+   * 详细类型,比如PRIMITIVE中包含string,int等,这个值返回的是int等详细信息
    */
   public abstract String getTypeName();
 

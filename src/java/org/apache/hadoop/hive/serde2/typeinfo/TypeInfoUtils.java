@@ -198,6 +198,10 @@ public final class TypeInfoUtils {
     return typeInfos;
   }
 
+  /**
+   * @param typeName 可以是char(10) or decimal(10, 2).
+   * @return
+   */
   public static boolean hasParameters(String typeName) {
     int idx = typeName.indexOf('(');
     if (idx == -1) {
@@ -207,6 +211,10 @@ public final class TypeInfoUtils {
     }
   }
 
+  /**
+   * @param typeName 可以是char(10) or decimal(10, 2).
+   * @return
+   */
   public static String getBaseName(String typeName) {
     int idx = typeName.indexOf('(');
     if (idx == -1) {

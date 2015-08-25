@@ -54,6 +54,7 @@ import org.apache.hadoop.io.Writable;
  */
 public final class PrimitiveObjectInspectorFactory {
 
+	//java类型
   public static final JavaBooleanObjectInspector javaBooleanObjectInspector =
       new JavaBooleanObjectInspector();
   public static final JavaByteObjectInspector javaByteObjectInspector =
@@ -83,6 +84,7 @@ public final class PrimitiveObjectInspectorFactory {
   public static final JavaHiveDecimalObjectInspector javaHiveDecimalObjectInspector =
       new JavaHiveDecimalObjectInspector();
 
+  //hadoop序列化类型
   public static final WritableBooleanObjectInspector writableBooleanObjectInspector =
       new WritableBooleanObjectInspector();
   public static final WritableByteObjectInspector writableByteObjectInspector =

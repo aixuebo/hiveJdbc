@@ -37,11 +37,11 @@ public class serdeConstants {
 
   public static final String SERIALIZATION_CLASS = "serialization.class";
 
-  public static final String SERIALIZATION_FORMAT = "serialization.format";
+  public static final String SERIALIZATION_FORMAT = "serialization.format";//拆分每一个属性的配置,默认是001
 
   public static final String SERIALIZATION_DDL = "serialization.ddl";
 
-  public static final String SERIALIZATION_NULL_FORMAT = "serialization.null.format";
+  public static final String SERIALIZATION_NULL_FORMAT = "serialization.null.format";//空值输出,默认是\\N
 
   public static final String SERIALIZATION_LAST_COLUMN_TAKES_REST = "serialization.last.column.takes.rest";
 

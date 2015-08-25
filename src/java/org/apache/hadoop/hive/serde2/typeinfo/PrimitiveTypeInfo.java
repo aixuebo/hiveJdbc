@@ -31,13 +31,14 @@ import org.apache.hadoop.hive.serde2.objectinspector.primitive.PrimitiveObjectIn
  *
  * Always use the TypeInfoFactory to create new TypeInfo objects, instead of
  * directly creating an instance of this class.
+ * 基础类型,包含基础类型的参数对象
  */
 public class PrimitiveTypeInfo extends TypeInfo implements Serializable, PrimitiveTypeSpec {
 
   private static final long serialVersionUID = 1L;
 
-  protected String typeName;
-  protected BaseTypeParams typeParams;
+  protected String typeName;//基础类型字符串名称
+  protected BaseTypeParams typeParams;//基础类型的参数,比如字符串类型的需要设置最大长度
 
   /**
    * For java serialization use only.
@@ -86,6 +87,7 @@ public class PrimitiveTypeInfo extends TypeInfo implements Serializable, Primiti
    * If the type has type parameters (such as varchar length, or decimal precision/scale),
    * then return the parameters for the type.
    * @return A BaseTypeParams object representing the parameters for the type, or null
+   * 获取该基础类型的参数,比如字符长度等信息
    */
   public BaseTypeParams getTypeParams() {
     return typeParams;
@@ -94,6 +96,7 @@ public class PrimitiveTypeInfo extends TypeInfo implements Serializable, Primiti
   /**
    * Set the type parameters for the type.
    * @param typeParams type parameters for the type
+   * 设置基础类型的参数
    */
   public void setTypeParams(BaseTypeParams typeParams) {
     // Ideally could check here to make sure the type really supports parameters,

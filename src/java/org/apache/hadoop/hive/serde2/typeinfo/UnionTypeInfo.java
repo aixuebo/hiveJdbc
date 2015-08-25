@@ -44,6 +44,9 @@ public class UnionTypeInfo extends TypeInfo implements Serializable {
   public UnionTypeInfo() {
   }
 
+  /**
+   * ·µ»Ø:uniontype<TypeInfo.getTypeName(),TypeInfo.getTypeName()>
+   */
   @Override
   public String getTypeName() {
     StringBuilder sb = new StringBuilder();

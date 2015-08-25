@@ -48,6 +48,7 @@ public interface Serializer {
   /**
    * Returns the Writable class that would be returned by the serialize method.
    * This is used to initialize SequenceFile header.
+   * 序列化的对象
    */
   Class<? extends Writable> getSerializedClass();
 
@@ -57,11 +58,13 @@ public interface Serializer {
    * constant since the function will reuse the Writable object. If the client
    * wants to keep a copy of the Writable, the client needs to clone the
    * returned value.
+   * 将obj对象进行序列化,根据序列化class,getSerializedClass
    */
   Writable serialize(Object obj, ObjectInspector objInspector) throws SerDeException;
 
   /**
    * Returns statistics collected when serializing
+   * 返回序列化的统计信息,当前仅仅支持数据行数统计信息
    */
   SerDeStats getSerDeStats();
 }

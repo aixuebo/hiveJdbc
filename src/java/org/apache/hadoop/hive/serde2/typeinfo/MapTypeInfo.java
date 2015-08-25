@@ -35,8 +35,8 @@ public final class MapTypeInfo extends TypeInfo implements Serializable {
 
   private static final long serialVersionUID = 1L;
 
-  private TypeInfo mapKeyTypeInfo;
-  private TypeInfo mapValueTypeInfo;
+  private TypeInfo mapKeyTypeInfo;//key的类型
+  private TypeInfo mapValueTypeInfo;//value的类型
 
   /**
    * For java serialization use only.
@@ -44,6 +44,10 @@ public final class MapTypeInfo extends TypeInfo implements Serializable {
   public MapTypeInfo() {
   }
 
+  /**
+   * 输出:
+   * map<mapKeyTypeInfo.getTypeName(),mapValueTypeInfo.getTypeName()>
+   */
   @Override
   public String getTypeName() {
     return org.apache.hadoop.hive.serde.serdeConstants.MAP_TYPE_NAME + "<"

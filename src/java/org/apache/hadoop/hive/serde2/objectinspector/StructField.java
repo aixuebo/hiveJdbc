@@ -23,21 +23,25 @@ package org.apache.hadoop.hive.serde2.objectinspector;
  * 
  * Classes implementing this interface are considered to represent a field of a
  * struct for this serde package.
+ * 代表一个属性
  */
 public interface StructField {
 
   /**
    * Get the name of the field. The name should be always in lower-case.
+   * 属性名字的小写
    */
   String getFieldName();
 
   /**
    * Get the ObjectInspector for the field.
+   * 属性对应的类型Type对象
    */
   ObjectInspector getFieldObjectInspector();
 
   /**
    * Get the comment for the field. May be null if no comment provided.
+   * 属性对应的备注
    */
   String getFieldComment();
 }

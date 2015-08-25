@@ -64,6 +64,7 @@ import org.apache.hadoop.io.WritableUtils;
  *
  * SerDe classes should call the static functions in this library to create an
  * ObjectInspector to return to the caller of SerDe2.getObjectInspector().
+ * 基础类型的附加信息
  */
 public final class PrimitiveObjectInspectorUtils {
   private static Log LOG = LogFactory.getLog(PrimitiveObjectInspectorUtils.class);
@@ -463,6 +464,7 @@ public final class PrimitiveObjectInspectorUtils {
   /**
    * Compare 2 primitive objects. Conversion not allowed. Note that NULL does
    * not equal to NULL according to SQL standard.
+   * 比较是否相同
    */
   public static boolean comparePrimitiveObjects(Object o1,
       PrimitiveObjectInspector oi1, Object o2, PrimitiveObjectInspector oi2) {
@@ -470,9 +472,11 @@ public final class PrimitiveObjectInspectorUtils {
       return false;
     }
 
+    //必须一个小分类下才允许比较
     if (oi1.getPrimitiveCategory() != oi2.getPrimitiveCategory()) {
       return false;
     }
+    
     switch (oi1.getPrimitiveCategory()) {
     case BOOLEAN: {
       return ((BooleanObjectInspector) oi1).get(o1) == ((BooleanObjectInspector) oi2)
@@ -536,6 +540,7 @@ public final class PrimitiveObjectInspectorUtils {
 
   /**
    * Convert a primitive object to double.
+   * 将值转换为double的
    */
   public static double convertPrimitiveToDouble(Object o, PrimitiveObjectInspector oi) {
     switch (oi.getPrimitiveCategory()) {

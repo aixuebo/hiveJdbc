@@ -22,16 +22,18 @@ import org.apache.hadoop.hive.serde2.objectinspector.PrimitiveObjectInspector.Pr
 
 /**
  * Interface to encapsulate retrieving of type information, for the object inspector factory.
- *
+ * 基础类型的额外接口
  */
 public interface PrimitiveTypeSpec {
   /**
    * @return  PrimitiveCategory referred to by the PrimitiveTypeSpec
+   * 该接触类型的详细分类
    */
   PrimitiveCategory getPrimitiveCategory();
 
   /**
    * @return Type params referred to by the PrimitiveTypeSpec
+   * 需要获取该基础类型的参数对象
    */
   BaseTypeParams getTypeParams();
 }

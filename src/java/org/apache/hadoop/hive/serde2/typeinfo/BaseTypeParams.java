@@ -24,13 +24,23 @@ import org.apache.hadoop.io.Writable;
 
 /**
  * Base type for type-specific params, such as char(10) or decimal(10, 2).
+ * 类型基数类,可以设置类型的参数
  */
 public abstract class BaseTypeParams implements Writable, Serializable {
 
   private static final long serialVersionUID = 1L;
 
+  /**
+   * 校验
+   * 出问题就抛异常即可
+   */
   public abstract void validateParams() throws SerDeException;
 
+  /**
+   * char(10) or decimal(10, 2).
+   * 解析参数,因为char(10)这个参数只能是一个,就是属性长度
+   * decimal有两个参数
+   */
   public abstract void populateParams(String[] params) throws SerDeException;
 
   public abstract String toString();
@@ -41,9 +51,11 @@ public abstract class BaseTypeParams implements Writable, Serializable {
   }
 
   // Needed for conversion to/from TypeQualifiers. Override in subclasses.
+  //是否有最大字符限制
   public boolean hasCharacterMaximumLength() {
     return false;
   }
+  //如果有最大字符限制,则限制字符是多少,例如char(10),最多允许输入10个字符
   public int getCharacterMaximumLength() {
     return -1;
   }

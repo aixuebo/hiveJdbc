@@ -32,7 +32,8 @@ import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector.Category;
 public final class ListTypeInfo extends TypeInfo implements Serializable {
 
   private static final long serialVersionUID = 1L;
-  private TypeInfo listElementTypeInfo;
+  
+  private TypeInfo listElementTypeInfo;//List中存储一种类型
 
   /**
    * For java serialization use only.
@@ -40,6 +41,10 @@ public final class ListTypeInfo extends TypeInfo implements Serializable {
   public ListTypeInfo() {
   }
 
+  /**
+   * 返回:
+   * array<TypeInfo.getTypeName()>
+   */
   @Override
   public String getTypeName() {
     return org.apache.hadoop.hive.serde.serdeConstants.LIST_TYPE_NAME + "<"

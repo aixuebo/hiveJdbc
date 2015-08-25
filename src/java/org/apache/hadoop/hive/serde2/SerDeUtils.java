@@ -66,6 +66,10 @@ public final class SerDeUtils {
   // lower case null is used within json objects
   private static final String JSON_NULL = "null";
 
+  /**
+   * key:value对应的class全路径,class对象为序列化对象Deserializer
+   * value:class对象,class对象为序列化对象Deserializer
+   */
   private static ConcurrentHashMap<String, Class<?>> serdes =
     new ConcurrentHashMap<String, Class<?>>();
 
@@ -79,6 +83,9 @@ public final class SerDeUtils {
     serdes.put(name, serde);
   }
 
+  /**
+   * 通过name对应的class直接实例化一个
+   */
   public static Deserializer lookupDeserializer(String name) throws SerDeException {
     Class<?> c;
     if (serdes.containsKey(name)) {
@@ -97,6 +104,9 @@ public final class SerDeUtils {
     }
   }
 
+  /**
+   * 存储全路径,属于hive自带支持的序列化对象
+   */
   private static List<String> nativeSerDeNames = new ArrayList<String>();
   static {
     nativeSerDeNames
@@ -112,6 +122,12 @@ public final class SerDeUtils {
     nativeSerDeNames.add(org.apache.hadoop.hive.serde2.columnar.ColumnarSerDe.class.getName());
   }
 
+  /**
+   * true表示该serde不是hive自带的
+   * fale表示serde=null 或者 一定是hive自带的
+   * @param serde
+   * @return
+   */
   public static boolean shouldGetColsFromSerDe(String serde) {
     return (serde != null) && !nativeSerDeNames.contains(serde);
   }
@@ -140,6 +156,8 @@ public final class SerDeUtils {
 
   /**
    * Escape a String in JSON format.
+   * 将关键字符进行转义处理
+   * 同时空格转换成\\uxxxx
    */
   public static String escapeString(String str) {
     int length = str.length();
@@ -175,7 +193,7 @@ public final class SerDeUtils {
         break;
       default:
         // Control characeters! According to JSON RFC u0020
-        if (c < ' ') {
+        if (c < ' ') {//同时空格转换成\\uxxxx
           String hex = Integer.toHexString(c);
           escape.append('\\');
           escape.append('u');
@@ -192,6 +210,7 @@ public final class SerDeUtils {
     return (escape.toString());
   }
 
+  //转义换行字符
   public static String lightEscapeString(String str) {
     int length = str.length();
     StringBuilder escape = new StringBuilder(length + 16);
@@ -239,6 +258,13 @@ public final class SerDeUtils {
   }
 
 
+  /**
+   * 
+   * @param sb 向该sb对象中追加信息
+   * @param o
+   * @param oi
+   * @param nullStr 当为null的时候的默认值
+   */
   static void buildJSONString(StringBuilder sb, Object o, ObjectInspector oi, String nullStr) {
 
     switch (oi.getCategory()) {
@@ -325,8 +351,7 @@ public final class SerDeUtils {
     }
     case LIST: {
       ListObjectInspector loi = (ListObjectInspector) oi;
-      ObjectInspector listElementObjectInspector = loi
-          .getListElementObjectInspector();
+      ObjectInspector listElementObjectInspector = loi.getListElementObjectInspector();
       List<?> olist = loi.getList(o);
       if (olist == null) {
         sb.append(nullStr);

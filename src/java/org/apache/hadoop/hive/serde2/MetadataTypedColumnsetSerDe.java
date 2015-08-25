@@ -82,6 +82,9 @@ public class MetadataTypedColumnsetSerDe extends AbstractSerDe {
     separator = DefaultSeparator;
   }
 
+  /**
+   * 获取value的第一个char字符串
+   */
   private String getByteValue(String altValue, String defaultVal) {
     if (altValue != null && altValue.length() > 0) {
       try {
@@ -97,9 +100,12 @@ public class MetadataTypedColumnsetSerDe extends AbstractSerDe {
 
   @Override
   public void initialize(Configuration job, Properties tbl) throws SerDeException {
+	
+	//设置拆分每一个属性的字符串,默认是001
     String altSep = tbl.getProperty(serdeConstants.SERIALIZATION_FORMAT);
     separator = getByteValue(altSep, DefaultSeparator);
 
+    //空值输出,默认是\\N
     String altNull = tbl.getProperty(serdeConstants.SERIALIZATION_NULL_FORMAT);
     nullString = getByteValue(altNull, defaultNullString);
 

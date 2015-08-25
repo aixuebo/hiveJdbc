@@ -34,15 +34,17 @@ package org.apache.hadoop.hive.serde2.objectinspector;
  * that we can make sure the same ObjectInspector only has one instance. That
  * also makes sure hashCode() and equals() methods of java.lang.Object directly
  * works for ObjectInspector as well.
+ * 根据该属性类型,设置处理属性的对象
  */
 public interface ObjectInspector extends Cloneable {
 
   /**
    * Category.
-   *
+   * 对象的类型
    */
   public static enum Category {
-    PRIMITIVE, LIST, MAP, STRUCT, UNION
+    PRIMITIVE,//基础类型
+    LIST, MAP, STRUCT, UNION
   };
 
   /**
@@ -52,6 +54,7 @@ public interface ObjectInspector extends Cloneable {
    * For primitive types, the type name is standardized. For other types, the
    * type name can be something like "list<int>", "map<int,string>", java class
    * names, or user-defined type names similar to typedef.
+   * 具体int还是long类型
    */
   String getTypeName();
 
@@ -59,6 +62,7 @@ public interface ObjectInspector extends Cloneable {
    * An ObjectInspector must inherit from one of the following interfaces if
    * getCategory() returns: PRIMITIVE: PrimitiveObjectInspector LIST:
    * ListObjectInspector MAP: MapObjectInspector STRUCT: StructObjectInspector.
+   * 分类
    */
   Category getCategory();
 }

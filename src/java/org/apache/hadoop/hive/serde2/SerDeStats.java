@@ -23,6 +23,7 @@ public class SerDeStats {
   /**
    * Class used to pass statistics information from serializer/deserializer to the tasks.
    * A SerDeStats object is returned by calling SerDe.getStats().
+   * 返回序列化的统计信息,当前仅仅支持数据行数统计信息
    */
 
   // currently we support only raw data size stat

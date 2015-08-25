@@ -22,12 +22,12 @@ package org.apache.hadoop.hive.common.type;
  * HiveVarChar.
  * String wrapper to support SQL VARCHAR features.
  * Max string length is enforced.
- *
+ * 按照value去排序
  */
 public class HiveVarchar extends HiveBaseChar
   implements Comparable<HiveVarchar> {
 
-  public static final int MAX_VARCHAR_LENGTH = 65535;
+  public static final int MAX_VARCHAR_LENGTH = 65535;//varchar最大的存储字符
 
   public HiveVarchar() {
   }

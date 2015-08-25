@@ -26,11 +26,17 @@ import org.apache.hadoop.hive.common.type.HiveVarchar;
 import org.apache.hadoop.hive.serde2.SerDeException;
 import org.apache.hadoop.io.WritableUtils;
 
+/**
+ * 字符串类型需要的参数对象
+ */
 public class VarcharTypeParams extends BaseTypeParams implements Serializable {
   private static final long serialVersionUID = 1L;
 
   public int length;
 
+  /**
+   * 校验,必须有字符长度.并且长度要小于65535
+   */
   @Override
   public void validateParams() throws SerDeException {
     if (length < 1) {
@@ -42,6 +48,9 @@ public class VarcharTypeParams extends BaseTypeParams implements Serializable {
     }
   }
 
+  /**
+   * 解析参数,因为var(25)这个参数只能是一个,就是属性长度
+   */
   @Override
   public void populateParams(String[] params) throws SerDeException {
     if (params.length != 1) {
@@ -86,10 +95,13 @@ public class VarcharTypeParams extends BaseTypeParams implements Serializable {
     length = len;
   }
 
+  //是否有最大字符限制
   @Override
   public boolean hasCharacterMaximumLength() {
     return true;
   }
+  
+  //如果有最大字符限制,则限制字符是多少,例如char(10),最多允许输入10个字符
   @Override
   public int getCharacterMaximumLength() {
     return length;

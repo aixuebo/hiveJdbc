@@ -262,16 +262,28 @@ public final class ObjectInspectorFactory {
   static ConcurrentHashMap<ArrayList<List<?>>, StandardStructObjectInspector> cachedStandardStructObjectInspector =
       new ConcurrentHashMap<ArrayList<List<?>>, StandardStructObjectInspector>();
 
+  /**
+   * @param structFieldNames 属性name
+   * @param structFieldObjectInspectors 属性对应的type类型
+   */
   public static StandardStructObjectInspector getStandardStructObjectInspector(
       List<String> structFieldNames,
       List<ObjectInspector> structFieldObjectInspectors) {
     return getStandardStructObjectInspector(structFieldNames, structFieldObjectInspectors, null);
   }
 
+  /**
+   * 
+   * @param structFieldNames 属性name
+   * @param structFieldObjectInspectors 属性对应的type类型
+   * @param structComments 属性对应的备注信息
+   */
   public static StandardStructObjectInspector getStandardStructObjectInspector(
       List<String> structFieldNames,
       List<ObjectInspector> structFieldObjectInspectors,
       List<String> structComments) {
+	 
+	  //存储三个集合
     ArrayList<List<?>> signature = new ArrayList<List<?>>(3);
     signature.add(structFieldNames);
     signature.add(structFieldObjectInspectors);

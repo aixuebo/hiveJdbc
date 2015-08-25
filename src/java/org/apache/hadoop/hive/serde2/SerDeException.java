@@ -20,7 +20,7 @@ package org.apache.hadoop.hive.serde2;
 
 /**
  * Generic exception class for SerDes.
- * 
+ * 序列化反序列化出现异常
  */
 
 public class SerDeException extends Exception {

@@ -71,17 +71,17 @@ public class RegexSerDe extends AbstractSerDe {
   public static final Log LOG = LogFactory.getLog(RegexSerDe.class.getName());
 
   int numColumns;
-  String inputRegex;
+  String inputRegex;//正则表达式字符串
 
-  Pattern inputPattern;
+  Pattern inputPattern;//正则表达式对象
 
   StructObjectInspector rowOI;
   List<Object> row;
-  List<TypeInfo> columnTypes;
+  List<TypeInfo> columnTypes;//每一个列属性对应的类型
   Object[] outputFields;
   Text outputRowText;
 
-  boolean alreadyLoggedNoMatch = false;
+  boolean alreadyLoggedNoMatch = false;//true表示已经对不匹配正则表达式的line打印了输出
   boolean alreadyLoggedPartialMatch = false;
 
   @Override
@@ -122,6 +122,7 @@ public class RegexSerDe extends AbstractSerDe {
     /* Constructing the row ObjectInspector:
      * The row consists of some set of primitive columns, each column will
      * be a java object of primitive type.
+     * 根据该属性类型,设置处理属性的对象
      */
     List<ObjectInspector> columnOIs = new ArrayList<ObjectInspector>(columnNames.size());
     for (int c = 0; c < numColumns; c++) {
@@ -167,6 +168,7 @@ public class RegexSerDe extends AbstractSerDe {
     rowOI = ObjectInspectorFactory.getStandardStructObjectInspector(
         columnNames, columnOIs);
 
+    //默认输出的每一个都是null
     row = new ArrayList<Object>(numColumns);
     // Constructing the row object, etc, which will be reused for all rows.
     for (int c = 0; c < numColumns; c++) {
@@ -186,22 +188,24 @@ public class RegexSerDe extends AbstractSerDe {
     return Text.class;
   }
 
-  // Number of rows not matching the regex
+  // Number of rows not matching the regex 不匹配正则表达式的行数
   long unmatchedRowsCount = 0;
   // Number of rows that match the regex but have missing groups.
   long partialMatchedRowsCount = 0;
 
+  //返回解析后的字符串集合,顺序按照设置的column顺序
   @Override
   public Object deserialize(Writable blob) throws SerDeException {
 
     Text rowText = (Text) blob;
     Matcher m = inputPattern.matcher(rowText.toString());
 
+    //发现正则表达式不能解析所有的列属性
     if (m.groupCount() != numColumns) {
       throw new SerDeException("Number of matching groups doesn't match the number of columns");
     }
 
-    // If do not match, ignore the line, return a row with all nulls.
+    // If do not match, ignore the line, return a row with all nulls.不匹配则返回null
     if (!m.matches()) {
       unmatchedRowsCount++;
         if (!alreadyLoggedNoMatch) {
@@ -212,7 +216,7 @@ public class RegexSerDe extends AbstractSerDe {
       return null;
     }
 
-    // Otherwise, return the row.
+    // Otherwise, return the row.匹配,为row对象设置值
     for (int c = 0; c < numColumns; c++) {
       try {
         String t = m.group(c+1);

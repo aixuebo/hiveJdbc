@@ -58,6 +58,7 @@ public interface Deserializer {
    * @param blob
    *          The Writable object containing a serialized object
    * @return A Java object representing the contents in the blob.
+   * 将字节码进行反序列化
    */
   Object deserialize(Writable blob) throws SerDeException;
 
@@ -69,6 +70,7 @@ public interface Deserializer {
 
   /**
    * Returns statistics collected when serializing
+   * 统计信息
    */
   SerDeStats getSerDeStats();
 }

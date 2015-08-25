@@ -45,7 +45,7 @@ import org.apache.hadoop.io.WritableUtils;
 public class DateWritable implements WritableComparable<DateWritable> {
   private static final Log LOG = LogFactory.getLog(DateWritable.class);
 
-  private static final long MILLIS_PER_DAY = TimeUnit.DAYS.toMillis(1);
+  private static final long MILLIS_PER_DAY = TimeUnit.DAYS.toMillis(1);//24小时对应的时间long毫秒值,即24*60*60*1000
 
   // Local time zone.
   // Java TimeZone has no mention of thread safety. Use thread local instance to be safe.
