@@ -464,6 +464,15 @@ public class Warehouse {
     return true;
   }
 
+  /**
+   * 校验合法性
+   * 完成partion的组装
+   * partionKey=partionValue/partionKey=partionValue
+   * @param partCols partion的field对象
+   * @param vals partionfield对象对应的value值
+   * @return
+   * @throws MetaException
+   */
   public static String makePartName(List<FieldSchema> partCols,
       List<String> vals) throws MetaException {
     return makePartName(partCols, vals, null);
@@ -477,6 +486,9 @@ public class Warehouse {
    *    The default name given to a partition value if the respective value is empty or null.
    * @return An escaped, valid partition name.
    * @throws MetaException
+   * 校验合法性
+   * 完成partion的组装
+   * partionKey=partionValue/partionKey=partionValue
    */
   public static String makePartName(List<FieldSchema> partCols,
       List<String> vals, String defaultStr) throws MetaException {

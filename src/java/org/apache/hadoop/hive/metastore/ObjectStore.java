@@ -1243,6 +1243,9 @@ public class ObjectStore implements RawStore, Configurable {
     return success;
   }
 
+  /**
+   * @List<String> part_vals 该数据库表对应的partion对应的value值集合,即按照什么值进行partion信息
+   */
   public Partition getPartition(String dbName, String tableName,
       List<String> part_vals) throws NoSuchObjectException, MetaException {
     openTransaction();
@@ -1256,6 +1259,14 @@ public class ObjectStore implements RawStore, Configurable {
     return part;
   }
 
+  /**
+   * 
+   * @param dbName
+   * @param tableName
+   * @param part_vals 该数据库表对应的partion对应的value值集合,即按照什么值进行partion信息
+   * @return
+   * @throws MetaException
+   */
   private MPartition getMPartition(String dbName, String tableName,
       List<String> part_vals) throws MetaException {
     MPartition mpart = null;
@@ -1271,6 +1282,13 @@ public class ObjectStore implements RawStore, Configurable {
       }
       // Change the query to use part_vals instead of the name which is
       // redundant
+      /**
+       *校验合法性
+   * 完成partion的组装
+   * partionKey=partionValue/partionKey=partionValue
+   * @param partCols partion的field对象
+   * @param vals partionfield对象对应的value值
+       */
       String name = Warehouse.makePartName(convertToFieldSchemas(mtbl
           .getPartitionKeys()), part_vals);
       Query query = pm.newQuery(MPartition.class,
@@ -1385,18 +1403,26 @@ public class ObjectStore implements RawStore, Configurable {
     try {
       openTransaction();
       if (part != null) {
+    	  //分区属性集合
         List<MFieldSchema> schemas = part.getTable().getPartitionKeys();
         List<String> colNames = new ArrayList<String>();
         for (MFieldSchema col: schemas) {
           colNames.add(col.getName());
         }
+        
+        /**
+         *    * partion的组装
+         * 	partionKey=partionValue/partionKey=partionValue
+         */
         String partName = FileUtils.makePartName(colNames, part.getValues());
 
+        //获取权限
         List<MPartitionPrivilege> partGrants = listPartitionGrants(
             part.getTable().getDatabase().getName(),
             part.getTable().getTableName(),
             partName);
 
+        //删除权限
         if (partGrants != null && partGrants.size() > 0) {
           pm.deletePersistentAll(partGrants);
         }
@@ -1436,10 +1462,18 @@ public class ObjectStore implements RawStore, Configurable {
     return getPartitionsInternal(dbName, tableName, maxParts, true, true);
   }
 
+  /**
+   * 
+   * @param dbName
+   * @param tableName
+   * @param maxParts
+   * @param allowSql 用sql查询
+   * @param allowJdo 用jdo框架查询
+   */
   protected List<Partition> getPartitionsInternal(String dbName, String tableName,
       int maxParts, boolean allowSql, boolean allowJdo) throws MetaException {
     assert allowSql || allowJdo;
-    boolean doTrace = LOG.isDebugEnabled();
+    boolean doTrace = LOG.isDebugEnabled();//是否打印debug详细信息
     boolean doUseDirectSql = canUseDirectSql(allowSql);
 
     boolean success = false;
@@ -1474,6 +1508,9 @@ public class ObjectStore implements RawStore, Configurable {
     }
   }
 
+  /**
+   * 查询带有权限信息的Partition集合
+   */
   @Override
   public List<Partition> getPartitionsWithAuth(String dbName, String tblName,
       short max, String userName, List<String> groupNames)
@@ -1507,6 +1544,9 @@ public class ObjectStore implements RawStore, Configurable {
     }
   }
 
+  /**
+   * 查询带有权限信息的Partition
+   */
   @Override
   public Partition getPartitionWithAuth(String dbName, String tblName,
       List<String> partVals, String user_name, List<String> group_names)
@@ -1559,6 +1599,9 @@ public class ObjectStore implements RawStore, Configurable {
     return parts;
   }
 
+  /**
+   * 查询最多max个partitionName
+   */
   // TODO:pc implement max
   public List<String> listPartitionNames(String dbName, String tableName,
       short max) throws MetaException {
@@ -1606,6 +1649,7 @@ public class ObjectStore implements RawStore, Configurable {
    *          for a table.  The type of each item in the collection corresponds to the column
    *          you want results for.  E.g., if resultsCol is partitionName, the Collection
    *          has types of String, and if resultsCol is null, the types are MPartition.
+   * 查询最多max个partition对象,只是这些partitionName是匹配part_vals的
    */
   private Collection getPartitionPsQueryResults(String dbName, String tableName,
       List<String> part_vals, short max_parts, String resultsCol)
@@ -1655,6 +1699,10 @@ public class ObjectStore implements RawStore, Configurable {
     return (Collection) q.execute(dbName, tableName, partNameMatcher);
   }
 
+  /**
+   * 查询最多max个Partition对象,只是这些partitionName是匹配part_vals的
+   * 并且返回的Partition对象有权限信息
+   */
   @Override
   public List<Partition> listPartitionsPsWithAuth(String db_name, String tbl_name,
       List<String> part_vals, short max_parts, String userName, List<String> groupNames)
@@ -1689,6 +1737,7 @@ public class ObjectStore implements RawStore, Configurable {
     return partitions;
   }
 
+  //查询最多max个partition对象,只是这些partitionName是匹配part_vals的
   @Override
   public List<String> listPartitionNamesPs(String dbName, String tableName,
       List<String> part_vals, short max_parts) throws MetaException, NoSuchObjectException {
@@ -1711,6 +1760,7 @@ public class ObjectStore implements RawStore, Configurable {
     return partitionNames;
   }
 
+  //获取前max个partition对象
   // TODO:pc implement max
   private List<MPartition> listMPartitions(String dbName, String tableName,
       int max) {
@@ -1748,6 +1798,9 @@ public class ObjectStore implements RawStore, Configurable {
     return getPartitionsByNamesInternal(dbName, tblName, partNames, true, true);
   }
 
+  /**
+   * 查询数据库表中partNames名字集合对应的Partition对象集合,partNames匹配规则是或者关系
+   */
   protected List<Partition> getPartitionsByNamesInternal(String dbName, String tblName,
       List<String> partNames, boolean allowSql, boolean allowJdo)
           throws MetaException, NoSuchObjectException {
@@ -1798,11 +1851,24 @@ public class ObjectStore implements RawStore, Configurable {
     openTransaction();
   }
 
+  /**
+   * 查询数据库表中partNames名字集合对应的Partition对象集合,partNames匹配规则是或者关系
+   * @param dbName
+   * @param tblName
+   * @param partNames
+   * @return
+   * @throws MetaException
+   */
   private List<Partition> getPartitionsViaOrm(
       String dbName, String tblName, List<String> partNames) throws MetaException {
     StringBuilder sb = new StringBuilder(
         "table.tableName == t1 && table.database.name == t2 && (");
+    
     int n = 0;
+    /**
+     * 1.存储每一个待查询的partion对应的name,例如p0=partion1,p1=partion2
+     * 2.组装sql,partitionName == p0 || partitionName == p1 
+     */
     Map<String, String> params = new HashMap<String, String>();
     for (Iterator<String> itr = partNames.iterator(); itr.hasNext();) {
       String pn = "p" + n;
@@ -1826,6 +1892,7 @@ public class ObjectStore implements RawStore, Configurable {
     query.declareParameters(parameterDeclaration);
     query.setOrdering("partitionName ascending");
 
+    //执行查询
     List<MPartition> mparts = (List<MPartition>) query.executeWithMap(params);
     // pm.retrieveAll(mparts); // retrieveAll is pessimistic. some fields may not be needed
     List<Partition> results = convertToParts(dbName, tblName, mparts);
@@ -1981,6 +2048,7 @@ public class ObjectStore implements RawStore, Configurable {
     return makeQueryFilterString(null, filter, params);
   }
 
+  //设置每一个字符串的类型是String类型,用于查询sql的使用
   private String makeParameterDeclarationString(Map<String, String> params) {
     //Create the parameter declaration string
     StringBuilder paramDecl = new StringBuilder();
@@ -1990,6 +2058,10 @@ public class ObjectStore implements RawStore, Configurable {
     return paramDecl.toString();
   }
 
+  /**
+   * 设置sql只使用的最终查询设置类型sql 
+   * @param params key:sql中变量,sql中变量的value类型
+   */
   private String makeParameterDeclarationStringObj(Map<String, Object> params) {
     //Create the parameter declaration string
     StringBuilder paramDecl = new StringBuilder();

@@ -581,6 +581,7 @@ public final class FunctionRegistry {
    * @param funcName
    *          the name of the function
    * @return Set of synonyms for funcName
+   * 返回同义的功能集合,即同一个FunctionClass函数,名字不同的集合
    */
   public static Set<String> getFunctionSynonyms(String funcName) {
     Set<String> synonyms = new HashSet<String>();
@@ -627,6 +628,7 @@ public final class FunctionRegistry {
     registerNumericType(PrimitiveCategory.STRING, 8);
   }
 
+  //获取两个参数中最大的那个参数
   static int getCommonLength(int aLen, int bLen) {
     int maxLength;
     if (aLen < 0 || bLen < 0) {

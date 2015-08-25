@@ -508,6 +508,7 @@ public class ExpressionTree {
       super(input);
     }
 
+    //×ª»¯Îª×Ö·û
     @Override
     public int LA (int i) {
       int returnChar = super.LA (i);

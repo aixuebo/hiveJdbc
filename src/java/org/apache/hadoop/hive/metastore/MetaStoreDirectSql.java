@@ -58,6 +58,7 @@ import org.apache.hadoop.hive.metastore.parser.ExpressionTree.TreeVisitor;
  * As of now, only the partition retrieval is done this way to improve job startup time;
  * JDOQL partition retrieval is still present so as not to limit the ORM solution we have
  * to SQL stores only. There's always a way to do without direct SQL.
+ * 直接使用sql查找信息
  */
 class MetaStoreDirectSql {
   private static final Log LOG = LogFactory.getLog(MetaStoreDirectSql.class);

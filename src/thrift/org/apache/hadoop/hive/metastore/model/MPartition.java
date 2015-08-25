@@ -25,7 +25,7 @@ public class MPartition {
 
   private String partitionName; // partitionname ==>  (key=value/)*(key=value)
   private MTable table; 
-  private List<String> values;
+  private List<String> values;//该partion对应的每一个value值集合
   private int createTime;
   private int lastAccessTime;
   private MStorageDescriptor sd;

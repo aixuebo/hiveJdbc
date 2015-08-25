@@ -93,7 +93,13 @@ public final class FileUtils {
     // prevent instantiation
   }
 
-
+/**
+ *    * partion的组装
+   * partionKey=partionValue/partionKey=partionValue
+ * @param partCols
+ * @param vals
+ * @return
+ */
   public static String makePartName(List<String> partCols, List<String> vals) {
     return makePartName(partCols, vals, null);
   }
@@ -105,6 +111,8 @@ public final class FileUtils {
    * @param defaultStr
    *         The default name given to a partition value if the respective value is empty or null.
    * @return An escaped, valid partition name.
+   * partion的组装
+   * partionKey=partionValue/partionKey=partionValue
    */
   public static String makePartName(List<String> partCols, List<String> vals,
       String defaultStr) {
