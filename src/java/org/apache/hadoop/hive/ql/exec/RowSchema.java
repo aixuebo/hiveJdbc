@@ -23,6 +23,7 @@ import java.util.ArrayList;
 
 /**
  * RowSchema Implementation.
+ * 定义一行有哪些列
  */
 public class RowSchema implements Serializable {
 

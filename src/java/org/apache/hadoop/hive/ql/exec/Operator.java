@@ -195,7 +195,7 @@ public abstract class Operator<T extends OperatorDesc> implements Serializable,C
     this.done = done;
   }
 
-  // non-bean fields needed during compilation
+  // non-bean fields needed during compilation定义一行有哪些列
   private transient RowSchema rowSchema;
 
   public void setSchema(RowSchema rowSchema) {
@@ -216,7 +216,7 @@ public abstract class Operator<T extends OperatorDesc> implements Serializable,C
   protected transient Reporter reporter;
   protected transient String id;
   // object inspectors for input rows
-  // We will increase the size of the array on demand
+  // We will increase the size of the array on demand 输入行集合
   protected transient ObjectInspector[] inputObjInspectors = new ObjectInspector[1];
   // for output rows of this operator
   protected transient ObjectInspector outputObjInspector;
@@ -296,6 +296,7 @@ public abstract class Operator<T extends OperatorDesc> implements Serializable,C
    *
    * @return true if there are no parents or all parents are initialized. false
    *         otherwise
+   * 确定全部父类任务都已经初始化完成,则返回true
    */
   protected boolean areAllParentsInitialized() {
     if (parentOperators == null) {
@@ -331,6 +332,7 @@ public abstract class Operator<T extends OperatorDesc> implements Serializable,C
 
     this.configuration = hconf;
     this.out = null;
+    //必须先初始化父类job
     if (!areAllParentsInitialized()) {
       return;
     }

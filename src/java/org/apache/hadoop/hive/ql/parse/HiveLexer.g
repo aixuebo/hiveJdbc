@@ -300,75 +300,90 @@ BITWISEXOR : '^';
 QUESTION : '?';
 DOLLAR : '$';
 
-// LITERALS
+// LITERALS 匹配字母
 fragment
 Letter
     : 'a'..'z' | 'A'..'Z'
     ;
-
+//匹配16进制的字母
 fragment
 HexDigit
     : 'a'..'f' | 'A'..'F'
     ;
 
+//匹配数字0-9
 fragment
 Digit
     :
     '0'..'9'
     ;
 
+//匹配科学计数法规则 1必须有e或者E.2.+或者-可有可无 3.加若干个0-9的数字
 fragment
 Exponent
     :
     ('e' | 'E') ( PLUS|MINUS )? (Digit)+
     ;
 
+//匹配正则表达式,规则 包含以下字符
 fragment
 RegexComponent
     : 'a'..'z' | 'A'..'Z' | '0'..'9' | '_'
-    | PLUS | STAR | QUESTION | MINUS | DOT
-    | LPAREN | RPAREN | LSQUARE | RSQUARE | LCURLY | RCURLY
-    | BITWISEXOR | BITWISEOR | DOLLAR
+    | PLUS | STAR | QUESTION | MINUS | DOT // + * ? - . 
+    | LPAREN | RPAREN | LSQUARE | RSQUARE | LCURLY | RCURLY //() [] {}
+    | BITWISEXOR | BITWISEOR | DOLLAR //^ | $
     ;
 
+//匹配
 StringLiteral
     :
-    ( '\'' ( ~('\''|'\\') | ('\\' .) )* '\''
-    | '\"' ( ~('\"'|'\\') | ('\\' .) )* '\"'
+    ( '\'' ( ~('\''|'\\') | ('\\' .) )* '\''    //''单引号包裹--1.不允许是单引号或者\ *任意字符  2.或者是\ *任意字符
+    | '\"' ( ~('\"'|'\\') | ('\\' .) )* '\"'    //""双引号包裹--1.不允许是单引号或者\ *任意字符  2.或者是\ *任意字符
     )+
     ;
 
+//匹配包含引号的字符串  或者 十六进制的数字,以0X开头
 CharSetLiteral
     :
     StringLiteral
     | '0' 'X' (HexDigit|Digit)+
     ;
 
+//匹配long类型,即数字+L
 BigintLiteral
     :
     (Digit)+ 'L'
     ;
 
+//匹配数字+S
 SmallintLiteral
     :
     (Digit)+ 'S'
     ;
 
+//匹配数字+Y
 TinyintLiteral
     :
     (Digit)+ 'Y'
     ;
 
+//匹配数字或者带科学计数法的数字 +BD
 DecimalLiteral
     :
     Number 'B' 'D'
     ;
 
+//匹配数字+单位,即表示长度信息
 ByteLengthLiteral
     :
     (Digit)+ ('b' | 'B' | 'k' | 'K' | 'm' | 'M' | 'g' | 'G')
     ;
 
+
+//1.纯粹数字
+//2.数字 + . + 数字 
+//3.数字 + . + 数字 + Exponent (科学计数法)
+//4.数字 + Exponent(科学计数法)
 Number
     :
     (Digit)+ ( DOT (Digit)* (Exponent)? | Exponent)?
@@ -380,14 +395,17 @@ Identifier
     | '`' RegexComponent+ '`'
     ;
 
+//匹配以_ +字母/数字'_' | '-' | '.' | ':' 信息为合法信息
 CharSetName
     :
     '_' (Letter | Digit | '_' | '-' | '.' | ':' )+
     ;
 
+//匹配空格
 WS  :  (' '|'\r'|'\t'|'\n') {$channel=HIDDEN;}
     ;
 
+//匹配注释 以--开头,一直到\n\r结束
 COMMENT
   : '--' (~('\n'|'\r'))*
     { $channel=HIDDEN; }

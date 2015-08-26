@@ -45,6 +45,7 @@ catch (RecognitionException e) {
 
 //-----------------------------------------------------------------------------------
 
+//∆•≈‰group by groupByExpression,groupByExpression,groupByExpression
 // group by a,b
 groupByClause
 @init { gParent.msgs.push("group by clause"); }

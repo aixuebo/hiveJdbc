@@ -43,12 +43,13 @@ import org.apache.hadoop.hive.serde2.objectinspector.primitive.WritableStringObj
 
 /**
  * ObjectInspectorConverters.
- *
+ * 类型转换类
  */
 public final class ObjectInspectorConverters {
 
   /**
    * A converter which will convert objects with one ObjectInspector to another.
+   * 给定参数是object,输出也是object,因此需要根据参数类型,做相应的转换
    */
   public static interface Converter {
     Object convert(Object input);
@@ -56,7 +57,7 @@ public final class ObjectInspectorConverters {
 
   /**
    * IdentityConverter.
-   *
+   * 输入和输出一样类型
    */
   public static class IdentityConverter implements Converter {
     public Object convert(Object input) {
@@ -64,6 +65,12 @@ public final class ObjectInspectorConverters {
     }
   }
 
+  /**
+   * 基础类型转换器 
+   * @param inputOI
+   * @param outputOI
+   * @return
+   */
   private static Converter getConverter(PrimitiveObjectInspector inputOI,
       PrimitiveObjectInspector outputOI) {
     switch (outputOI.getPrimitiveCategory()) {
@@ -388,7 +395,6 @@ public final class ObjectInspectorConverters {
       // NOTE: This code tries to get all key-value pairs out of the map.
       // It's not very efficient. The more efficient way should be to let MapOI
       // return an Iterator. This is currently not supported by MapOI yet.
-
       Map<?, ?> map = inputOI.getMap(input);
       int size = map.size();
 
