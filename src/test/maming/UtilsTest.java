@@ -3,6 +3,7 @@ package maming;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.sql.Date;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -33,6 +34,12 @@ public class UtilsTest {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-	    
+	}
+	
+	@Test
+	public void test3(){
+		String s = "2015-7-07";
+        Date result = Date.valueOf(s);
+        System.out.println(result);
 	}
 }

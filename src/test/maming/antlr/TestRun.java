@@ -1,5 +1,12 @@
 package maming.antlr;
 
+import java.io.IOException;
+import java.util.Enumeration;
+
+
+import org.apache.hadoop.hive.ql.parse.ASTNode;
+import org.apache.hadoop.hive.ql.parse.ParseDriver;
+import org.apache.hadoop.hive.ql.parse.ParseException;
 import org.junit.Test;
 
 public class TestRun {
@@ -9,13 +16,32 @@ public class TestRun {
 		//String path = "E://tmp//hive//Expr.g";
 		//new org.antlr.Tool(new String[] {path});
 		//new org.antlr.works.IDE();
+		
+		try {
+			//Enumeration enumeration = this.getClass().getClassLoader().getResources("/maming/antlr/TestRun");
+			Enumeration enumeration = this.getClass().getClassLoader().getResources("./org/apache/hadoop/hive/ql/parse/HiveLexer.class");
+			System.out.println("ssssss");
+			while(enumeration.hasMoreElements()){
+				System.out.println(enumeration.nextElement());
+			}
+			System.out.println("end");
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		
 	}
 	
 	@Test
 	public void test2(){
-		System.out.println(0x0000000000000002L);
-		System.out.println(0x0000000000000000L);
-		System.out.println(0xFEF4FFFDFC000000L);
+		String command = "select aa from biao";
+		try {
+			ASTNode node = new ParseDriver().parse(command);
+			System.out.println(node.dump());
+			System.out.println(node);
+		} catch (ParseException e) {
+			e.printStackTrace();
+		}
 	}
 	
 }
