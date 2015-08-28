@@ -45,11 +45,12 @@ catch (RecognitionException e) {
 
 //----------------------- Rules for parsing selectClause -----------------------------
 // select a,b,c ...
+//SELECT /*+ STREAMTABLE(t1) */ ÊôÓÚhintClause
 selectClause
 @init { gParent.msgs.push("select clause"); }
 @after { gParent.msgs.pop(); }
     :
-    KW_SELECT hintClause? (((KW_ALL | dist=KW_DISTINCT)? selectList)
+    KW_SELECT hintClause? (((KW_ALL | dist=KW_DISTINCT)? selectList) // select *,version from nginx limit 10;
                           | (transform=KW_TRANSFORM selectTrfmClause))
      -> {$transform == null && $dist == null}? ^(TOK_SELECT hintClause? selectList)
      -> {$transform == null && $dist != null}? ^(TOK_SELECTDI hintClause? selectList)
@@ -77,6 +78,7 @@ selectTrfmClause
     -> ^(TOK_TRANSFORM selectExpressionList $inSerde $inRec StringLiteral $outSerde $outRec aliasList? columnNameTypeList?)
     ;
 
+// /*+ STREAMTABLE(t1) */ ÊôÓÚhintClause
 hintClause
 @init { gParent.msgs.push("hint clause"); }
 @after { gParent.msgs.pop(); }
@@ -91,6 +93,7 @@ hintList
     hintItem (COMMA hintItem)* -> hintItem+
     ;
 
+// STREAMTABLE(t1)
 hintItem
 @init { gParent.msgs.push("hint item"); }
 @after { gParent.msgs.pop(); }
@@ -121,7 +124,8 @@ hintArgName
     identifier
     ;
 
-selectItem
+//select identifier as identifier
+selectItem 
 @init { gParent.msgs.push("selection target"); }
 @after { gParent.msgs.pop(); }
     :

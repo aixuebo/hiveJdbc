@@ -9050,10 +9050,10 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       try {
         Table dumpTable = db.newTable(tableName);
         databaseName = dumpTable.getDbName();
-        if (null == db.getDatabase(dumpTable.getDbName())) {
+        if (null == db.getDatabase(dumpTable.getDbName())) {//该table对应的数据库必须存在
           throw new SemanticException(ErrorMsg.DATABASE_NOT_EXISTS.getMsg(dumpTable.getDbName()));
         }
-        if (null != db.getTable(dumpTable.getDbName(), dumpTable.getTableName(), false)) {
+        if (null != db.getTable(dumpTable.getDbName(), dumpTable.getTableName(), false)) {//该表不能已经存在
           throw new SemanticException(ErrorMsg.TABLE_ALREADY_EXISTS.getMsg(tableName));
         }
       } catch (HiveException e) {

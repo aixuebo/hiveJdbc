@@ -31,7 +31,7 @@ import org.apache.hadoop.io.Text;
 
 /**
  * UDFMinute.
- *
+ * 返回指定日期对应的分钟
  */
 @Description(name = "minute",
     value = "_FUNC_(date) - Returns the minute of date",

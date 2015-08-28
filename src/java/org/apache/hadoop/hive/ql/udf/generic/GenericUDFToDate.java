@@ -31,6 +31,8 @@ import org.apache.hadoop.hive.serde2.objectinspector.primitive.PrimitiveObjectIn
 
 /**
  * GenericUDFToDate
+ * 将only allows date,string, or timestamp type三种格式转换成Date对象
+ * 如果是第一个参数String或者varchar类型的,则格式一定是2015-7-07或者2015-07-07方式,即一定要有-分隔,同时年为4位,月和日可以为1位
  */
 @Description(name = "date",
     value = "CAST(<Date string> as DATE) - Returns the date represented by the date string.",
@@ -55,6 +57,7 @@ public class GenericUDFToDate extends GenericUDF {
       PrimitiveCategory pc = argumentOI.getPrimitiveCategory();
       PrimitiveGrouping pg =
           PrimitiveObjectInspectorUtils.getPrimitiveGrouping(pc);
+      //校验格式,only allows date,string, or timestamp type
       switch (pg) {
         case DATE_GROUP:
         case STRING_GROUP:

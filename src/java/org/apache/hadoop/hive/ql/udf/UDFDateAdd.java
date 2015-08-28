@@ -32,7 +32,8 @@ import org.apache.hadoop.io.Text;
 
 /**
  * UDFDateAdd.
- *
+ * 为参数1添加或者减少天数
+ * 参数:dateString1(yyyy-MM-dd),int(可以是负数)
  */
 @Description(name = "date_add",
     value = "_FUNC_(start_date, num_days) - Returns the date that is num_days after start_date.",

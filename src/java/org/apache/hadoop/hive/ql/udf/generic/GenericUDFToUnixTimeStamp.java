@@ -36,6 +36,9 @@ import org.apache.hadoop.io.LongWritable;
 
 /**
  * deterministic version of UDFUnixTimeStamp. enforces argument
+ * 将一个字符串转换成时间戳long
+ * 第一个参数是时间字符串
+ * 第二个参数是可选的,默认是yyyy-MM-dd HH:mm:ss,即字符串时间的格式
  */
 @Description(name = "to_unix_timestamp",
     value = "_FUNC_(date[, pattern]) - Returns the UNIX timestamp",

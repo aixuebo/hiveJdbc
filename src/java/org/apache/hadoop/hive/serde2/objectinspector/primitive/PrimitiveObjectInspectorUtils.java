@@ -1034,6 +1034,12 @@ public final class PrimitiveObjectInspectorUtils {
     return result;
   }
 
+  /**
+   * 
+   * @param o 如果是String或者varchar类型的,则格式一定是2015-7-07或者2015-07-07方式,即一定要有-分隔,同时年为4位,月和日可以为1位
+   * @param oi
+   * @return
+   */
   public static Date getDate(Object o, PrimitiveObjectInspector oi) {
     if (o == null) {
       return null;

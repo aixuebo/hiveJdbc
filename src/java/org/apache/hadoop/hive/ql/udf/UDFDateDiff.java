@@ -32,7 +32,7 @@ import org.apache.hadoop.io.Text;
 
 /**
  * UDFDateDiff.
- *
+ * 计算两个日期差距多少天
  */
 @Description(name = "datediff",
     value = "_FUNC_(date1, date2) - Returns the number of days between date1 and date2",
@@ -109,7 +109,7 @@ public class UDFDateDiff extends UDF {
     // by comparing with UTC epoch and integer division.
     // 86400 is the number of seconds in a day
     long diffInMilliSeconds = date.getTime() - date2.getTime();
-    result.set((int) (diffInMilliSeconds / (86400 * 1000)));
+    result.set((int) (diffInMilliSeconds / (86400 * 1000)));//差距多少天
     return result;
   }
 

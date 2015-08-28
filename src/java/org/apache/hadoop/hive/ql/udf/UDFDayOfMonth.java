@@ -32,7 +32,7 @@ import org.apache.hadoop.io.Text;
 
 /**
  * UDFDayOfMonth.
- *
+ * 给定时间返回该时间对应的day日期
  */
 @Description(name = "day,dayofmonth",
     value = "_FUNC_(date) - Returns the date of the month of date",

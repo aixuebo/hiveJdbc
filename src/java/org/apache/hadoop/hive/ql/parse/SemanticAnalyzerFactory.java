@@ -101,19 +101,12 @@ public final class SemanticAnalyzerFactory {
   }
 
   static {
-    tablePartitionCommandType.put(
-        HiveParser.TOK_ALTERTABLE_ALTERPARTS_PROTECTMODE,
-        new HiveOperation[] { HiveOperation.ALTERTABLE_PROTECTMODE,
-            HiveOperation.ALTERPARTITION_PROTECTMODE });
     tablePartitionCommandType.put(HiveParser.TOK_ALTERTABLE_FILEFORMAT,
         new HiveOperation[] { HiveOperation.ALTERTABLE_FILEFORMAT,
             HiveOperation.ALTERPARTITION_FILEFORMAT });
     tablePartitionCommandType.put(HiveParser.TOK_ALTERTABLE_LOCATION,
         new HiveOperation[] { HiveOperation.ALTERTABLE_LOCATION,
             HiveOperation.ALTERPARTITION_LOCATION });
-    tablePartitionCommandType.put(HiveParser.TOK_ALTERTABLE_ALTERPARTS_MERGEFILES,
-        new HiveOperation[] {HiveOperation.ALTERTABLE_MERGEFILES,
-            HiveOperation.ALTERPARTITION_MERGEFILES });
     tablePartitionCommandType.put(HiveParser.TOK_ALTERTABLE_SERIALIZER,
         new HiveOperation[] {HiveOperation.ALTERTABLE_SERIALIZER,
             HiveOperation.ALTERPARTITION_SERIALIZER });
@@ -191,7 +184,6 @@ public final class SemanticAnalyzerFactory {
       case HiveParser.TOK_ALTERTABLE_TOUCH:
       case HiveParser.TOK_ALTERTABLE_ARCHIVE:
       case HiveParser.TOK_ALTERTABLE_UNARCHIVE:
-      case HiveParser.TOK_ALTERTABLE_ALTERPARTS:
       case HiveParser.TOK_LOCKTABLE:
       case HiveParser.TOK_UNLOCKTABLE:
       case HiveParser.TOK_CREATEROLE:

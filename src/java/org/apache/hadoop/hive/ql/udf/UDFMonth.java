@@ -32,7 +32,7 @@ import org.apache.hadoop.io.Text;
 
 /**
  * UDFMonth.
- *
+ * 给定时间返回该时间对应的month月
  */
 @Description(name = "month",
     value = "_FUNC_(date) - Returns the month of date",

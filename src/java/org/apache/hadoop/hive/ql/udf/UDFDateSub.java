@@ -32,7 +32,8 @@ import org.apache.hadoop.io.Text;
 
 /**
  * UDFDateSub.
- *
+ * 为参数1减少天数,当参数为整数的时候就自动会变成-n
+ * @参见UDFDateAdd.
  */
 @Description(name = "date_sub",
     value = "_FUNC_(start_date, num_days) - Returns the date that is num_days before start_date.",

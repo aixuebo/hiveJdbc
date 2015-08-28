@@ -80,10 +80,12 @@ public class CreateTableDesc extends DDLDesc implements Serializable {
   String serName;
   String storageHandler;
   Map<String, String> serdeProps;
-  Map<String, String> tblProps;
+  Map<String, String> tblProps;//全局属性集合
   boolean ifNotExists;//是否设置了不存在属性
-  List<String> skewedColNames;
-  List<List<String>> skewedColValues;
+  //SKEWED BY (id) ON (142624653, 198477395, 102641838, 138947865, 156483436, 96411677, 210082076, 800174765, 139116901, 704352025)
+  //SKEWED BY (col1, col2) ON (('s1',1), ('s3',3), ('s13',13), ('s78',78))
+  List<String> skewedColNames;//id
+  List<List<String>> skewedColValues;//用逗号拆分成集合,如果skewedColNames是两个以上列,则每一个元素又是一个List,例如('s1',1)
   boolean isStoredAsSubDirectories = false;
 
   public CreateTableDesc() {

@@ -30,7 +30,7 @@ import org.apache.hadoop.io.Text;
 
 /**
  * UDFDate.
- *
+ * 将字符串转换成Date类型.字符串格式yyyy-MM-dd
  */
 @Description(name = "to_date",
     value = "_FUNC_(expr) - Extracts the date part of the date or datetime expression expr",

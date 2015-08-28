@@ -31,7 +31,7 @@ import org.apache.hadoop.io.Text;
 
 /**
  * UDFHour.
- *
+ * 返回指定日期对应的小时
  */
 @Description(name = "hour",
     value = "_FUNC_(date) - Returns the hour of date",

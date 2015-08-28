@@ -29,7 +29,8 @@ import org.apache.hadoop.io.Text;
 
 /**
  * UDFFromUnixTime.
- *
+ * 将第一个long类型的参数*1000,之后转化为String的时间格式,默认转化的格式为yyyy-MM-dd HH:mm:ss
+ * 第二个参数为自定义日期格式yyyy-MM-dd HH:mm:ss
  */
 @Description(name = "from_unixtime",
     value = "_FUNC_(unix_time, format) - returns unix_time in the specified format",
@@ -117,7 +118,7 @@ public class UDFFromUnixTime extends UDF {
    * @return elapsed time in the given format.
    */
   private Text eval(long unixtime, Text format) {
-    if (!format.equals(lastFormat)) {
+    if (!format.equals(lastFormat)) {//格式是否与上次使用的相同
       formatter = new SimpleDateFormat(format.toString());
       lastFormat.set(format);
     }
