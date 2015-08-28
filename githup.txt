@@ -10,6 +10,7 @@ git add README.md
 git commit -m "first commit"
 git remote add origin git@github.com:aixuebo/hive.git
 git push -u origin master
+git pull origin master
 ¡­or push an existing repository from the command line
 
 
