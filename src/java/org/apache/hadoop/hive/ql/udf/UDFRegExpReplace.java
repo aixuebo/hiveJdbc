@@ -27,7 +27,7 @@ import org.apache.hadoop.io.Text;
 
 /**
  * UDFRegExpReplace.
- *
+ * 将全部符合正则表达式的地方都替换成指定值
  */
 @Description(name = "regexp_replace",
     value = "_FUNC_(str, regexp, rep) - replace all substrings of str that "
@@ -36,17 +36,24 @@ import org.apache.hadoop.io.Text;
     + "  'num-num'")
 public class UDFRegExpReplace extends UDF {
 
-  private final Text lastRegex = new Text();
-  private Pattern p = null;
+  private final Text lastRegex = new Text();//上一次的正则表达式,以使其重复使用
+  private Pattern p = null;//正则表达式
 
-  private final Text lastReplacement = new Text();
-  private String replacementString = "";
+  private final Text lastReplacement = new Text();//上一次要被替换的字符串缓存
+  private String replacementString = "";//上一次要被替换的字符串缓存
 
   private Text result = new Text();
 
   public UDFRegExpReplace() {
   }
 
+  /**
+   * 
+   * @param s 字符串
+   * @param regex 正则表达式
+   * @param replacement 符合正则表达式的地方替换成replacement
+   * @return
+   */
   public Text evaluate(Text s, Text regex, Text replacement) {
     if (s == null || regex == null || replacement == null) {
       return null;
@@ -56,6 +63,7 @@ public class UDFRegExpReplace extends UDF {
       lastRegex.set(regex);
       p = Pattern.compile(regex.toString());
     }
+    //字符串与匹配正则表达式
     Matcher m = p.matcher(s.toString());
     // If the replacement is changed, make sure we redo toString again.
     if (!replacement.equals(lastReplacement)) {

@@ -90,6 +90,8 @@ groupByExpression
     expression
     ;
 
+
+//having havingCondition条件语句
 havingClause
 @init { gParent.msgs.push("having clause"); }
 @after { gParent.msgs.pop(); }
@@ -97,6 +99,7 @@ havingClause
     KW_HAVING havingCondition -> ^(TOK_HAVING havingCondition)
     ;
 
+//having过滤条件的字符串表达式
 havingCondition
 @init { gParent.msgs.push("having condition"); }
 @after { gParent.msgs.pop(); }
@@ -259,6 +262,7 @@ dateLiteral
     }
     ;
 
+//表达式的定义
 expression
 @init { gParent.msgs.push("expression specification"); }
 @after { gParent.msgs.pop(); }

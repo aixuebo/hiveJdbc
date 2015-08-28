@@ -28,7 +28,10 @@ import org.apache.hadoop.io.Text;
 
 /**
  * UDFSubstr.
- *
+ * 字符串截取Facebook,
+ * 如果要从5开始截取.则是从1开始计算字符串的.[5,因此第五个是要被保留的
+ * 如果从-5开始截取,从后面查,后面自后一个也是1,例如-5,从后查询[5,因此第五个是要被保留的
+ * 
  */
 @Description(name = "substr,substring",
     value = "_FUNC_(str, pos[, len]) - returns the substring of str that"
@@ -54,6 +57,13 @@ public class UDFSubstr extends UDF {
     r = new Text();
   }
 
+  /**
+   * 
+   * @param t 等待截取的字符串
+   * @param pos 从开始位置截取
+   * @param len 截取多少个字符
+   * @return
+   */
   public Text evaluate(Text t, IntWritable pos, IntWritable len) {
 
     if ((t == null) || (pos == null) || (len == null)) {
@@ -75,8 +85,15 @@ public class UDFSubstr extends UDF {
     return r;
   }
 
+  /**
+   * 
+   * @param pos 从开始位置截取
+   * @param len 截取的总长度
+   * @param inputLen 等待截取的字符串总长度
+   * @return
+   */
   private int[] makeIndex(int pos, int len, int inputLen) {
-    if ((Math.abs(pos) > inputLen)) {
+    if ((Math.abs(pos) > inputLen)) {//说明不需要截取,已经超出总长度了
       return null;
     }
 
@@ -91,7 +108,7 @@ public class UDFSubstr extends UDF {
     }
 
     if ((inputLen - start) < len) {
-      end = inputLen;
+      end = inputLen;//最后一个位置,因为字符串的总长度不够
     } else {
       end = start + len;
     }

@@ -1,0 +1,29 @@
+(nil(
+TOK_QUERY(
+		TOK_FROM(
+			TOK_TABREF(
+				TOK_TABNAME(biao)
+				)
+			)
+		)
+		(
+		TOK_INSERT(
+			TOK_DESTINATION(
+						TOK_DIR(TOK_TMP_FILE)
+					)
+			)
+			(
+				TOK_SELECT(
+						TOK_SELEXPR(
+								TOK_TABLE_OR_COL(aa)
+							   )(a)(b)
+							   )
+					  )
+		        )
+		)
+		(<EOF>)
+)
+
+
+
+select aa as (a,b c) from biao

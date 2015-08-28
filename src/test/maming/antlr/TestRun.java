@@ -34,7 +34,7 @@ public class TestRun {
 	
 	@Test
 	public void test2(){
-		String command = "select aa from biao";
+		String command = "select distinct aa,bb from biao";
 		try {
 			ASTNode node = new ParseDriver().parse(command);
 			System.out.println(node.dump());

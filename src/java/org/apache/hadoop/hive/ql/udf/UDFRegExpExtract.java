@@ -28,7 +28,8 @@ import org.apache.hadoop.hive.ql.exec.UDF;
 /**
  * UDF to extract a specific group identified by a java regex. Note that if a
  * regexp has a backslash ('\'), then need to specify '\\' For example,
- * regexp_extract('100-200', '(\\d+)-(\\d+)', 1) will return '100'
+ * regexp_extract('100-200', '(\\d+)-(\\d+)', 1) will return '100'  例子从100-200中获取第一个分组100
+ * 使用正则表达式抽取指定字符串中匹配的关键信息,返回某一个匹配的信息
  */
 @Description(name = "regexp_extract",
     value = "_FUNC_(str, regexp[, idx]) - extracts a group that matches regexp",
@@ -42,6 +43,13 @@ public class UDFRegExpExtract extends UDF {
   public UDFRegExpExtract() {
   }
 
+  /**
+   * 
+   * @param s 字符串
+   * @param regex 带()组成的分组好的正则表达式
+   * @param extractIndex 最终获取的是第几个分组值,最小值以1开始计算
+   * @return
+   */
   public String evaluate(String s, String regex, Integer extractIndex) {
     if (s == null || regex == null) {
       return null;

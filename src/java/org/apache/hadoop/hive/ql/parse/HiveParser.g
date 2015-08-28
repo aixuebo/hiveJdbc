@@ -551,12 +551,18 @@ catch (RecognitionException e) {
 }
 }
 
+//开始执行规则,分两种,是explain还是仅仅执行的sql语句
 // starting rule
 statement
 	: explainStatement EOF
 	| execStatement EOF
 	;
-
+//执行以下sql语句,
+//EXPLAIN execStatement
+//EXPLAIN EXTENDED execStatement
+//EXPLAIN FORMATTED execStatement
+//EXPLAIN DEPENDENCY execStatement
+//EXPLAIN LOGICAL execStatement
 explainStatement
 @init { msgs.push("explain statement"); }
 @after { msgs.pop(); }
@@ -629,6 +635,7 @@ ddlStatement
     | revokeRole
     ;
 
+//匹配if exists语句
 ifExists
 @init { msgs.push("if exists clause"); }
 @after { msgs.pop(); }
@@ -645,6 +652,7 @@ restrictOrCascade
     -> ^(TOK_CASCADE)
     ;
 
+//匹配if not exists语句
 ifNotExists
 @init { msgs.push("if not exists clause"); }
 @after { msgs.pop(); }
@@ -692,6 +700,8 @@ dbLocation
       KW_LOCATION locn=StringLiteral -> ^(TOK_DATABASELOCATION $locn)
     ;
 
+//存储table的属性键值对信息集合
+//格式(key=value,key=value),或者key(此时认为解析成key=null,即不需要value属性值)
 dbProperties
 @init { msgs.push("dbproperties"); }
 @after { msgs.pop(); }
@@ -699,6 +709,8 @@ dbProperties
       LPAREN dbPropertiesList RPAREN -> ^(TOK_DATABASEPROPERTIES dbPropertiesList)
     ;
 
+//存储table的属性键值对信息集合
+//格式key=value,key=value,或者key(此时认为解析成key=null,即不需要value属性值)
 dbPropertiesList
 @init { msgs.push("database properties list"); }
 @after { msgs.pop(); }
@@ -1452,6 +1464,8 @@ showStmtIdentifier
     | StringLiteral
     ;
 
+//为table添加注释
+//KW_COMMENT 字符换
 tableComment
 @init { msgs.push("table's comment"); }
 @after { msgs.pop(); }
@@ -1529,6 +1543,8 @@ tableRowFormat
     -> ^(TOK_TABLESERIALIZER rowFormatSerde)
     ;
 
+//解析table的键值对属性值的前缀信息
+//格式TBLPROPERTIES (key=value,key=value)
 tablePropertiesPrefixed
 @init { msgs.push("table properties with prefix"); }
 @after { msgs.pop(); }
@@ -1536,6 +1552,8 @@ tablePropertiesPrefixed
         KW_TBLPROPERTIES! tableProperties
     ;
 
+//存储table的属性键值对信息集合
+//格式(key=value,key=value)
 tableProperties
 @init { msgs.push("table properties"); }
 @after { msgs.pop(); }
@@ -1543,6 +1561,8 @@ tableProperties
       LPAREN tablePropertiesList RPAREN -> ^(TOK_TABLEPROPERTIES tablePropertiesList)
     ;
 
+//存储table的属性键值对信息集合
+//格式key=value,key=value,或者key(此时认为解析成key=null,即不需要value属性值)
 tablePropertiesList
 @init { msgs.push("table properties list"); }
 @after { msgs.pop(); }
@@ -1552,6 +1572,8 @@ tablePropertiesList
       keyProperty (COMMA keyProperty)* -> ^(TOK_TABLEPROPLIST keyProperty+)
     ;
 
+//解析一个key-value键值对属性
+//key = value
 keyValueProperty
 @init { msgs.push("specifying key/value property"); }
 @after { msgs.pop(); }
@@ -1559,6 +1581,9 @@ keyValueProperty
       key=StringLiteral EQUAL value=StringLiteral -> ^(TOK_TABLEPROPERTY $key $value)
     ;
 
+
+//解析一个key键值对属性,并且设置value属性为null
+//内容就是一个字符串,代表key
 keyProperty
 @init { msgs.push("specifying key property"); }
 @after { msgs.pop(); }
@@ -1622,24 +1647,30 @@ tableLocation
       KW_LOCATION locn=StringLiteral -> ^(TOK_TABLELOCATION $locn)
     ;
 
+//解析column的name、类型集合,用逗号拆分
+//格式xxx colType COMMENT xxx,xxx colType COMMENT xxx
 columnNameTypeList
 @init { msgs.push("column name type list"); }
 @after { msgs.pop(); }
     : columnNameType (COMMA columnNameType)* -> ^(TOK_TABCOLLIST columnNameType+)
     ;
 
+//获取属性名字:属性类型的集合,用逗号拆分
+//格式 name:type,name:type
 columnNameColonTypeList
 @init { msgs.push("column name type list"); }
 @after { msgs.pop(); }
     : columnNameColonType (COMMA columnNameColonType)* -> ^(TOK_TABCOLLIST columnNameColonType+)
     ;
 
+//获取属性名字集合,用逗号拆分
 columnNameList
 @init { msgs.push("column name list"); }
 @after { msgs.pop(); }
     : columnName (COMMA columnName)* -> ^(TOK_TABCOLNAME columnName+)
     ;
 
+//仅仅获取属性名称
 columnName
 @init { msgs.push("column name"); }
 @after { msgs.pop(); }
@@ -1704,12 +1735,16 @@ columnNameOrder
     ->                  ^(TOK_TABSORTCOLNAMEDESC identifier)
     ;
 
+//解析属性名字和注释集合,用逗号拆分，没有类型
+//格式 属性名字 COMMENT 注释,属性名字 COMMENT 注释
 columnNameCommentList
 @init { msgs.push("column name comment list"); }
 @after { msgs.pop(); }
     : columnNameComment (COMMA columnNameComment)* -> ^(TOK_TABCOLNAME columnNameComment+)
     ;
 
+//解析属性名字和注释，没有类型
+//格式 属性名字 COMMENT 注释
 columnNameComment
 @init { msgs.push("column name comment"); }
 @after { msgs.pop(); }
@@ -1725,6 +1760,8 @@ columnRefOrder
     ->                  ^(TOK_TABSORTCOLNAMEDESC expression)
     ;
 
+//解析column的name、类型、注释,仅仅解析一个属性的
+//格式xxx colType COMMENT xxx
 columnNameType
 @init { msgs.push("column specification"); }
 @after { msgs.pop(); }
@@ -1733,6 +1770,8 @@ columnNameType
     ->                     ^(TOK_TABCOL $colName colType $comment)
     ;
 
+//解析column的name、类型、注释,仅仅解析一个属性的,并且属性name和类型之间用:连接
+//格式xxx : colType COMMENT xxx
 columnNameColonType
 @init { msgs.push("column specification"); }
 @after { msgs.pop(); }
@@ -1741,18 +1780,21 @@ columnNameColonType
     ->                     ^(TOK_TABCOL $colName colType $comment)
     ;
 
+//解析column属性的类型,仅仅解析一个属性的类型
 colType
 @init { msgs.push("column type"); }
 @after { msgs.pop(); }
     : type
     ;
 
+//column属性的类型集合,用逗号拆分,仅仅包含属性类型
 colTypeList
 @init { msgs.push("column type list"); }
 @after { msgs.pop(); }
     : colType (COMMA colType)* -> ^(TOK_COLTYPELIST colType+)
     ;
 
+//column属性的类型
 type
     : primitiveType
     | listType
@@ -1910,11 +1952,10 @@ destination
    | KW_TABLE tableOrPartition -> tableOrPartition
    ;
 
+//limit+ 数字
 limitClause
 @init { msgs.push("limit clause"); }
 @after { msgs.pop(); }
    :
    KW_LIMIT num=Number -> ^(TOK_LIMIT $num)
    ;
-
-

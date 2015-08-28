@@ -25,7 +25,8 @@ import org.apache.hadoop.io.Text;
 
 /**
  * UDFRepeat.
- *
+ * 两个参数,1.字符串.2.数字
+ * 表示将字符串重复打印多次,比如参数'123', 2,输出结果是123123
  */
 @Description(name = "repeat",
     value = "_FUNC_(str, n) - repeat str n times ",
@@ -46,7 +47,7 @@ public class UDFRepeat extends UDF {
 
     byte[] data = result.getBytes();
 
-    if (data.length < len) {
+    if (data.length < len) {//data数组是被重用的,因此一旦当本次的len长度比以前的大,因此要扩大data大小到满足len长度为止
       data = new byte[len];
     }
 
