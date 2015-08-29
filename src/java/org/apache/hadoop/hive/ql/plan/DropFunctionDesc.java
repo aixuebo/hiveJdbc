@@ -22,13 +22,13 @@ import java.io.Serializable;
 
 /**
  * DropFunctionDesc.
- *
+ * 等待drop的函数名称
  */
 @Explain(displayName = "Drop Function")
 public class DropFunctionDesc implements Serializable {
   private static final long serialVersionUID = 1L;
 
-  private String functionName;
+  private String functionName;//函数名称
 
   /**
    * For serialization only.

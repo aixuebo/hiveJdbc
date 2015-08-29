@@ -674,8 +674,8 @@ public class HiveConf extends Configuration {
     HIVEEXPREVALUATIONCACHE("hive.cache.expr.evaluation", true),
 
     // Hive Variables
-    HIVEVARIABLESUBSTITUTE("hive.variable.substitute", true),
-    HIVEVARIABLESUBSTITUTEDEPTH("hive.variable.substitute.depth", 40),
+    HIVEVARIABLESUBSTITUTE("hive.variable.substitute", true),//是否启动了变量解析功能
+    HIVEVARIABLESUBSTITUTEDEPTH("hive.variable.substitute.depth", 40),//变量设置的总深度,即总数量不得超过该值
 
     HIVECONFVALIDATION("hive.conf.validation", true),
 

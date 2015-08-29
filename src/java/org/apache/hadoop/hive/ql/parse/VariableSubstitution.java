@@ -30,6 +30,7 @@ import org.apache.hadoop.hive.ql.session.SessionState;
 public class VariableSubstitution {
 
   private static final Log l4j = LogFactory.getLog(VariableSubstitution.class);
+  //变量匹配的正则表达式规则${xxx}
   protected static Pattern varPat = Pattern.compile("\\$\\{[^\\}\\$\u0020]+\\}");
 
   private String getSubstitute(HiveConf conf, String var) {
@@ -61,9 +62,10 @@ public class VariableSubstitution {
     return val;
   }
 
+  //expr是等待解析的字符串
   public String substitute (HiveConf conf, String expr) {
 
-    if (conf.getBoolVar(ConfVars.HIVEVARIABLESUBSTITUTE)){
+    if (conf.getBoolVar(ConfVars.HIVEVARIABLESUBSTITUTE)){//必须设置了解析变量可用状态
       l4j.debug("Substitution is on: "+expr);
     } else {
       return expr;
@@ -73,7 +75,7 @@ public class VariableSubstitution {
     }
     Matcher match = varPat.matcher("");
     String eval = expr;
-    for(int s=0;s<conf.getIntVar(ConfVars.HIVEVARIABLESUBSTITUTEDEPTH); s++) {
+    for(int s=0;s<conf.getIntVar(ConfVars.HIVEVARIABLESUBSTITUTEDEPTH); s++) {//等待解析的变量不能超过最大值
       match.reset(eval);
       if (!match.find()) {
         return eval;

@@ -28,7 +28,7 @@ import org.apache.hadoop.hive.ql.udf.ptf.WindowingTableFunction;
 
 /**
  * FunctionInfo.
- *
+ * 定义一个函数对象
  */
 public class FunctionInfo {
 

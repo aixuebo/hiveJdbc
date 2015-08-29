@@ -42,7 +42,7 @@ public class FunctionSemanticAnalyzer extends BaseSemanticAnalyzer {
 
   @Override
   public void analyzeInternal(ASTNode ast) throws SemanticException {
-    if (ast.getToken().getType() == HiveParser.TOK_CREATEFUNCTION) {
+    if (ast.getToken().getType() == HiveParser.TOK_CREATEFUNCTION) {//CREATE TEMPORARY FUNCTION xxx as xxx
       analyzeCreateFunction(ast);
     }
     if (ast.getToken().getType() == HiveParser.TOK_DROPFUNCTION) {
@@ -52,21 +52,26 @@ public class FunctionSemanticAnalyzer extends BaseSemanticAnalyzer {
     LOG.info("analyze done");
   }
 
+  //CREATE TEMPORARY FUNCTION xxx as xxx创建函数功能
   private void analyzeCreateFunction(ASTNode ast) throws SemanticException {
-    String functionName = ast.getChild(0).getText();
-    String className = unescapeSQLString(ast.getChild(1).getText());
+    String functionName = ast.getChild(0).getText();//函数名
+    String className = unescapeSQLString(ast.getChild(1).getText());//该函数对应的class全路径
     CreateFunctionDesc desc = new CreateFunctionDesc(functionName, className);
     rootTasks.add(TaskFactory.get(new FunctionWork(desc), conf));
   }
 
+  /**
+   * 删除一个自定义函数
+   * drop TEMPORARY FUNCTION [ifExists] xxx
+   */
   private void analyzeDropFunction(ASTNode ast) throws SemanticException {
     String functionName = ast.getChild(0).getText();
-    boolean ifExists = (ast.getFirstChildWithType(HiveParser.TOK_IFEXISTS) != null);
+    boolean ifExists = (ast.getFirstChildWithType(HiveParser.TOK_IFEXISTS) != null);//设置了ifExists
     // we want to signal an error if the function doesn't exist and we're
     // configured not to ignore this
     boolean throwException =
       !ifExists && !HiveConf.getBoolVar(conf, ConfVars.DROPIGNORESNONEXISTENT);
-    if (throwException && FunctionRegistry.getFunctionInfo(functionName) == null) {
+    if (throwException && FunctionRegistry.getFunctionInfo(functionName) == null) {//函数存在.并且函数存在的话要抛异常
       throw new SemanticException(ErrorMsg.INVALID_FUNCTION.getMsg(functionName));
     }
 

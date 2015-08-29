@@ -174,6 +174,7 @@ public final class FunctionRegistry {
 
   /**
    * The mapping from expression function names to expression classes.
+   * key是自定义函数名称,value是函数对象
    */
   static Map<String, FunctionInfo> mFunctions = Collections.synchronizedMap(new LinkedHashMap<String, FunctionInfo>());
 

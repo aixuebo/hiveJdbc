@@ -57,10 +57,12 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
+ * HiveInputFormat是一个通过参数化的配置信息,进行format格式化的
  * HiveInputFormat is a parameterized InputFormat which looks at the path name
  * and determine the correct InputFormat for that path name from
  * mapredPlan.pathToPartitionInfo(). It can be used to read files with different
  * input format in the same map-reduce job.
+ * 允许你在同一个mr的job里面读取不同的格式的数据源文件
  */
 public class HiveInputFormat<K extends WritableComparable, V extends Writable>
     implements InputFormat<K, V>, JobConfigurable {
@@ -72,12 +74,13 @@ public class HiveInputFormat<K extends WritableComparable, V extends Writable>
    * HiveInputSplit encapsulates an InputSplit with its corresponding
    * inputFormatClass. The reason that it derives from FileSplit is to make sure
    * "map.input.file" in MapTask.
+   * 定义一种文件以及解析该文件的格式化类
    */
   public static class HiveInputSplit extends FileSplit implements InputSplit,
       Configurable {
 
-    InputSplit inputSplit;
-    String inputFormatClassName;
+    InputSplit inputSplit;//这个文件的字节大小 以及该文件所在路径
+    String inputFormatClassName;//该文件读取时候的文件格式
 
     public HiveInputSplit() {
       // This is the only public constructor of FileSplit
@@ -137,6 +140,11 @@ public class HiveInputFormat<K extends WritableComparable, V extends Writable>
       return inputSplit.getLocations();
     }
 
+    /**
+     * 1.读取InputSplit的class全路径
+     * 2.创建InputSplit对象,对该对象进行反序列化
+     * 3.读取inputFormatClassName的全路径
+     */
     @Override
     public void readFields(DataInput in) throws IOException {
       String inputSplitClassName = in.readUTF();
@@ -152,6 +160,9 @@ public class HiveInputFormat<K extends WritableComparable, V extends Writable>
       inputFormatClassName = in.readUTF();
     }
 
+    /**
+     * 查看上一个readFields方法
+     */
     @Override
     public void write(DataOutput out) throws IOException {
       out.writeUTF(inputSplit.getClass().getName());
@@ -180,9 +191,11 @@ public class HiveInputFormat<K extends WritableComparable, V extends Writable>
 
   /**
    * A cache of InputFormat instances.
+   * 每一个格式化class,与之对应的class实例
    */
   protected static Map<Class, InputFormat<WritableComparable, Writable>> inputFormats;
 
+  //创建并且缓存该格式化class实例
   public static InputFormat<WritableComparable, Writable> getInputFormatFromCache(
     Class inputFormatClass, JobConf job) throws IOException {
 
@@ -202,22 +215,25 @@ public class HiveInputFormat<K extends WritableComparable, V extends Writable>
     return inputFormats.get(inputFormatClass);
   }
 
+  /**
+   * split 就是HiveInputSplit,即包含文件输入源,以及包含对应的格式化类全路径
+   */
   public RecordReader getRecordReader(InputSplit split, JobConf job,
       Reporter reporter) throws IOException {
 
     HiveInputSplit hsplit = (HiveInputSplit) split;
 
-    InputSplit inputSplit = hsplit.getInputSplit();
-    String inputFormatClassName = null;
-    Class inputFormatClass = null;
+    InputSplit inputSplit = hsplit.getInputSplit();//输入源文件
+    String inputFormatClassName = null;//格式化对象的全路径
+    Class inputFormatClass = null;//获取该格式化对象的class
     try {
-      inputFormatClassName = hsplit.inputFormatClassName();
-      inputFormatClass = job.getClassByName(inputFormatClassName);
+      inputFormatClassName = hsplit.inputFormatClassName();//格式化对象的全路径
+      inputFormatClass = job.getClassByName(inputFormatClassName);//获取该格式化对象的class
     } catch (Exception e) {
       throw new IOException("cannot find class " + inputFormatClassName, e);
     }
 
-    // clone a jobConf for setting needed columns for reading
+    // clone a jobConf for setting needed columns for reading复制一个配置文件对象
     JobConf cloneJobConf = new JobConf(job);
 
     if (this.mrwork == null) {

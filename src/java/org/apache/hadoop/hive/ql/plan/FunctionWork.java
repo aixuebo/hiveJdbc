@@ -22,12 +22,12 @@ import java.io.Serializable;
 
 /**
  * FunctionWork.
- *
+ * 函数可以有的工作内容
  */
 public class FunctionWork implements Serializable {
   private static final long serialVersionUID = 1L;
-  private CreateFunctionDesc createFunctionDesc;
-  private DropFunctionDesc dropFunctionDesc;
+  private CreateFunctionDesc createFunctionDesc;//创建自定义函数对象
+  private DropFunctionDesc dropFunctionDesc;//卸载函数
   private CreateMacroDesc createMacroDesc;
   private DropMacroDesc dropMacroDesc;
 

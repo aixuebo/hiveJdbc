@@ -643,6 +643,8 @@ ifExists
     -> ^(TOK_IFEXISTS)
     ;
 
+//执行drop的时候使用的语法
+//格式RESTRICT 或者 CASCADE
 restrictOrCascade
 @init { msgs.push("restrict or cascade clause"); }
 @after { msgs.pop(); }
@@ -660,6 +662,7 @@ ifNotExists
     -> ^(TOK_IFNOTEXISTS)
     ;
 
+//格式 STORED AS DIRECTORIES
 storedAsDirs
 @init { msgs.push("stored as directories"); }
 @after { msgs.pop(); }
@@ -667,6 +670,7 @@ storedAsDirs
     -> ^(TOK_STOREDASDIRS)
     ;
 
+//匹配 or replace 
 orReplace
 @init { msgs.push("or replace clause"); }
 @after { msgs.pop(); }
@@ -674,6 +678,7 @@ orReplace
     -> ^(TOK_ORREPLACE)
     ;
 
+//匹配 IGNORE PROTECTION 表示忽略保护模式
 ignoreProtection
 @init { msgs.push("ignore protection clause"); }
 @after { msgs.pop(); }
@@ -681,6 +686,7 @@ ignoreProtection
         -> ^(TOK_IGNOREPROTECTION)
         ;
 
+//格式 create database|schema [ifNotExists] databaseName [databaseComment] [dbLocation] [with DBPROPERTIES (key=value,key=value)]
 createDatabaseStatement
 @init { msgs.push("create database statement"); }
 @after { msgs.pop(); }
@@ -693,6 +699,7 @@ createDatabaseStatement
     -> ^(TOK_CREATEDATABASE $name ifNotExists? dbLocation? databaseComment? $dbprops?)
     ;
 
+//匹配location + 字符串
 dbLocation
 @init { msgs.push("database location specification"); }
 @after { msgs.pop(); }
@@ -719,6 +726,8 @@ dbPropertiesList
     ;
 
 
+//切换数据库 
+//格式 use + 字符串
 switchDatabaseStatement
 @init { msgs.push("switch database statement"); }
 @after { msgs.pop(); }
@@ -726,6 +735,7 @@ switchDatabaseStatement
     -> ^(TOK_SWITCHDATABASE identifier)
     ;
 
+//DROP (DATABASE|SCHEMA) [IF EXISTS] database_name [RESTRICT|CASCADE];
 dropDatabaseStatement
 @init { msgs.push("drop database statement"); }
 @after { msgs.pop(); }
@@ -733,6 +743,8 @@ dropDatabaseStatement
     -> ^(TOK_DROPDATABASE identifier ifExists? restrictOrCascade?)
     ;
 
+//添加数据库的备注信息
+//COMMENT +备注
 databaseComment
 @init { msgs.push("database's comment"); }
 @after { msgs.pop(); }
@@ -740,6 +752,54 @@ databaseComment
     -> ^(TOK_DATABASECOMMENT $comment)
     ;
 
+//格式 create [EXTERNAL] table [ifNotExists] tableName LIKE tableNameSource [tableNameSourceLocation] [附加属性信息TBLPROPERTIES (key=value,key=value)]
+//或者 create [EXTERNAL] table [ifNotExists] tableName [(xxx colType COMMENT xxx,xxx colType COMMENT xxx)] [COMMENT 字符换] 
+//      [partitioned by (xxx colType COMMENT xxx,xxx colType COMMENT xxx)]
+//      [CLUSTERED BY (格式属性字符串,属性字符串) [SORTED by ( 字符串 [asc|desc],格式 字符串 [asc|desc]) ] into Number BUCKETS ] 
+// [     SKEWED BY (属性字符串,属性字符串) on (属性值集合xxx,xxx) [STORED AS DIRECTORIES]
+//         或者SKEWED BY (属性字符串,属性字符串) on (多组属性值集合 (xxx,xxx),(xxx,xxx),(xxx,xxx) ) [STORED AS DIRECTORIES]
+//	]
+// //解析每一行的分隔信息
+//[
+// ROW FORMAT DELIMITED [FIELDS terminated by xxx [ESCAPED by xx] ] 
+//[COLLECTION ITEMS terminated by xxx ]
+//[MAP KEYS terminated by xxx ]
+//[LINES terminated by xxx ] 
+// ]
+/**
+[
+//数据文件格式
+//STORED as SEQUENCEFILE |
+//STORED as TEXTFILE |
+//STORED as RCFILE |
+//STORED as TEXTFILE |
+//STORED as INPUTFORMAT xxx OUTPUTFORMAT xxx [INPUTDRIVER xxx OUTPUTDRIVER xxx]
+]
+
+[
+存储路径
+LOCATION xxx
+]
+
+[
+附加属性信息
+TBLPROPERTIES (key=value,key=value)
+]
+
+[as 
+   selectClause
+   fromClause
+   whereClause?
+   groupByClause?
+   havingClause?
+   orderByClause?
+   clusterByClause?
+   distributeByClause?
+   sortByClause?
+   window_clause?
+]
+
+*/
 createTableStatement
 @init { msgs.push("create table statement"); }
 @after { msgs.pop(); }
@@ -1190,6 +1250,7 @@ fileFormat
     | genericSpec=identifier -> ^(TOK_FILEFORMAT_GENERIC $genericSpec)
     ;
 
+//xxx .($ELEM$ | $KEY$ | $VALUE$ | xxx ) .($ELEM$ | $KEY$ | $VALUE$ | xxx )
 tabTypeExpr
 @init { msgs.push("specifying table types"); }
 @after { msgs.pop(); }
@@ -1230,6 +1291,19 @@ analyzeStatement
     : KW_ANALYZE KW_TABLE (parttype=tableOrPartition) KW_COMPUTE KW_STATISTICS ((noscan=KW_NOSCAN) | (partialscan=KW_PARTIALSCAN) | (KW_FOR KW_COLUMNS statsColumnName=columnNameList))? -> ^(TOK_ANALYZE $parttype $noscan? $partialscan? $statsColumnName?)
     ;
 
+/**
+SHOW 语法
+1.SHOW DATABASES|SCHEMAS LIKE "xxx" 模糊查询,一定要带引号
+2.SHOW TABLES [ (from | in) tableName ] like "xxx"
+3.SHOW COLUMNS (from | in) tableName [ (from | in) db_name ]
+4.SHOW FUNCTIONS xxx
+5.SHOW PARTITIONS xxx [ PARTITION( xxx [ (== | =) constant],xxx [ (== | =) constant] ) ]
+6.SHOW CREATE TABLE tableName 
+7.SHOW TABLE EXTENDED [ (from | in) db_name ] like xxx [ PARTITION( xxx [ (== | =) constant],xxx [ (== | =) constant] ) ]
+8.SHOW TBLPROPERTIES 表名xxx [ (属性名xxx) ] 获取该表的某一个自定义属性内容
+9.SHOW LOCKS xxx .($ELEM$ | $KEY$ | $VALUE$ | xxx ) .($ELEM$ | $KEY$ | $VALUE$ | xxx )详细看.没看太懂
+10.SHOW [FORMATTED] [(INDEX|INDEXES) on xxx (from | in) db_name ]
+*/
 showStatement
 @init { msgs.push("show statement"); }
 @after { msgs.pop(); }
@@ -1248,6 +1322,7 @@ showStatement
     -> ^(TOK_SHOWINDEXES showStmtIdentifier $showOptions? $db_name?)
     ;
 
+//LOCK TABLE tableName [PARTITION( xxx [ (== | =) constant],xxx [ (== | =) constant] )] (SHARED | EXCLUSIVE)
 lockStatement
 @init { msgs.push("lock statement"); }
 @after { msgs.pop(); }
@@ -1260,6 +1335,7 @@ lockMode
     : KW_SHARED | KW_EXCLUSIVE
     ;
 
+//UNLOCK TABLE tableName [PARTITION( xxx [ (== | =) constant],xxx [ (== | =) constant] )]
 unlockStatement
 @init { msgs.push("unlock statement"); }
 @after { msgs.pop(); }
@@ -1395,6 +1471,8 @@ metastoreCheck
     -> ^(TOK_MSCK $repair? ($table partitionSpec*)?)
     ;
 
+//创建一个function函数
+//CREATE TEMPORARY FUNCTION xxx as xxx
 createFunctionStatement
 @init { msgs.push("create function statement"); }
 @after { msgs.pop(); }
@@ -1402,6 +1480,7 @@ createFunctionStatement
     -> ^(TOK_CREATEFUNCTION identifier StringLiteral)
     ;
 
+//删除一个自定义函数drop TEMPORARY FUNCTION [ifExists] xxx
 dropFunctionStatement
 @init { msgs.push("drop temporary function statement"); }
 @after { msgs.pop(); }
@@ -1457,6 +1536,7 @@ dropViewStatement
     : KW_DROP KW_VIEW ifExists? viewName -> ^(TOK_DROPVIEW viewName ifExists?)
     ;
 
+//随意字符串,用于show 后面的语句
 showStmtIdentifier
 @init { msgs.push("identifier for show statement"); }
 @after { msgs.pop(); }
@@ -1465,7 +1545,7 @@ showStmtIdentifier
     ;
 
 //为table添加注释
-//KW_COMMENT 字符换
+//COMMENT 字符换
 tableComment
 @init { msgs.push("table's comment"); }
 @after { msgs.pop(); }
@@ -1473,6 +1553,7 @@ tableComment
       KW_COMMENT comment=StringLiteral  -> ^(TOK_TABLECOMMENT $comment)
     ;
 
+//partitioned by (xxx colType COMMENT xxx,xxx colType COMMENT xxx)
 tablePartition
 @init { msgs.push("table partition specification"); }
 @after { msgs.pop(); }
@@ -1480,6 +1561,7 @@ tablePartition
     -> ^(TOK_TABLEPARTCOLS columnNameTypeList)
     ;
 
+//CLUSTERED BY (格式属性字符串,属性字符串) [SORTED by ( 字符串 [asc|desc],格式 字符串 [asc|desc]) ] into Number BUCKETS
 tableBuckets
 @init { msgs.push("table buckets specification"); }
 @after { msgs.pop(); }
@@ -1488,6 +1570,8 @@ tableBuckets
     -> ^(TOK_TABLEBUCKETS $bucketCols $sortCols? $num)
     ;
 
+//SKEWED BY (属性字符串,属性字符串) on (属性值集合xxx,xxx) [STORED AS DIRECTORIES]
+//或者SKEWED BY (属性字符串,属性字符串) on (多组属性值集合 (xxx,xxx),(xxx,xxx),(xxx,xxx) ) [STORED AS DIRECTORIES]
 tableSkewed
 @init { msgs.push("table skewed specification"); }
 @after { msgs.pop(); }
@@ -1525,6 +1609,11 @@ rowFormatSerde
     -> ^(TOK_SERDENAME $name $serdeprops?)
     ;
 
+//解析每一行的分隔信息
+//ROW FORMAT DELIMITED [FIELDS terminated by xxx [ESCAPED by xx] ] 
+//[COLLECTION ITEMS terminated by xxx ]
+//[MAP KEYS terminated by xxx ]
+//[LINES terminated by xxx ]
 rowFormatDelimited
 @init { msgs.push("serde properties specification"); }
 @after { msgs.pop(); }
@@ -1591,6 +1680,8 @@ keyProperty
       key=StringLiteral -> ^(TOK_TABLEPROPERTY $key TOK_NULL)
     ;
 
+//设置每行的field分隔符
+//格式FIELDS terminated by xxx [ESCAPED by xx]
 tableRowFormatFieldIdentifier
 @init { msgs.push("table row format's field separator"); }
 @after { msgs.pop(); }
@@ -1599,6 +1690,8 @@ tableRowFormatFieldIdentifier
     -> ^(TOK_TABLEROWFORMATFIELD $fldIdnt $fldEscape?)
     ;
 
+//设置每行的集合分隔符
+//格式COLLECTION ITEMS terminated by xxx 
 tableRowFormatCollItemsIdentifier
 @init { msgs.push("table row format's column separator"); }
 @after { msgs.pop(); }
@@ -1607,6 +1700,8 @@ tableRowFormatCollItemsIdentifier
     -> ^(TOK_TABLEROWFORMATCOLLITEMS $collIdnt)
     ;
 
+//设置每行的Map中key-value分隔符
+//格式 MAP KEYS terminated by xxx 
 tableRowFormatMapKeysIdentifier
 @init { msgs.push("table row format's map key separator"); }
 @after { msgs.pop(); }
@@ -1615,6 +1710,8 @@ tableRowFormatMapKeysIdentifier
     -> ^(TOK_TABLEROWFORMATMAPKEYS $mapKeysIdnt)
     ;
 
+//设置每行的分隔符
+//格式 LINES terminated by xxx 
 tableRowFormatLinesIdentifier
 @init { msgs.push("table row format's line separator"); }
 @after { msgs.pop(); }
@@ -1623,6 +1720,12 @@ tableRowFormatLinesIdentifier
     -> ^(TOK_TABLEROWFORMATLINES $linesIdnt)
     ;
 
+//数据文件格式
+//STORED as SEQUENCEFILE |
+//STORED as TEXTFILE |
+//STORED as RCFILE |
+//STORED as TEXTFILE |
+//STORED as INPUTFORMAT xxx OUTPUTFORMAT xxx [INPUTDRIVER xxx OUTPUTDRIVER xxx]
 tableFileFormat
 @init { msgs.push("table file format specification"); }
 @after { msgs.pop(); }
@@ -1640,6 +1743,8 @@ tableFileFormat
       -> ^(TOK_FILEFORMAT_GENERIC $genericSpec)
     ;
 
+//存储路径
+//LOCATION xxx
 tableLocation
 @init { msgs.push("table location specification"); }
 @after { msgs.pop(); }
@@ -1664,6 +1769,7 @@ columnNameColonTypeList
     ;
 
 //获取属性名字集合,用逗号拆分
+//格式属性字符串,属性字符串
 columnNameList
 @init { msgs.push("column name list"); }
 @after { msgs.pop(); }
@@ -1678,12 +1784,16 @@ columnName
       identifier
     ;
 
+//返回多个属性列集合 格式: 字符串 [asc|desc],格式 字符串 [asc|desc]
 columnNameOrderList
 @init { msgs.push("column name order list"); }
 @after { msgs.pop(); }
     : columnNameOrder (COMMA columnNameOrder)* -> ^(TOK_TABCOLNAME columnNameOrder+)
     ;
 
+//返回一个属性对应的value值集合
+//格式1 xxx,xxx
+//格式2 (xxx,xxx),(xxx,xxx),(xxx,xxx) 多组,每组用()分离
 skewedValueElement
 @init { msgs.push("skewed value element"); }
 @after { msgs.pop(); }
@@ -1692,12 +1802,16 @@ skewedValueElement
      | skewedColumnValuePairList
     ;
 
+//返回多组列值集合,用逗号拆分,每组用()分隔
+//格式(xxx,xxx),(xxx,xxx),(xxx,xxx)
 skewedColumnValuePairList
 @init { msgs.push("column value pair list"); }
 @after { msgs.pop(); }
     : skewedColumnValuePair (COMMA skewedColumnValuePair)* -> ^(TOK_TABCOLVALUE_PAIR skewedColumnValuePair+)
     ;
 
+//返回列值集合,用逗号拆分
+//格式(xxx,xxx)
 skewedColumnValuePair
 @init { msgs.push("column value pair"); }
 @after { msgs.pop(); }
@@ -1706,12 +1820,26 @@ skewedColumnValuePair
       -> ^(TOK_TABCOLVALUES $colValues)
     ;
 
+//返回列值集合,用逗号拆分
+//格式 xxx,xxx
 skewedColumnValues
 @init { msgs.push("column values"); }
 @after { msgs.pop(); }
     : skewedColumnValue (COMMA skewedColumnValue)* -> ^(TOK_TABCOLVALUE skewedColumnValue+)
     ;
-
+/*
+* 返回列值
+* 格式
+* DATE + 字符串 |
+* 字符串  |
+* 多个字符串 |
+* 匹配long类型,即数字+L |
+* 匹配数字+S |
+* 匹配数字+Y |
+* 匹配数字或者带科学计数法的数字 +BD |
+* 匹配以_ +字母/数字'_' | '-' | '.' | ':' 信息为合法信息 + 匹配包含引号的字符串  或者 十六进制的数字,以0X开头 |
+* 格式 true 或者false
+*/
 skewedColumnValue
 @init { msgs.push("column value"); }
 @after { msgs.pop(); }
@@ -1719,6 +1847,8 @@ skewedColumnValue
       constant
     ;
 
+//元素的属性值
+//格式 xxx 或者 (xxx,xxx)
 skewedValueLocationElement
 @init { msgs.push("skewed value location element"); }
 @after { msgs.pop(); }
@@ -1726,7 +1856,8 @@ skewedValueLocationElement
       skewedColumnValue
      | skewedColumnValuePair
     ;
-    
+
+//仅仅返回一个列属性,格式 字符串 [asc|desc]
 columnNameOrder
 @init { msgs.push("column name order"); }
 @after { msgs.pop(); }
@@ -1802,6 +1933,7 @@ type
     | mapType
     | unionType;
 
+//必须是基础类型
 primitiveType
 @init { msgs.push("primitive type specification"); }
 @after { msgs.pop(); }
@@ -1821,25 +1953,32 @@ primitiveType
     | KW_VARCHAR LPAREN length=Number RPAREN      ->    ^(TOK_VARCHAR $length)
     ;
 
+//必须是数组类型,
+//格式 ARRAY<primitiveType |listType |structType | mapType | unionType >
 listType
 @init { msgs.push("list type"); }
 @after { msgs.pop(); }
     : KW_ARRAY LESSTHAN type GREATERTHAN   -> ^(TOK_LIST type)
     ;
 
+//必须是对象类型
+//格式STRUCT<name:type,name:type>
 structType
 @init { msgs.push("struct type"); }
 @after { msgs.pop(); }
     : KW_STRUCT LESSTHAN columnNameColonTypeList GREATERTHAN -> ^(TOK_STRUCT columnNameColonTypeList)
     ;
 
+//Map对象类型
+//MAP <primitiveType,primitiveType |listType |structType | mapType | unionType>
 mapType
 @init { msgs.push("map type"); }
 @after { msgs.pop(); }
     : KW_MAP LESSTHAN left=primitiveType COMMA right=type GREATERTHAN
     -> ^(TOK_MAP $left $right)
     ;
-
+//union对象类型
+//UNIONTYPE <包含属性类型>
 unionType
 @init { msgs.push("uniontype type"); }
 @after { msgs.pop(); }

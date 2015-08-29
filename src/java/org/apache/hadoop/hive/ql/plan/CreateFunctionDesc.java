@@ -22,14 +22,15 @@ import java.io.Serializable;
 
 /**
  * CreateFunctionDesc.
- *
+ * 创建自定义函数
+ * CREATE TEMPORARY FUNCTION xxx as xxx创建函数功能
  */
 @Explain(displayName = "Create Function")
 public class CreateFunctionDesc implements Serializable {
   private static final long serialVersionUID = 1L;
 
-  private String functionName;
-  private String className;
+  private String functionName;//函数名称
+  private String className;//函数对应的class全路径
 
   /**
    * For serialization only.

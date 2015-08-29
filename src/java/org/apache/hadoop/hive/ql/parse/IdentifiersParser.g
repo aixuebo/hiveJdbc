@@ -224,6 +224,18 @@ whenExpression
     KW_END -> ^(TOK_FUNCTION KW_WHEN expression*)
     ;
 
+/**
+* 格式
+* DATE + 字符串 |
+* 字符串  |
+* 多个字符串 |
+* 匹配long类型,即数字+L |
+* 匹配数字+S |
+* 匹配数字+Y |
+* 匹配数字或者带科学计数法的数字 +BD |
+* 匹配以_ +字母/数字'_' | '-' | '.' | ':' 信息为合法信息 + 匹配包含引号的字符串  或者 十六进制的数字,以0X开头 |
+* 格式 true 或者false
+/
 constant
 @init { gParent.msgs.push("constant"); }
 @after { gParent.msgs.pop(); }
@@ -240,11 +252,13 @@ constant
     | booleanValue
     ;
 
+//多个字符串
 stringLiteralSequence
     :
     StringLiteral StringLiteral+ -> ^(TOK_STRINGLITERALSEQUENCE StringLiteral StringLiteral+)
     ;
 
+// 匹配以_ +字母/数字'_' | '-' | '.' | ':' 信息为合法信息 + 匹配包含引号的字符串  或者 十六进制的数字,以0X开头 
 charSetStringLiteral
 @init { gParent.msgs.push("character string literal"); }
 @after { gParent.msgs.pop(); }
@@ -252,6 +266,7 @@ charSetStringLiteral
     csName=CharSetName csLiteral=CharSetLiteral -> ^(TOK_CHARSETLITERAL $csName $csLiteral)
     ;
 
+//格式 DATE + 字符串
 dateLiteral
     :
     KW_DATE StringLiteral ->
@@ -434,23 +449,28 @@ precedenceOrExpression
     precedenceAndExpression (precedenceOrOperator^ precedenceAndExpression)*
     ;
 
-
+//格式 true 或者false
 booleanValue
     :
     KW_TRUE^ | KW_FALSE^
     ;
 
+//返回 tableName [ PARTITION( xxx [ (== | =) constant],xxx [ (== | =) constant] ) ]
 tableOrPartition
    :
    tableName partitionSpec? -> ^(TOK_TAB tableName partitionSpec?)
    ;
 
+//分区描述
+//格式 PARTITION( xxx [ (== | =) constant],xxx [ (== | =) constant] )
 partitionSpec
     :
     KW_PARTITION
      LPAREN partitionVal (COMMA  partitionVal )* RPAREN -> ^(TOK_PARTSPEC partitionVal +)
     ;
 
+//每一个分区的描述
+//格式 xxx [ (== | =) constant]
 partitionVal
     :
     identifier (EQUAL constant)? -> ^(TOK_PARTVAL identifier constant?)

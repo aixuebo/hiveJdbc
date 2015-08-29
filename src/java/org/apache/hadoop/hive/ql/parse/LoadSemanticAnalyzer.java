@@ -61,6 +61,13 @@ public class LoadSemanticAnalyzer extends BaseSemanticAnalyzer {
     super(conf);
   }
 
+  /**
+   * 返回path使用通配符对应的文件集合
+   * @param fs
+   * @param path
+   * @return
+   * @throws IOException
+   */
   public static FileStatus[] matchFilesOrDir(FileSystem fs, Path path)
       throws IOException {
     FileStatus[] srcs = fs.globStatus(path);

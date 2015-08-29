@@ -40,8 +40,8 @@ import org.apache.hadoop.hive.ql.session.SessionState;
 public class SetProcessor implements CommandProcessor {
 
   private static String prefix = "set: ";
-  public static final String ENV_PREFIX = "env:";
-  public static final String SYSTEM_PREFIX = "system:";
+  public static final String ENV_PREFIX = "env:";//操作系统的环境变量
+  public static final String SYSTEM_PREFIX = "system:";//启动任务时,设置的系统变量,例如利用D标签设置
   public static final String HIVECONF_PREFIX = "hiveconf:";
   public static final String HIVEVAR_PREFIX = "hivevar:";
   public static final String SET_COLUMN_NAME = "set";
