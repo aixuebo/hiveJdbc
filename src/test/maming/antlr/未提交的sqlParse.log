@@ -1,0 +1,840 @@
+package maming.antlr;
+
+public class Î´Ìá½»µÄsqlParse {
+	
+	execStatement
+	@init { msgs.push("statement"); }
+	@after { msgs.pop(); }
+	    : queryStatementExpression
+	    | loadStatement
+	    | exportStatement
+	    | importStatement
+	    | ddlStatement
+	    ;
+	
+	loadStatement
+	@init { msgs.push("load statement"); }
+	@after { msgs.pop(); }
+	    : KW_LOAD KW_DATA (islocal=KW_LOCAL)? KW_INPATH (path=StringLiteral) (isoverwrite=KW_OVERWRITE)? KW_INTO KW_TABLE (tab=tableOrPartition)
+	    -> ^(TOK_LOAD $path $tab $islocal? $isoverwrite?)
+	    ;
+	
+	exportStatement
+	@init { msgs.push("export statement"); }
+	@after { msgs.pop(); }
+	    : KW_EXPORT KW_TABLE (tab=tableOrPartition) KW_TO (path=StringLiteral)
+	    -> ^(TOK_EXPORT $tab $path)
+	    ;
+	
+	importStatement
+	@init { msgs.push("import statement"); }
+	@after { msgs.pop(); }
+		: KW_IMPORT ((ext=KW_EXTERNAL)? KW_TABLE (tab=tableOrPartition))? KW_FROM (path=StringLiteral) tableLocation?
+	    -> ^(TOK_IMPORT $path $tab? $ext? tableLocation?)
+	    ;
+	
+	ddlStatement
+	@init { msgs.push("ddl statement"); }
+	@after { msgs.pop(); }
+	    : createDatabaseStatement
+	    | switchDatabaseStatement
+	    | dropDatabaseStatement
+	    | createTableStatement
+	    | dropTableStatement
+	    | truncateTableStatement
+	    | alterStatement
+	    | descStatement
+	    | showStatement
+	    | metastoreCheck
+	    | createViewStatement
+	    | dropViewStatement
+	    | createFunctionStatement
+	    | createMacroStatement
+	    | createIndexStatement
+	    | dropIndexStatement
+	    | dropFunctionStatement
+	    | dropMacroStatement
+	    | analyzeStatement
+	    | lockStatement
+	    | unlockStatement
+	    | createRoleStatement
+	    | dropRoleStatement
+	    | grantPrivileges
+	    | revokePrivileges
+	    | showGrants
+	    | showRoleGrants
+	    | grantRole
+	    | revokeRole
+	    ;
+	
+	truncateTableStatement
+	@init { msgs.push("truncate table statement"); }
+	@after { msgs.pop(); }
+	    : KW_TRUNCATE KW_TABLE tablePartitionPrefix (KW_COLUMNS LPAREN columnNameList RPAREN)? -> ^(TOK_TRUNCATETABLE tablePartitionPrefix columnNameList?);
+	
+	createIndexStatement
+	@init { msgs.push("create index statement");}
+	@after {msgs.pop();}
+	    : KW_CREATE KW_INDEX indexName=identifier
+	      KW_ON KW_TABLE tab=tableName LPAREN indexedCols=columnNameList RPAREN
+	      KW_AS typeName=StringLiteral
+	      autoRebuild?
+	      indexPropertiesPrefixed?
+	      indexTblName?
+	      tableRowFormat?
+	      tableFileFormat?
+	      tableLocation?
+	      tablePropertiesPrefixed?
+	      indexComment?
+	    ->^(TOK_CREATEINDEX $indexName $typeName $tab $indexedCols
+	        autoRebuild?
+	        indexPropertiesPrefixed?
+	        indexTblName?
+	        tableRowFormat?
+	        tableFileFormat?
+	        tableLocation?
+	        tablePropertiesPrefixed?
+	        indexComment?)
+	    ;
+	
+	indexComment
+	@init { msgs.push("comment on an index");}
+	@after {msgs.pop();}
+	        :
+	                KW_COMMENT comment=StringLiteral  -> ^(TOK_INDEXCOMMENT $comment)
+	        ;
+	
+	autoRebuild
+	@init { msgs.push("auto rebuild index");}
+	@after {msgs.pop();}
+	    : KW_WITH KW_DEFERRED KW_REBUILD
+	    ->^(TOK_DEFERRED_REBUILDINDEX)
+	    ;
+	
+	indexTblName
+	@init { msgs.push("index table name");}
+	@after {msgs.pop();}
+	    : KW_IN KW_TABLE indexTbl=tableName
+	    ->^(TOK_CREATEINDEX_INDEXTBLNAME $indexTbl)
+	    ;
+	
+	indexProperties
+	@init { msgs.push("index properties"); }
+	@after { msgs.pop(); }
+	    :
+	      LPAREN indexPropertiesList RPAREN -> ^(TOK_INDEXPROPERTIES indexPropertiesList)
+	    ;
+	
+	indexPropertiesList
+	@init { msgs.push("index properties list"); }
+	@after { msgs.pop(); }
+	    :
+	      keyValueProperty (COMMA keyValueProperty)* -> ^(TOK_INDEXPROPLIST keyValueProperty+)
+	    ;
+	
+	dropIndexStatement
+	@init { msgs.push("drop index statement");}
+	@after {msgs.pop();}
+	    : KW_DROP KW_INDEX ifExists? indexName=identifier KW_ON tab=tableName
+	    ->^(TOK_DROPINDEX $indexName $tab ifExists?)
+	    ;
+	
+	dropTableStatement
+	@init { msgs.push("drop statement"); }
+	@after { msgs.pop(); }
+	    : KW_DROP KW_TABLE ifExists? tableName -> ^(TOK_DROPTABLE tableName ifExists?)
+	    ;
+	
+	alterStatement
+	@init { msgs.push("alter statement"); }
+	@after { msgs.pop(); }
+	    : KW_ALTER!
+	        (
+	            KW_TABLE! alterTableStatementSuffix
+	        |
+	            KW_VIEW! alterViewStatementSuffix
+	        |
+	            KW_INDEX! alterIndexStatementSuffix
+	        |
+	            KW_DATABASE! alterDatabaseStatementSuffix
+	        )
+	    ;
+	
+	alterTableStatementSuffix
+	@init { msgs.push("alter table statement"); }
+	@after { msgs.pop(); }
+	    : alterStatementSuffixRename
+	    | alterStatementSuffixAddCol
+	    | alterStatementSuffixRenameCol
+	    | alterStatementSuffixDropPartitions
+	    | alterStatementSuffixAddPartitions
+	    | alterStatementSuffixTouch
+	    | alterStatementSuffixArchive
+	    | alterStatementSuffixUnArchive
+	    | alterStatementSuffixProperties
+	    | alterTblPartitionStatement
+	    | alterStatementSuffixSkewedby
+	    | alterStatementSuffixExchangePartition
+	    ;
+	
+	alterViewStatementSuffix
+	@init { msgs.push("alter view statement"); }
+	@after { msgs.pop(); }
+	    : alterViewSuffixProperties
+	    | alterStatementSuffixRename
+	        -> ^(TOK_ALTERVIEW_RENAME alterStatementSuffixRename)
+	    | alterStatementSuffixAddPartitions
+	        -> ^(TOK_ALTERVIEW_ADDPARTS alterStatementSuffixAddPartitions)
+	    | alterStatementSuffixDropPartitions
+	        -> ^(TOK_ALTERVIEW_DROPPARTS alterStatementSuffixDropPartitions)
+	    | name=tableName KW_AS selectStatement
+	        -> ^(TOK_ALTERVIEW_AS $name selectStatement)
+	    ;
+	
+	alterIndexStatementSuffix
+	@init { msgs.push("alter index statement"); }
+	@after { msgs.pop(); }
+	    : indexName=identifier
+	      (KW_ON tableNameId=identifier)
+	      partitionSpec?
+	    (
+	      KW_REBUILD
+	      ->^(TOK_ALTERINDEX_REBUILD $tableNameId $indexName partitionSpec?)
+	    |
+	      KW_SET KW_IDXPROPERTIES
+	      indexProperties
+	      ->^(TOK_ALTERINDEX_PROPERTIES $tableNameId $indexName indexProperties)
+	    )
+	    ;
+	
+	alterDatabaseStatementSuffix
+	@init { msgs.push("alter database statement"); }
+	@after { msgs.pop(); }
+	    : alterDatabaseSuffixProperties
+	    ;
+	
+	alterDatabaseSuffixProperties
+	@init { msgs.push("alter database properties statement"); }
+	@after { msgs.pop(); }
+	    : name=identifier KW_SET KW_DBPROPERTIES dbProperties
+	    -> ^(TOK_ALTERDATABASE_PROPERTIES $name dbProperties)
+	    ;
+	
+	alterStatementSuffixRename
+	@init { msgs.push("rename statement"); }
+	@after { msgs.pop(); }
+	    : oldName=identifier KW_RENAME KW_TO newName=identifier
+	    -> ^(TOK_ALTERTABLE_RENAME $oldName $newName)
+	    ;
+	
+	alterStatementSuffixAddCol
+	@init { msgs.push("add column statement"); }
+	@after { msgs.pop(); }
+	    : identifier (add=KW_ADD | replace=KW_REPLACE) KW_COLUMNS LPAREN columnNameTypeList RPAREN
+	    -> {$add != null}? ^(TOK_ALTERTABLE_ADDCOLS identifier columnNameTypeList)
+	    ->                 ^(TOK_ALTERTABLE_REPLACECOLS identifier columnNameTypeList)
+	    ;
+	
+	alterStatementSuffixRenameCol
+	@init { msgs.push("rename column name"); }
+	@after { msgs.pop(); }
+	    : identifier KW_CHANGE KW_COLUMN? oldName=identifier newName=identifier colType (KW_COMMENT comment=StringLiteral)? alterStatementChangeColPosition?
+	    ->^(TOK_ALTERTABLE_RENAMECOL identifier $oldName $newName colType $comment? alterStatementChangeColPosition?)
+	    ;
+	
+	alterStatementChangeColPosition
+	    : first=KW_FIRST|KW_AFTER afterCol=identifier
+	    ->{$first != null}? ^(TOK_ALTERTABLE_CHANGECOL_AFTER_POSITION )
+	    -> ^(TOK_ALTERTABLE_CHANGECOL_AFTER_POSITION $afterCol)
+	    ;
+	
+	alterStatementSuffixAddPartitions
+	@init { msgs.push("add partition statement"); }
+	@after { msgs.pop(); }
+	    : identifier KW_ADD ifNotExists? alterStatementSuffixAddPartitionsElement+
+	    -> ^(TOK_ALTERTABLE_ADDPARTS identifier ifNotExists? alterStatementSuffixAddPartitionsElement+)
+	    ;
+	
+	alterStatementSuffixAddPartitionsElement
+	    : partitionSpec partitionLocation?
+	    ;
+	
+	alterStatementSuffixTouch
+	@init { msgs.push("touch statement"); }
+	@after { msgs.pop(); }
+	    : identifier KW_TOUCH (partitionSpec)*
+	    -> ^(TOK_ALTERTABLE_TOUCH identifier (partitionSpec)*)
+	    ;
+	
+	alterStatementSuffixArchive
+	@init { msgs.push("archive statement"); }
+	@after { msgs.pop(); }
+	    : identifier KW_ARCHIVE (partitionSpec)*
+	    -> ^(TOK_ALTERTABLE_ARCHIVE identifier (partitionSpec)*)
+	    ;
+	
+	alterStatementSuffixUnArchive
+	@init { msgs.push("unarchive statement"); }
+	@after { msgs.pop(); }
+	    : identifier KW_UNARCHIVE (partitionSpec)*
+	    -> ^(TOK_ALTERTABLE_UNARCHIVE identifier (partitionSpec)*)
+	    ;
+	
+	partitionLocation
+	@init { msgs.push("partition location"); }
+	@after { msgs.pop(); }
+	    :
+	      KW_LOCATION locn=StringLiteral -> ^(TOK_PARTITIONLOCATION $locn)
+	    ;
+	
+	alterStatementSuffixDropPartitions
+	@init { msgs.push("drop partition statement"); }
+	@after { msgs.pop(); }
+	    : identifier KW_DROP ifExists? dropPartitionSpec (COMMA dropPartitionSpec)* ignoreProtection?
+	    -> ^(TOK_ALTERTABLE_DROPPARTS identifier dropPartitionSpec+ ifExists? ignoreProtection?)
+	    ;
+	
+	alterStatementSuffixProperties
+	@init { msgs.push("alter properties statement"); }
+	@after { msgs.pop(); }
+	    : name=identifier KW_SET KW_TBLPROPERTIES tableProperties
+	    -> ^(TOK_ALTERTABLE_PROPERTIES $name tableProperties)
+	    | name=identifier KW_UNSET KW_TBLPROPERTIES ifExists? tableProperties
+	    -> ^(TOK_DROPTABLE_PROPERTIES $name tableProperties ifExists?)
+	    ;
+	
+	alterViewSuffixProperties
+	@init { msgs.push("alter view properties statement"); }
+	@after { msgs.pop(); }
+	    : name=identifier KW_SET KW_TBLPROPERTIES tableProperties
+	    -> ^(TOK_ALTERVIEW_PROPERTIES $name tableProperties)
+	    | name=identifier KW_UNSET KW_TBLPROPERTIES ifExists? tableProperties
+	    -> ^(TOK_DROPVIEW_PROPERTIES $name tableProperties ifExists?)
+	    ;
+	
+	alterStatementSuffixSerdeProperties
+	@init { msgs.push("alter serdes statement"); }
+	@after { msgs.pop(); }
+	    : KW_SET KW_SERDE serdeName=StringLiteral (KW_WITH KW_SERDEPROPERTIES tableProperties)?
+	    -> ^(TOK_ALTERTABLE_SERIALIZER $serdeName tableProperties?)
+	    | KW_SET KW_SERDEPROPERTIES tableProperties
+	    -> ^(TOK_ALTERTABLE_SERDEPROPERTIES tableProperties)
+	    ;
+	
+	tablePartitionPrefix
+	@init {msgs.push("table partition prefix");}
+	@after {msgs.pop();}
+	  :name=identifier partitionSpec?
+	  ->^(TOK_TABLE_PARTITION $name partitionSpec?)
+	  ;
+	
+	alterTblPartitionStatement
+	@init {msgs.push("alter table partition statement");}
+	@after {msgs.pop();}
+	  : tablePartitionPrefix alterTblPartitionStatementSuffix
+	  -> ^(TOK_ALTERTABLE_PARTITION tablePartitionPrefix alterTblPartitionStatementSuffix)
+	  |Identifier KW_PARTITION KW_COLUMN LPAREN columnNameType RPAREN
+	  -> ^(TOK_ALTERTABLE_ALTERPARTS Identifier columnNameType)
+	  ;
+	
+	alterTblPartitionStatementSuffix
+	@init {msgs.push("alter table partition statement suffix");}
+	@after {msgs.pop();}
+	  : alterStatementSuffixFileFormat
+	  | alterStatementSuffixLocation
+	  | alterStatementSuffixProtectMode
+	  | alterStatementSuffixMergeFiles
+	  | alterStatementSuffixSerdeProperties
+	  | alterStatementSuffixRenamePart
+	  | alterStatementSuffixBucketNum
+	  | alterTblPartitionStatementSuffixSkewedLocation
+	  | alterStatementSuffixClusterbySortby
+	  ;
+	
+	alterStatementSuffixFileFormat
+	@init {msgs.push("alter fileformat statement"); }
+	@after {msgs.pop();}
+		: KW_SET KW_FILEFORMAT fileFormat
+		-> ^(TOK_ALTERTABLE_FILEFORMAT fileFormat)
+		;
+	
+	alterStatementSuffixClusterbySortby
+	@init {msgs.push("alter partition cluster by sort by statement");}
+	@after {msgs.pop();}
+	  : KW_NOT KW_CLUSTERED -> ^(TOK_ALTERTABLE_CLUSTER_SORT TOK_NOT_CLUSTERED)
+	  | KW_NOT KW_SORTED -> ^(TOK_ALTERTABLE_CLUSTER_SORT TOK_NOT_SORTED)
+	  | tableBuckets -> ^(TOK_ALTERTABLE_CLUSTER_SORT tableBuckets)
+	  ;
+	
+	alterTblPartitionStatementSuffixSkewedLocation
+	@init {msgs.push("alter partition skewed location");}
+	@after {msgs.pop();}
+	  : KW_SET KW_SKEWED KW_LOCATION skewedLocations
+	  -> ^(TOK_ALTERTBLPART_SKEWED_LOCATION skewedLocations)
+	  ;
+	  
+	skewedLocations
+	@init { msgs.push("skewed locations"); }
+	@after { msgs.pop(); }
+	    :
+	      LPAREN skewedLocationsList RPAREN -> ^(TOK_SKEWED_LOCATIONS skewedLocationsList)
+	    ;
+	
+	skewedLocationsList
+	@init { msgs.push("skewed locations list"); }
+	@after { msgs.pop(); }
+	    :
+	      skewedLocationMap (COMMA skewedLocationMap)* -> ^(TOK_SKEWED_LOCATION_LIST skewedLocationMap+)
+	    ;
+	
+	skewedLocationMap
+	@init { msgs.push("specifying skewed location map"); }
+	@after { msgs.pop(); }
+	    :
+	      key=skewedValueLocationElement EQUAL value=StringLiteral -> ^(TOK_SKEWED_LOCATION_MAP $key $value)
+	    ;
+	
+	alterStatementSuffixLocation
+	@init {msgs.push("alter location");}
+	@after {msgs.pop();}
+	  : KW_SET KW_LOCATION newLoc=StringLiteral
+	  -> ^(TOK_ALTERTABLE_LOCATION $newLoc)
+	  ;
+	
+		
+	alterStatementSuffixSkewedby
+	@init {msgs.push("alter skewed by statement");}
+	@after{msgs.pop();}
+		:name=identifier tableSkewed
+		->^(TOK_ALTERTABLE_SKEWED $name tableSkewed)
+		|
+		name=identifier KW_NOT KW_SKEWED
+		->^(TOK_ALTERTABLE_SKEWED $name)
+		|
+		name=identifier KW_NOT storedAsDirs
+		->^(TOK_ALTERTABLE_SKEWED $name storedAsDirs)
+		;
+	
+	alterStatementSuffixExchangePartition
+	@init {msgs.push("alter exchange partition");}
+	@after{msgs.pop();}
+	    : name=tableName KW_EXCHANGE partitionSpec KW_WITH KW_TABLE exchangename=tableName
+	    -> ^(TOK_EXCHANGEPARTITION $name partitionSpec $exchangename)
+	    ;
+	
+	alterStatementSuffixProtectMode
+	@init { msgs.push("alter partition protect mode statement"); }
+	@after { msgs.pop(); }
+	    : alterProtectMode
+	    -> ^(TOK_ALTERTABLE_ALTERPARTS_PROTECTMODE alterProtectMode)
+	    ;
+	
+	alterStatementSuffixRenamePart
+	@init { msgs.push("alter table rename partition statement"); }
+	@after { msgs.pop(); }
+	    : KW_RENAME KW_TO partitionSpec
+	    ->^(TOK_ALTERTABLE_RENAMEPART partitionSpec)
+	    ;
+	
+	alterStatementSuffixMergeFiles
+	@init { msgs.push(""); }
+	@after { msgs.pop(); }
+	    : KW_CONCATENATE
+	    -> ^(TOK_ALTERTABLE_ALTERPARTS_MERGEFILES)
+	    ;
+	
+	alterProtectMode
+	@init { msgs.push("protect mode specification enable"); }
+	@after { msgs.pop(); }
+	    : KW_ENABLE alterProtectModeMode  -> ^(TOK_ENABLE alterProtectModeMode)
+	    | KW_DISABLE alterProtectModeMode  -> ^(TOK_DISABLE alterProtectModeMode)
+	    ;
+	
+	alterProtectModeMode
+	@init { msgs.push("protect mode specification enable"); }
+	@after { msgs.pop(); }
+	    : KW_OFFLINE  -> ^(TOK_OFFLINE)
+	    | KW_NO_DROP KW_CASCADE? -> ^(TOK_NO_DROP KW_CASCADE?)
+	    | KW_READONLY  -> ^(TOK_READONLY)
+	    ;
+	
+	alterStatementSuffixBucketNum
+	@init { msgs.push(""); }
+	@after { msgs.pop(); }
+	    : KW_INTO num=Number KW_BUCKETS
+	    -> ^(TOK_TABLEBUCKETS $num)
+	    ;
+	
+	tabTypeExpr
+	@init { msgs.push("specifying table types"); }
+	@after { msgs.pop(); }
+	
+	   : identifier (DOT^ (KW_ELEM_TYPE | KW_KEY_TYPE | KW_VALUE_TYPE | identifier))*
+	   ;
+	
+	descTabTypeExpr
+	@init { msgs.push("specifying describe table types"); }
+	@after { msgs.pop(); }
+	
+	   : identifier (DOT^ (KW_ELEM_TYPE | KW_KEY_TYPE | KW_VALUE_TYPE | identifier))* identifier?
+	   ;
+	
+	partTypeExpr
+	@init { msgs.push("specifying table partitions"); }
+	@after { msgs.pop(); }
+	    :  tabTypeExpr partitionSpec? -> ^(TOK_TABTYPE tabTypeExpr partitionSpec?)
+	    ;
+	
+	descPartTypeExpr
+	@init { msgs.push("specifying describe table partitions"); }
+	@after { msgs.pop(); }
+	    :  descTabTypeExpr partitionSpec? -> ^(TOK_TABTYPE descTabTypeExpr partitionSpec?)
+	    ;
+	
+	descStatement
+	@init { msgs.push("describe statement"); }
+	@after { msgs.pop(); }
+	    : (KW_DESCRIBE|KW_DESC) (descOptions=KW_FORMATTED|descOptions=KW_EXTENDED|descOptions=KW_PRETTY)? (parttype=descPartTypeExpr) -> ^(TOK_DESCTABLE $parttype $descOptions?)
+	    | (KW_DESCRIBE|KW_DESC) KW_FUNCTION KW_EXTENDED? (name=descFuncNames) -> ^(TOK_DESCFUNCTION $name KW_EXTENDED?)
+	    | (KW_DESCRIBE|KW_DESC) KW_DATABASE KW_EXTENDED? (dbName=identifier) -> ^(TOK_DESCDATABASE $dbName KW_EXTENDED?)
+	    ;
+	
+	analyzeStatement
+	@init { msgs.push("analyze statement"); }
+	@after { msgs.pop(); }
+	    : KW_ANALYZE KW_TABLE (parttype=tableOrPartition) KW_COMPUTE KW_STATISTICS ((noscan=KW_NOSCAN) | (partialscan=KW_PARTIALSCAN) | (KW_FOR KW_COLUMNS statsColumnName=columnNameList))? -> ^(TOK_ANALYZE $parttype $noscan? $partialscan? $statsColumnName?)
+	    ;
+	
+	createRoleStatement
+	@init { msgs.push("create role"); }
+	@after { msgs.pop(); }
+	    : KW_CREATE KW_ROLE roleName=identifier
+	    -> ^(TOK_CREATEROLE $roleName)
+	    ;
+	
+	dropRoleStatement
+	@init {msgs.push("drop role");}
+	@after {msgs.pop();}
+	    : KW_DROP KW_ROLE roleName=identifier
+	    -> ^(TOK_DROPROLE $roleName)
+	    ;
+	
+	grantPrivileges
+	@init {msgs.push("grant privileges");}
+	@after {msgs.pop();}
+	    : KW_GRANT privList=privilegeList
+	      privilegeObject?
+	      KW_TO principalSpecification
+	      (KW_WITH withOption)?
+	    -> ^(TOK_GRANT $privList principalSpecification privilegeObject? withOption?)
+	    ;
+	
+	revokePrivileges
+	@init {msgs.push("revoke privileges");}
+	@afer {msgs.pop();}
+	    : KW_REVOKE privilegeList privilegeObject? KW_FROM principalSpecification
+	    -> ^(TOK_REVOKE privilegeList principalSpecification privilegeObject?)
+	    ;
+	
+	grantRole
+	@init {msgs.push("grant role");}
+	@after {msgs.pop();}
+	    : KW_GRANT KW_ROLE identifier (COMMA identifier)* KW_TO principalSpecification
+	    -> ^(TOK_GRANT_ROLE principalSpecification identifier+)
+	    ;
+	
+	revokeRole
+	@init {msgs.push("revoke role");}
+	@after {msgs.pop();}
+	    : KW_REVOKE KW_ROLE identifier (COMMA identifier)* KW_FROM principalSpecification
+	    -> ^(TOK_REVOKE_ROLE principalSpecification identifier+)
+	    ;
+	
+	showRoleGrants
+	@init {msgs.push("show role grants");}
+	@after {msgs.pop();}
+	    : KW_SHOW KW_ROLE KW_GRANT principalName
+	    -> ^(TOK_SHOW_ROLE_GRANT principalName)
+	    ;
+	
+	showGrants
+	@init {msgs.push("show grants");}
+	@after {msgs.pop();}
+	    : KW_SHOW KW_GRANT principalName privilegeIncludeColObject?
+	    -> ^(TOK_SHOW_GRANT principalName privilegeIncludeColObject?)
+	    ;
+	
+	privilegeIncludeColObject
+	@init {msgs.push("privilege object including columns");}
+	@after {msgs.pop();}
+	    : KW_ON (table=KW_TABLE|KW_DATABASE) identifier (LPAREN cols=columnNameList RPAREN)? partitionSpec?
+	    -> ^(TOK_PRIV_OBJECT_COL identifier $table? $cols? partitionSpec?)
+	    ;
+	
+	privilegeObject
+	@init {msgs.push("privilege subject");}
+	@after {msgs.pop();}
+	    : KW_ON (table=KW_TABLE|KW_DATABASE) identifier partitionSpec?
+	    -> ^(TOK_PRIV_OBJECT identifier $table? partitionSpec?)
+	    ;
+	
+	privilegeList
+	@init {msgs.push("grant privilege list");}
+	@after {msgs.pop();}
+	    : privlegeDef (COMMA privlegeDef)*
+	    -> ^(TOK_PRIVILEGE_LIST privlegeDef+)
+	    ;
+	
+	privlegeDef
+	@init {msgs.push("grant privilege");}
+	@after {msgs.pop();}
+	    : privilegeType (LPAREN cols=columnNameList RPAREN)?
+	    -> ^(TOK_PRIVILEGE privilegeType $cols?)
+	    ;
+	
+	privilegeType
+	@init {msgs.push("privilege type");}
+	@after {msgs.pop();}
+	    : KW_ALL -> ^(TOK_PRIV_ALL)
+	    | KW_ALTER -> ^(TOK_PRIV_ALTER_METADATA)
+	    | KW_UPDATE -> ^(TOK_PRIV_ALTER_DATA)
+	    | KW_CREATE -> ^(TOK_PRIV_CREATE)
+	    | KW_DROP -> ^(TOK_PRIV_DROP)
+	    | KW_INDEX -> ^(TOK_PRIV_INDEX)
+	    | KW_LOCK -> ^(TOK_PRIV_LOCK)
+	    | KW_SELECT -> ^(TOK_PRIV_SELECT)
+	    | KW_SHOW_DATABASE -> ^(TOK_PRIV_SHOW_DATABASE)
+	    ;
+	
+	principalSpecification
+	@init { msgs.push("user/group/role name list"); }
+	@after { msgs.pop(); }
+	    : principalName (COMMA principalName)* -> ^(TOK_PRINCIPAL_NAME principalName+)
+	    ;
+	
+	principalName
+	@init {msgs.push("user|group|role name");}
+	@after {msgs.pop();}
+	    : KW_USER identifier -> ^(TOK_USER identifier)
+	    | KW_GROUP identifier -> ^(TOK_GROUP identifier)
+	    | KW_ROLE identifier -> ^(TOK_ROLE identifier)
+	    ;
+	
+	withOption
+	@init {msgs.push("grant with option");}
+	@after {msgs.pop();}
+	    : KW_GRANT KW_OPTION
+	    -> ^(TOK_GRANT_WITH_OPTION)
+	    ;
+	
+	metastoreCheck
+	@init { msgs.push("metastore check statement"); }
+	@after { msgs.pop(); }
+	    : KW_MSCK (repair=KW_REPAIR)? (KW_TABLE table=identifier partitionSpec? (COMMA partitionSpec)*)?
+	    -> ^(TOK_MSCK $repair? ($table partitionSpec*)?)
+	    ;
+
+	createMacroStatement
+	@init { msgs.push("create macro statement"); }
+	@after { msgs.pop(); }
+	    : KW_CREATE KW_TEMPORARY KW_MACRO Identifier
+	      LPAREN columnNameTypeList? RPAREN expression
+	    -> ^(TOK_CREATEMACRO Identifier columnNameTypeList? expression)
+	    ;
+	
+	dropMacroStatement
+	@init { msgs.push("drop macro statement"); }
+	@after { msgs.pop(); }
+	    : KW_DROP KW_TEMPORARY KW_MACRO ifExists? Identifier
+	    -> ^(TOK_DROPMACRO Identifier ifExists?)
+	    ;
+	
+	createViewStatement
+	@init {
+	    msgs.push("create view statement");
+	}
+	@after { msgs.pop(); }
+	    : KW_CREATE (orReplace)? KW_VIEW (ifNotExists)? name=tableName
+	        (LPAREN columnNameCommentList RPAREN)? tableComment? viewPartition?
+	        tablePropertiesPrefixed?
+	        KW_AS
+	        selectStatement
+	    -> ^(TOK_CREATEVIEW $name orReplace?
+	         ifNotExists?
+	         columnNameCommentList?
+	         tableComment?
+	         viewPartition?
+	         tablePropertiesPrefixed?
+	         selectStatement
+	        )
+	    ;
+	
+	viewPartition
+	@init { msgs.push("view partition specification"); }
+	@after { msgs.pop(); }
+	    : KW_PARTITIONED KW_ON LPAREN columnNameList RPAREN
+	    -> ^(TOK_VIEWPARTCOLS columnNameList)
+	    ;
+	
+	dropViewStatement
+	@init { msgs.push("drop view statement"); }
+	@after { msgs.pop(); }
+	    : KW_DROP KW_VIEW ifExists? viewName -> ^(TOK_DROPVIEW viewName ifExists?)
+	    ;
+	
+	
+	rowFormat
+	@init { msgs.push("serde specification"); }
+	@after { msgs.pop(); }
+	    : rowFormatSerde -> ^(TOK_SERDE rowFormatSerde)
+	    | rowFormatDelimited -> ^(TOK_SERDE rowFormatDelimited)
+	    |   -> ^(TOK_SERDE)
+	    ;
+	
+	recordReader
+	@init { msgs.push("record reader specification"); }
+	@after { msgs.pop(); }
+	    : KW_RECORDREADER StringLiteral -> ^(TOK_RECORDREADER StringLiteral)
+	    |   -> ^(TOK_RECORDREADER)
+	    ;
+	
+	recordWriter
+	@init { msgs.push("record writer specification"); }
+	@after { msgs.pop(); }
+	    : KW_RECORDWRITER StringLiteral -> ^(TOK_RECORDWRITER StringLiteral)
+	    |   -> ^(TOK_RECORDWRITER)
+	    ;
+	
+	rowFormatSerde
+	@init { msgs.push("serde format specification"); }
+	@after { msgs.pop(); }
+	    : KW_ROW KW_FORMAT KW_SERDE name=StringLiteral (KW_WITH KW_SERDEPROPERTIES serdeprops=tableProperties)?
+	    -> ^(TOK_SERDENAME $name $serdeprops?)
+	    ;
+	
+	tableRowFormat
+	@init { msgs.push("table row format specification"); }
+	@after { msgs.pop(); }
+	    :
+	      rowFormatDelimited
+	    -> ^(TOK_TABLEROWFORMAT rowFormatDelimited)
+	    | rowFormatSerde
+	    -> ^(TOK_TABLESERIALIZER rowFormatSerde)
+	    ;
+	
+	columnRefOrder
+	@init { msgs.push("column order"); }
+	@after { msgs.pop(); }
+	    : expression (asc=KW_ASC | desc=KW_DESC)?
+	    -> {$desc == null}? ^(TOK_TABSORTCOLNAMEASC expression)
+	    ->                  ^(TOK_TABSORTCOLNAMEDESC expression)
+	    ;
+	
+	queryOperator
+	@init { msgs.push("query operator"); }
+	@after { msgs.pop(); }
+	    : KW_UNION KW_ALL -> ^(TOK_UNION)
+	    ;
+	
+	// select statement select ... from ... where ... group by ... order by ...
+	queryStatementExpression
+	    : queryStatement (queryOperator^ queryStatement)*
+	    ;
+	
+	queryStatement
+	    :
+	    fromClause
+	    ( b+=body )+ -> ^(TOK_QUERY fromClause body+)
+	    | regular_body
+	    ;
+	
+	regular_body
+	   :
+	   insertClause
+	   selectClause
+	   fromClause
+	   whereClause?
+	   groupByClause?
+	   havingClause?
+	   orderByClause?
+	   clusterByClause?
+	   distributeByClause?
+	   sortByClause?
+	   window_clause?
+	   limitClause? -> ^(TOK_QUERY fromClause ^(TOK_INSERT insertClause
+	                     selectClause whereClause? groupByClause? havingClause? orderByClause? clusterByClause?
+	                     distributeByClause? sortByClause? window_clause? limitClause?))
+	   |
+	   selectStatement
+	   ;
+	
+	selectStatement
+	   :
+	   selectClause
+	   fromClause
+	   whereClause?
+	   groupByClause?
+	   havingClause?
+	   orderByClause?
+	   clusterByClause?
+	   distributeByClause?
+	   sortByClause?
+	   window_clause?
+	   limitClause? -> ^(TOK_QUERY fromClause ^(TOK_INSERT ^(TOK_DESTINATION ^(TOK_DIR TOK_TMP_FILE))
+	                     selectClause whereClause? groupByClause? havingClause? orderByClause? clusterByClause?
+	                     distributeByClause? sortByClause? window_clause? limitClause?))
+	   ;
+	
+	
+	body
+	   :
+	   insertClause
+	   selectClause
+	   lateralView?
+	   whereClause?
+	   groupByClause?
+	   havingClause?
+	   orderByClause?
+	   clusterByClause?
+	   distributeByClause?
+	   sortByClause?
+	   window_clause?
+	   limitClause? -> ^(TOK_INSERT insertClause
+	                     selectClause lateralView? whereClause? groupByClause? havingClause? orderByClause? clusterByClause?
+	                     distributeByClause? sortByClause? window_clause? limitClause?)
+	   |
+	   selectClause
+	   lateralView?
+	   whereClause?
+	   groupByClause?
+	   havingClause?
+	   orderByClause?
+	   clusterByClause?
+	   distributeByClause?
+	   sortByClause?
+	   window_clause?
+	   limitClause? -> ^(TOK_INSERT ^(TOK_DESTINATION ^(TOK_DIR TOK_TMP_FILE))
+	                     selectClause lateralView? whereClause? groupByClause? havingClause? orderByClause? clusterByClause?
+	                     distributeByClause? sortByClause? window_clause? limitClause?)
+	   ;
+	
+	insertClause
+	@init { msgs.push("insert clause"); }
+	@after { msgs.pop(); }
+	   :
+	     KW_INSERT KW_OVERWRITE destination ifNotExists? -> ^(TOK_DESTINATION destination ifNotExists?)
+	   | KW_INSERT KW_INTO KW_TABLE tableOrPartition
+	       -> ^(TOK_INSERT_INTO tableOrPartition)
+	   ;
+	
+	destination
+	@init { msgs.push("destination specification"); }
+	@after { msgs.pop(); }
+	   :
+	     KW_LOCAL KW_DIRECTORY StringLiteral tableRowFormat? tableFileFormat? -> ^(TOK_LOCAL_DIR StringLiteral tableRowFormat? tableFileFormat?)
+	   | KW_DIRECTORY StringLiteral -> ^(TOK_DIR StringLiteral)
+	   | KW_TABLE tableOrPartition -> tableOrPartition
+	   ;
+	
+}
+

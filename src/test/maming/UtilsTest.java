@@ -38,8 +38,6 @@ public class UtilsTest {
 	
 	@Test
 	public void test3(){
-		String s = "2015-7-07";
-        Date result = Date.valueOf(s);
-        System.out.println(result);
+		System.out.println(System.getenv());
 	}
 }
