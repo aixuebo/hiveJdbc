@@ -580,6 +580,7 @@ execStatement
     | ddlStatement
     ;
 
+//load data [local] inpath xxxxPath [overwrite] into table tableName [ PARTITION( xxx [ (== | =) constant],xxx [ (== | =) constant] ) ]
 loadStatement
 @init { msgs.push("load statement"); }
 @after { msgs.pop(); }
@@ -587,6 +588,7 @@ loadStatement
     -> ^(TOK_LOAD $path $tab $islocal? $isoverwrite?)
     ;
 
+//export table  tableName [ PARTITION( xxx [ (== | =) constant],xxx [ (== | =) constant] ) ] to xxxPath
 exportStatement
 @init { msgs.push("export statement"); }
 @after { msgs.pop(); }
@@ -594,6 +596,9 @@ exportStatement
     -> ^(TOK_EXPORT $tab $path)
     ;
 
+//1.import [external] table tableName [ PARTITION( xxx [ (== | =) constant],xxx [ (== | =) constant] ) ] from xxxPath [LOCATION xxx]
+//2.import table tableName [ PARTITION( xxx [ (== | =) constant],xxx [ (== | =) constant] ) ] from xxxPath [LOCATION xxx]
+//3.import from xxxPath [LOCATION xxx]
 importStatement
 @init { msgs.push("import statement"); }
 @after { msgs.pop(); }
@@ -604,11 +609,18 @@ importStatement
 ddlStatement
 @init { msgs.push("ddl statement"); }
 @after { msgs.pop(); }
+//创建数据库  create database|schema [ifNotExists] databaseName [databaseComment] [dbLocation] [with DBPROPERTIES (key=value,key=value)]
     : createDatabaseStatement
+    // use + 字符串 切换数据库
     | switchDatabaseStatement
+    //删除一个数据库DROP (DATABASE|SCHEMA) [IF EXISTS] database_name [RESTRICT|CASCADE];
     | dropDatabaseStatement
+    //太长了,详细看记录吧
     | createTableStatement
+    //删除一个数据库表 drop table [if exists] tableName
     | dropTableStatement
+    //截断表,是不会因为有回滚而停止截断表操作的,语义上与delete表一样,就是删除表内数据,不过该语法会速度非常快删除,不会有条件跟随，也可以删除表的某些分区
+	//truncate table xxxtableName PARTITION( xxx [ (== | =) constant],xxx [ (== | =) constant] ) [(xxx,xxx,xxx)]
     | truncateTableStatement
     | alterStatement
     | descStatement
@@ -622,6 +634,7 @@ ddlStatement
     | dropIndexStatement
     | dropFunctionStatement
     | dropMacroStatement
+    //分析表的一些统计信息analyze table  tableName [ PARTITION( xxx [ (== | =) constant],xxx [ (== | =) constant] ) ] compute statistics [noscan | partialscan | for columns (xxx,xxx,xxx)]
     | analyzeStatement
     | lockStatement
     | unlockStatement
@@ -833,6 +846,8 @@ createTableStatement
         )
     ;
 
+//截断表,是不会因为有回滚而停止截断表操作的,语义上与delete表一样,就是删除表内数据,不过该语法会速度非常快删除,不会有条件跟随，也可以删除表的某些分区
+//truncate table xxxtableName PARTITION( xxx [ (== | =) constant],xxx [ (== | =) constant] ) [(xxx,xxx,xxx)]
 truncateTableStatement
 @init { msgs.push("truncate table statement"); }
 @after { msgs.pop(); }
@@ -912,6 +927,7 @@ dropIndexStatement
     ->^(TOK_DROPINDEX $indexName $tab ifExists?)
     ;
 
+//drop table [if exists] tableName
 dropTableStatement
 @init { msgs.push("drop statement"); }
 @after { msgs.pop(); }
@@ -1094,6 +1110,7 @@ alterStatementSuffixSerdeProperties
     -> ^(TOK_ALTERTABLE_SERDEPROPERTIES tableProperties)
     ;
 
+//表示一个表和表的分区前缀  xxx PARTITION( xxx [ (== | =) constant],xxx [ (== | =) constant] )
 tablePartitionPrefix
 @init {msgs.push("table partition prefix");}
 @after {msgs.pop();}
@@ -1285,6 +1302,7 @@ descStatement
     | (KW_DESCRIBE|KW_DESC) KW_DATABASE KW_EXTENDED? (dbName=identifier) -> ^(TOK_DESCDATABASE $dbName KW_EXTENDED?)
     ;
 
+//分析表的一些统计信息analyze table  tableName [ PARTITION( xxx [ (== | =) constant],xxx [ (== | =) constant] ) ] compute statistics [noscan | partialscan | for columns (xxx,xxx,xxx)]
 analyzeStatement
 @init { msgs.push("analyze statement"); }
 @after { msgs.pop(); }
@@ -1770,6 +1788,7 @@ columnNameColonTypeList
 
 //获取属性名字集合,用逗号拆分
 //格式属性字符串,属性字符串
+//xxx,xxx,xxx
 columnNameList
 @init { msgs.push("column name list"); }
 @after { msgs.pop(); }

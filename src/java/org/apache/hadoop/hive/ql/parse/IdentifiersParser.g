@@ -456,6 +456,7 @@ booleanValue
     ;
 
 //返回 tableName [ PARTITION( xxx [ (== | =) constant],xxx [ (== | =) constant] ) ]
+//其中tableName 可以是数据库.表 或者表
 tableOrPartition
    :
    tableName partitionSpec? -> ^(TOK_TAB tableName partitionSpec?)
@@ -537,6 +538,7 @@ sysFuncNames
     | KW_BETWEEN
     ;
 
+//任意字符串,表示函数名称
 descFuncNames
     :
       sysFuncNames

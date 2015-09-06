@@ -12,35 +12,21 @@ public class 未提交的sqlParse {
 	    | ddlStatement
 	    ;
 	
-	loadStatement
-	@init { msgs.push("load statement"); }
-	@after { msgs.pop(); }
-	    : KW_LOAD KW_DATA (islocal=KW_LOCAL)? KW_INPATH (path=StringLiteral) (isoverwrite=KW_OVERWRITE)? KW_INTO KW_TABLE (tab=tableOrPartition)
-	    -> ^(TOK_LOAD $path $tab $islocal? $isoverwrite?)
-	    ;
-	
-	exportStatement
-	@init { msgs.push("export statement"); }
-	@after { msgs.pop(); }
-	    : KW_EXPORT KW_TABLE (tab=tableOrPartition) KW_TO (path=StringLiteral)
-	    -> ^(TOK_EXPORT $tab $path)
-	    ;
-	
-	importStatement
-	@init { msgs.push("import statement"); }
-	@after { msgs.pop(); }
-		: KW_IMPORT ((ext=KW_EXTERNAL)? KW_TABLE (tab=tableOrPartition))? KW_FROM (path=StringLiteral) tableLocation?
-	    -> ^(TOK_IMPORT $path $tab? $ext? tableLocation?)
-	    ;
-	
 	ddlStatement
 	@init { msgs.push("ddl statement"); }
 	@after { msgs.pop(); }
+	//创建数据库  create database|schema [ifNotExists] databaseName [databaseComment] [dbLocation] [with DBPROPERTIES (key=value,key=value)]
 	    : createDatabaseStatement
+	    // use + 字符串 切换数据库
 	    | switchDatabaseStatement
+	    //删除一个数据库DROP (DATABASE|SCHEMA) [IF EXISTS] database_name [RESTRICT|CASCADE];
 	    | dropDatabaseStatement
+	    //太长了,详细看记录吧
 	    | createTableStatement
+	    //删除一个数据库表 drop table [if exists] tableName
 	    | dropTableStatement
+	    //截断表,是不会因为有回滚而停止截断表操作的,语义上与delete表一样,就是删除表内数据,不过该语法会速度非常快删除,不会有条件跟随，也可以删除表的某些分区
+		//truncate table xxxtableName PARTITION( xxx [ (== | =) constant],xxx [ (== | =) constant] ) [(xxx,xxx,xxx)]
 	    | truncateTableStatement
 	    | alterStatement
 	    | descStatement
@@ -54,7 +40,6 @@ public class 未提交的sqlParse {
 	    | dropIndexStatement
 	    | dropFunctionStatement
 	    | dropMacroStatement
-	    | analyzeStatement
 	    | lockStatement
 	    | unlockStatement
 	    | createRoleStatement
@@ -66,11 +51,6 @@ public class 未提交的sqlParse {
 	    | grantRole
 	    | revokeRole
 	    ;
-	
-	truncateTableStatement
-	@init { msgs.push("truncate table statement"); }
-	@after { msgs.pop(); }
-	    : KW_TRUNCATE KW_TABLE tablePartitionPrefix (KW_COLUMNS LPAREN columnNameList RPAREN)? -> ^(TOK_TRUNCATETABLE tablePartitionPrefix columnNameList?);
 	
 	createIndexStatement
 	@init { msgs.push("create index statement");}
@@ -137,12 +117,6 @@ public class 未提交的sqlParse {
 	@after {msgs.pop();}
 	    : KW_DROP KW_INDEX ifExists? indexName=identifier KW_ON tab=tableName
 	    ->^(TOK_DROPINDEX $indexName $tab ifExists?)
-	    ;
-	
-	dropTableStatement
-	@init { msgs.push("drop statement"); }
-	@after { msgs.pop(); }
-	    : KW_DROP KW_TABLE ifExists? tableName -> ^(TOK_DROPTABLE tableName ifExists?)
 	    ;
 	
 	alterStatement
@@ -321,13 +295,6 @@ public class 未提交的sqlParse {
 	    -> ^(TOK_ALTERTABLE_SERDEPROPERTIES tableProperties)
 	    ;
 	
-	tablePartitionPrefix
-	@init {msgs.push("table partition prefix");}
-	@after {msgs.pop();}
-	  :name=identifier partitionSpec?
-	  ->^(TOK_TABLE_PARTITION $name partitionSpec?)
-	  ;
-	
 	alterTblPartitionStatement
 	@init {msgs.push("alter table partition statement");}
 	@after {msgs.pop();}
@@ -497,12 +464,6 @@ public class 未提交的sqlParse {
 	    : (KW_DESCRIBE|KW_DESC) (descOptions=KW_FORMATTED|descOptions=KW_EXTENDED|descOptions=KW_PRETTY)? (parttype=descPartTypeExpr) -> ^(TOK_DESCTABLE $parttype $descOptions?)
 	    | (KW_DESCRIBE|KW_DESC) KW_FUNCTION KW_EXTENDED? (name=descFuncNames) -> ^(TOK_DESCFUNCTION $name KW_EXTENDED?)
 	    | (KW_DESCRIBE|KW_DESC) KW_DATABASE KW_EXTENDED? (dbName=identifier) -> ^(TOK_DESCDATABASE $dbName KW_EXTENDED?)
-	    ;
-	
-	analyzeStatement
-	@init { msgs.push("analyze statement"); }
-	@after { msgs.pop(); }
-	    : KW_ANALYZE KW_TABLE (parttype=tableOrPartition) KW_COMPUTE KW_STATISTICS ((noscan=KW_NOSCAN) | (partialscan=KW_PARTIALSCAN) | (KW_FOR KW_COLUMNS statsColumnName=columnNameList))? -> ^(TOK_ANALYZE $parttype $noscan? $partialscan? $statsColumnName?)
 	    ;
 	
 	createRoleStatement

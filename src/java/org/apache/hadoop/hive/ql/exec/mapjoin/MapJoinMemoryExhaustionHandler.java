@@ -38,10 +38,12 @@ public class MapJoinMemoryExhaustionHandler {
   /**
    * The percentage of overall heap that the JVM is allowed
    * to allocate before failing a MapJoin local task.
+   * 允许最大内存使用的百分比
    */
   private final double maxMemoryUsage;
   /**
    * The max heap of the JVM in bytes.
+   * 当前最大堆内存
    */
   private final long maxHeapSize;
   private final LogHelper console;
