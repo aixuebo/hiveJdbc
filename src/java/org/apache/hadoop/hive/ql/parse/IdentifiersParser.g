@@ -455,14 +455,14 @@ booleanValue
     KW_TRUE^ | KW_FALSE^
     ;
 
-//返回 tableName [ PARTITION( xxx [ (== | =) constant],xxx [ (== | =) constant] ) ]
+//返回 tableName [ PARTITION (name=value,name=value,name) ]
 tableOrPartition
    :
    tableName partitionSpec? -> ^(TOK_TAB tableName partitionSpec?)
    ;
 
 //分区描述
-//格式 PARTITION( xxx [ (== | =) constant],xxx [ (== | =) constant] )
+//格式 PARTITION (name=value,name=value,name)
 partitionSpec
     :
     KW_PARTITION
@@ -470,23 +470,26 @@ partitionSpec
     ;
 
 //每一个分区的描述
-//格式 xxx [ (== | =) constant]
+//格式  name=value,name=value,name
 partitionVal
     :
     identifier (EQUAL constant)? -> ^(TOK_PARTVAL identifier constant?)
     ;
 
+//PARTITION( key (= 、 == 、 <>、 != 、 <= 、< 、 < 、 >=) value,key (= 、 == 、 <>、 != 、 <= 、< 、 < 、 >=) value)
 dropPartitionSpec
     :
     KW_PARTITION
      LPAREN dropPartitionVal (COMMA  dropPartitionVal )* RPAREN -> ^(TOK_PARTSPEC dropPartitionVal +)
     ;
 
+//key (= 、 == 、 <>、 != 、 <= 、< 、 < 、 >=) value
 dropPartitionVal
     :
     identifier dropPartitionOperator constant -> ^(TOK_PARTVAL identifier dropPartitionOperator constant)
     ;
 
+// = 、 == 、 <>、 != 、 <= 、< 、 < 、 >=
 dropPartitionOperator
     :
     EQUAL | NOTEQUAL | LESSTHANOREQUALTO | LESSTHAN | GREATERTHANOREQUALTO | GREATERTHAN

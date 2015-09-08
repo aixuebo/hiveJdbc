@@ -66,6 +66,7 @@ public final class ParseUtils {
    *          candidate node from which to start searching
    *
    * @return node at which descent stopped
+   * 过滤到第一个不是null的节点
    */
   public static ASTNode findRootNonNullToken(ASTNode tree) {
     while ((tree.getToken() == null) && (tree.getChildCount() > 0)) {

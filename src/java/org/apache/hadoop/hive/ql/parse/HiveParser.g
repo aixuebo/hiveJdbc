@@ -654,7 +654,7 @@ restrictOrCascade
     -> ^(TOK_CASCADE)
     ;
 
-//匹配if not exists语句
+//IF NOT EXISTS
 ifNotExists
 @init { msgs.push("if not exists clause"); }
 @after { msgs.pop(); }
@@ -1094,6 +1094,7 @@ alterStatementSuffixSerdeProperties
     -> ^(TOK_ALTERTABLE_SERDEPROPERTIES tableProperties)
     ;
 
+//tableName []
 tablePartitionPrefix
 @init {msgs.push("table partition prefix");}
 @after {msgs.pop();}
@@ -1299,7 +1300,7 @@ SHOW 语法
 4.SHOW FUNCTIONS xxx
 5.SHOW PARTITIONS xxx [ PARTITION( xxx [ (== | =) constant],xxx [ (== | =) constant] ) ]
 6.SHOW CREATE TABLE tableName 
-7.SHOW TABLE EXTENDED [ (from | in) db_name ] like xxx [ PARTITION( xxx [ (== | =) constant],xxx [ (== | =) constant] ) ]
+7.SHOW TABLE EXTENDED [ (from | in) db_name ] like tableName [  PARTITION (name=value,name=value,name) ]
 8.SHOW TBLPROPERTIES 表名xxx [ (属性名xxx) ] 获取该表的某一个自定义属性内容
 9.SHOW LOCKS xxx .($ELEM$ | $KEY$ | $VALUE$ | xxx ) .($ELEM$ | $KEY$ | $VALUE$ | xxx )详细看.没看太懂
 10.SHOW [FORMATTED] [(INDEX|INDEXES) on xxx (from | in) db_name ]
@@ -1602,6 +1603,8 @@ recordWriter
     |   -> ^(TOK_RECORDWRITER)
     ;
 
+//ROW FORMAT SERDE "class全路径" [WHIN SERDEPROPERTIES TBLPROPERTIES (key=value,key=value,key)]
+//注意:key没有等号,表示默认值是null
 rowFormatSerde
 @init { msgs.push("serde format specification"); }
 @after { msgs.pop(); }
@@ -1622,6 +1625,13 @@ rowFormatDelimited
     -> ^(TOK_SERDEPROPS tableRowFormatFieldIdentifier? tableRowFormatCollItemsIdentifier? tableRowFormatMapKeysIdentifier? tableRowFormatLinesIdentifier?)
     ;
 
+//方式1:ROW FORMAT DELIMITED [FIELDS terminated by xxx [ESCAPED by xx] ] 
+//[COLLECTION ITEMS terminated by xxx ]
+//[MAP KEYS terminated by xxx ]
+//[LINES terminated by xxx ]
+//方式2:
+//ROW FORMAT SERDE "class全路径" [WHIN SERDEPROPERTIES TBLPROPERTIES (key=value,key=value,key)]
+//注意:key没有等号,表示默认值是null
 tableRowFormat
 @init { msgs.push("table row format specification"); }
 @after { msgs.pop(); }
@@ -1633,7 +1643,7 @@ tableRowFormat
     ;
 
 //解析table的键值对属性值的前缀信息
-//格式TBLPROPERTIES (key=value,key=value)
+//格式TBLPROPERTIES (key=value,key=value,key) 注意:key没有等号,表示默认值是null
 tablePropertiesPrefixed
 @init { msgs.push("table properties with prefix"); }
 @after { msgs.pop(); }
@@ -2073,6 +2083,12 @@ body
                      distributeByClause? sortByClause? window_clause? limitClause?)
    ;
 
+//方式1:INSERT OVERWRITE LOCAL DIRECTORY "path" [IF NOT EXISTS ]
+//方式2:INSERT OVERWRITE LOCAL DIRECTORY "path" ROW FORMAT DELIMITED [FIELDS terminated by xxx [ESCAPED by xx] ]    [COLLECTION ITEMS terminated by xxx ]    [MAP KEYS terminated by xxx ]  [LINES terminated by xxx ] [IF NOT EXISTS ]
+//方式3:INSERT OVERWRITE LOCAL DIRECTORY "path" ROW FORMAT SERDE "class全路径" [WHIN SERDEPROPERTIES TBLPROPERTIES (key=value,key=value,key)] [IF NOT EXISTS ] 注意:key没有等号,表示默认值是null
+//方式4:INSERT OVERWRITE DIRECTORY "path"
+//方式5:INSERT OVERWRITE TABLE tableName [PARTITION (task = 'share', date = '20150831')]
+//方式6:INSERT INTO TABLE tableName [PARTITION (task = 'share', date = '20150831')]
 insertClause
 @init { msgs.push("insert clause"); }
 @after { msgs.pop(); }
@@ -2082,6 +2098,12 @@ insertClause
        -> ^(TOK_INSERT_INTO tableOrPartition)
    ;
 
+//方式1:
+//a.LOCAL DIRECTORY "path" 注意:必须是单引号或者双引号包裹
+//b.LOCAL DIRECTORY "path" ROW FORMAT DELIMITED [FIELDS terminated by xxx [ESCAPED by xx] ]    [COLLECTION ITEMS terminated by xxx ]    [MAP KEYS terminated by xxx ]  [LINES terminated by xxx ]
+//c.LOCAL DIRECTORY "path" ROW FORMAT SERDE "class全路径" [WHIN SERDEPROPERTIES TBLPROPERTIES (key=value,key=value,key)] 注意:key没有等号,表示默认值是null
+//方式2:DIRECTORY "path" 注意:必须是单引号或者双引号包裹
+//方式3:TABLE tableName PARTITION (task = 'share', date = '20150831')
 destination
 @init { msgs.push("destination specification"); }
 @after { msgs.pop(); }

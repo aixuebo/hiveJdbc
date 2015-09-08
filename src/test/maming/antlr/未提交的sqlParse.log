@@ -705,23 +705,6 @@ public class 未提交的sqlParse {
 	    |   -> ^(TOK_RECORDWRITER)
 	    ;
 	
-	rowFormatSerde
-	@init { msgs.push("serde format specification"); }
-	@after { msgs.pop(); }
-	    : KW_ROW KW_FORMAT KW_SERDE name=StringLiteral (KW_WITH KW_SERDEPROPERTIES serdeprops=tableProperties)?
-	    -> ^(TOK_SERDENAME $name $serdeprops?)
-	    ;
-	
-	tableRowFormat
-	@init { msgs.push("table row format specification"); }
-	@after { msgs.pop(); }
-	    :
-	      rowFormatDelimited
-	    -> ^(TOK_TABLEROWFORMAT rowFormatDelimited)
-	    | rowFormatSerde
-	    -> ^(TOK_TABLESERIALIZER rowFormatSerde)
-	    ;
-	
 	columnRefOrder
 	@init { msgs.push("column order"); }
 	@after { msgs.pop(); }
@@ -817,24 +800,6 @@ public class 未提交的sqlParse {
 	                     selectClause lateralView? whereClause? groupByClause? havingClause? orderByClause? clusterByClause?
 	                     distributeByClause? sortByClause? window_clause? limitClause?)
 	   ;
-	
-	insertClause
-	@init { msgs.push("insert clause"); }
-	@after { msgs.pop(); }
-	   :
-	     KW_INSERT KW_OVERWRITE destination ifNotExists? -> ^(TOK_DESTINATION destination ifNotExists?)
-	   | KW_INSERT KW_INTO KW_TABLE tableOrPartition
-	       -> ^(TOK_INSERT_INTO tableOrPartition)
-	   ;
-	
-	destination
-	@init { msgs.push("destination specification"); }
-	@after { msgs.pop(); }
-	   :
-	     KW_LOCAL KW_DIRECTORY StringLiteral tableRowFormat? tableFileFormat? -> ^(TOK_LOCAL_DIR StringLiteral tableRowFormat? tableFileFormat?)
-	   | KW_DIRECTORY StringLiteral -> ^(TOK_DIR StringLiteral)
-	   | KW_TABLE tableOrPartition -> tableOrPartition
-	   ;
-	
+
 }
 

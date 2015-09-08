@@ -12,8 +12,8 @@ import java.util.HashMap;
 import org.apache.thrift.TEnum;
 
 public enum NodeType implements org.apache.thrift.TEnum {
-  OPERATOR(0),
-  STAGE(1);
+  OPERATOR(0),//²Ù×÷ÈË
+  STAGE(1);//½×¶Î
 
   private final int value;
 

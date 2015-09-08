@@ -1,0 +1,93 @@
+汇总格式
+queryStatementExpression
+    : queryStatement (queryOperator^ queryStatement)*
+    ;
+
+queryStatement
+    :
+    fromClause
+    ( b+=body )+ -> ^(TOK_QUERY fromClause body+)
+    | regular_body
+    ;
+
+regular_body
+   :
+   insertClause
+   selectClause
+   fromClause
+   whereClause?
+   groupByClause?
+   havingClause?
+   orderByClause?
+   clusterByClause?
+   distributeByClause?
+   sortByClause?
+   window_clause?
+   limitClause? -> ^(TOK_QUERY fromClause ^(TOK_INSERT insertClause
+                     selectClause whereClause? groupByClause? havingClause? orderByClause? clusterByClause?
+                     distributeByClause? sortByClause? window_clause? limitClause?))
+   |
+   selectStatement
+   ;
+
+selectStatement
+   :
+   selectClause
+   fromClause
+   whereClause?
+   groupByClause?
+   havingClause?
+   orderByClause?
+   clusterByClause?
+   distributeByClause?
+   sortByClause?
+   window_clause?
+   limitClause? -> ^(TOK_QUERY fromClause ^(TOK_INSERT ^(TOK_DESTINATION ^(TOK_DIR TOK_TMP_FILE))
+                     selectClause whereClause? groupByClause? havingClause? orderByClause? clusterByClause?
+                     distributeByClause? sortByClause? window_clause? limitClause?))
+   ;
+
+
+body
+   :
+   insertClause
+   selectClause
+   lateralView?
+   whereClause?
+   groupByClause?
+   havingClause?
+   orderByClause?
+   clusterByClause?
+   distributeByClause?
+   sortByClause?
+   window_clause?
+   limitClause? -> ^(TOK_INSERT insertClause
+                     selectClause lateralView? whereClause? groupByClause? havingClause? orderByClause? clusterByClause?
+                     distributeByClause? sortByClause? window_clause? limitClause?)
+   |
+   selectClause
+   lateralView?
+   whereClause?
+   groupByClause?
+   havingClause?
+   orderByClause?
+   clusterByClause?
+   distributeByClause?
+   sortByClause?
+   window_clause?
+   limitClause? -> ^(TOK_INSERT ^(TOK_DESTINATION ^(TOK_DIR TOK_TMP_FILE))
+                     selectClause lateralView? whereClause? groupByClause? havingClause? orderByClause? clusterByClause?
+                     distributeByClause? sortByClause? window_clause? limitClause?)
+   ;
+
+------------------------------------------------------------------------------------------
+1.insertClause(新增段落)
+//方式1:INSERT OVERWRITE LOCAL DIRECTORY "path" [IF NOT EXISTS ]
+//方式2:INSERT OVERWRITE LOCAL DIRECTORY "path" ROW FORMAT DELIMITED [FIELDS terminated by xxx [ESCAPED by xx] ]    [COLLECTION ITEMS terminated by xxx ]    [MAP KEYS terminated by xxx ]  [LINES terminated by xxx ] [IF NOT EXISTS ]
+//方式3:INSERT OVERWRITE LOCAL DIRECTORY "path" ROW FORMAT SERDE "class全路径" [WHIN SERDEPROPERTIES TBLPROPERTIES (key=value,key=value,key)] [IF NOT EXISTS ] 注意:key没有等号,表示默认值是null
+//方式4:INSERT OVERWRITE DIRECTORY "path"
+//方式5:INSERT OVERWRITE TABLE tableName [PARTITION (task = 'share', date = '20150831')]
+//方式6:INSERT INTO TABLE tableName [PARTITION (task = 'share', date = '20150831')]
+
+2.selectClause(查询段落)
+

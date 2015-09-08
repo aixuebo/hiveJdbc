@@ -194,6 +194,7 @@ public class Driver implements CommandProcessor {
 
   /**
    * Return the status information about the Map-Reduce cluster
+   * 获取hadoop集群的信息
    */
   public ClusterStatus getClusterStatus() throws Exception {
     ClusterStatus cs;
@@ -995,6 +996,7 @@ public class Driver implements CommandProcessor {
     boolean requireLock = false;
     boolean ckLock = checkLockManager();
 
+    //检查是否需要锁
     if (ckLock) {
       boolean lockOnlyMapred = HiveConf.getBoolVar(conf, HiveConf.ConfVars.HIVE_LOCK_MAPRED_ONLY);
       if(lockOnlyMapred) {

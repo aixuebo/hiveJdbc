@@ -21,7 +21,7 @@
 
 <configuration>
   <property>
-    <name>fs.default.name</name>
-    <value>core-site.xml</value>
+    <name>yarn.app.mapreduce.am.job.node-blacklisting.enable</name>
+    <value>false</value>
   </property>
 </configuration>

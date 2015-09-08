@@ -2001,6 +2001,8 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
     setFetchTask(createFetchTask(descDbDesc.getSchema()));
   }
 
+  //解析table的partion,原始格式是partionName=value,partionName=value
+  //eg:date=20150831,task=share
   private static HashMap<String, String> getPartSpec(ASTNode partspec)
       throws SemanticException {
     if (partspec == null) {
@@ -2128,6 +2130,7 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
     setFetchTask(createFetchTask(showColumnsDesc.getSchema()));
   }
 
+  //SHOW TABLE EXTENDED [ (from | in) db_name ] like tableName [  PARTITION (name=value,name=value,name) ]
   private void analyzeShowTableStatus(ASTNode ast) throws SemanticException {
     ShowTableStatusDesc showTblStatusDesc;
     String tableNames = getUnescapedName((ASTNode) ast.getChild(0));

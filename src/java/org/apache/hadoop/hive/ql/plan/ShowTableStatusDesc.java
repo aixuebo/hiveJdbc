@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.Path;
 
 /**
  * ShowTableStatusDesc.
- *
+ * 包含数据库名、表名、分区信息
  */
 @Explain(displayName = "Show Table Status")
 public class ShowTableStatusDesc extends DDLDesc implements Serializable {
