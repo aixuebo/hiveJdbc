@@ -47,6 +47,17 @@ catch (RecognitionException e) {
 // select a,b,c ... 前缀加入distinct或者all,都是仅仅针对第一个字段有用,其余字段无关
 //SELECT /*+ STREAMTABLE(t1) */ 属于hintClause
 //TRANSFORM 使用linux或者python脚本,可以忽略,因为我不喜欢这种方式,工作中我个人很少遇见
+//总结
+/**
+SELECT [ /*+ STREAMTABLE(arg1),MAPJOIN(arg1,arg2,arg3),HOLD_DDLTIME(arg1,arg2,arg3) */ ] [ALL | DISTINCT ] selectExpression [ as xxx | as (xxx,xxx) ],selectExpression [ as xxx | as (xxx,xxx) ]
+注意
+a.arg1参数任意字符串即可
+b.STREAMTABLE(arg1),MAPJOIN(arg1,arg2,arg3),HOLD_DDLTIME(arg1,arg2,arg3) 可以有任意几个都可以.不需要三个都存在,多个存在的时候用逗号分隔即可
+c.DISTINCT col1,col2 表示按照col1和col2合在一起进行过滤重复，相当于 group by col1,col2
+d.as 后面可以定义多个别名
+e.selectExpression
+  * 、 tableName.* 、dbName.tableName.* 或者 precedenceOrExpression
+ **/
 selectClause
 @init { gParent.msgs.push("select clause"); }
 @after { gParent.msgs.pop(); }
@@ -155,6 +166,7 @@ trfmClause
     -> ^(TOK_TRANSFORM selectExpressionList $inSerde $inRec StringLiteral $outSerde $outRec aliasList? columnNameTypeList?)
     ;
 
+//tableName.* 、dbName.tableName.*、 *
 selectExpression
 @init { gParent.msgs.push("select expression"); }
 @after { gParent.msgs.pop(); }

@@ -417,33 +417,37 @@ expressions
     LPAREN expression (COMMA expression)* RPAREN -> expression*
     ;
 
+//not操作符
 precedenceNotOperator
     :
     KW_NOT
     ;
 
+//优先OR操作
 precedenceNotExpression
     :
     (precedenceNotOperator^)* precedenceEqualExpression
     ;
 
-
+//and操作符
 precedenceAndOperator
     :
     KW_AND
     ;
 
+//优先and操作,将and操作用括号 表示优先
 precedenceAndExpression
     :
     precedenceNotExpression (precedenceAndOperator^ precedenceNotExpression)*
     ;
 
-
+//or操作符
 precedenceOrOperator
     :
     KW_OR
     ;
 
+//优先or操作
 precedenceOrExpression
     :
     precedenceAndExpression (precedenceOrOperator^ precedenceAndExpression)*

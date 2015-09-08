@@ -44,4 +44,27 @@ public class TestRun {
 		}
 	}
 	
+	@Test
+	public void test3(){
+		String command = "select distinct aa as (mm,vv),bb from biao";
+		try {
+			ASTNode node = new ParseDriver().parse(command);
+			System.out.println(node.dump());
+			System.out.println(node);
+		} catch (ParseException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	@Test
+	public void test4(){
+		String command = "select not ee or aa and bb,dd from biao";
+		try {
+			ASTNode node = new ParseDriver().parse(command);
+			System.out.println(node.dump());
+			System.out.println(node);
+		} catch (ParseException e) {
+			e.printStackTrace();
+		}
+	}
 }

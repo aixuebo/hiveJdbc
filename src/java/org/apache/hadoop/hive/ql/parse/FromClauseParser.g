@@ -45,6 +45,7 @@ catch (RecognitionException e) {
 
 //-----------------------------------------------------------------------------------
 
+//* 或者 tableName.* 或者dbName.tableName.*
 tableAllColumns
     : STAR
         -> ^(TOK_ALLCOLREF)
@@ -121,6 +122,11 @@ joinToken
     | KW_LEFT KW_SEMI KW_JOIN      -> TOK_LEFTSEMIJOIN
     ;
 
+//1.LATERAL VIEW OUTER function tableAlias [ as xxx | as xxx,xxx,xxx]
+//2.LATERAL VIEW function tableAlias [ as xxx | as xxx,xxx,xxx]
+//注意
+//1.tableAlias是任意字符串
+//2.可以设置多个别名
 lateralView
 @init {gParent.msgs.push("lateral view"); }
 @after {gParent.msgs.pop(); }

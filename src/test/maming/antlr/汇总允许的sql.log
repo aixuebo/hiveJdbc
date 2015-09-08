@@ -90,4 +90,21 @@ body
 //方式6:INSERT INTO TABLE tableName [PARTITION (task = 'share', date = '20150831')]
 
 2.selectClause(查询段落)
+SELECT [ /*+ STREAMTABLE(arg1),MAPJOIN(arg1,arg2,arg3),HOLD_DDLTIME(arg1,arg2,arg3) */ ] [ALL | DISTINCT ] selectExpression [ as xxx | as (xxx,xxx) ],selectExpression [ as xxx | as (xxx,xxx) ]
+注意
+a.arg1参数任意字符串即可
+b.STREAMTABLE(arg1),MAPJOIN(arg1,arg2,arg3),HOLD_DDLTIME(arg1,arg2,arg3) 可以有任意几个都可以.不需要三个都存在,多个存在的时候用逗号分隔即可
+c.DISTINCT col1,col2 表示按照col1和col2合在一起进行过滤重复，相当于 group by col1,col2
+d.as 后面可以定义多个别名
+e.selectExpression
+  * 、 tableName.* 、dbName.tableName.* 或者 precedenceOrExpression
+f.precedenceOrExpression 规则太复杂了
 
+
+3.lateralView
+//1.LATERAL VIEW OUTER function tableAlias [ as xxx | as xxx,xxx,xxx]
+//2.LATERAL VIEW function tableAlias [ as xxx | as xxx,xxx,xxx]
+//注意
+//1.tableAlias是任意字符串
+//2.可以设置多个别名
+lateralView
