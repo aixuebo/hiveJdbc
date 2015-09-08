@@ -180,6 +180,8 @@ tableSource
     -> ^(TOK_TABREF $tabname $props? $ts? $alias?)
     ;
 
+//xxx.yyy 表示数据库.表
+//或者xx 仅仅表示表
 tableName
 @init { gParent.msgs.push("table name"); }
 @after { gParent.msgs.pop(); }
