@@ -1140,7 +1140,7 @@ public abstract class BaseSemanticAnalyzer {
    * @param child
    * @return
    * @throws SemanticException
-   * 获取分桶的属性集合
+   * 获取要优化数据偏移的属性集合.Skewed by语句
    */
   protected List<String> analyzeSkewedTablDDLColNames(List<String> skewedColNames, ASTNode child)
       throws SemanticException {
@@ -1166,6 +1166,7 @@ public abstract class BaseSemanticAnalyzer {
    * @param skewedValues
    * @param child
    * @throws SemanticException
+   * 为Skewed by on解析,skewedValues的每一个元素都要匹配skewed by后面的属性个数
    */
   protected void analyzeDDLSkewedValues(List<List<String>> skewedValues, ASTNode child)
       throws SemanticException {
@@ -1176,8 +1177,9 @@ public abstract class BaseSemanticAnalyzer {
     ASTNode vAstNode = (ASTNode) vNode;
     switch (vAstNode.getToken().getType()) {
       case HiveParser.TOK_TABCOLVALUE:
-        for (String str : getSkewedValueFromASTNode(vAstNode)) {
-          List<String> sList = new ArrayList<String>(Arrays.asList(str));
+    	  //仅仅一个属性被设置了偏移,因此返回的集合元素每一个都
+        for (String str : getSkewedValueFromASTNode(vAstNode)) {//循环具体的值
+          List<String> sList = new ArrayList<String>(Arrays.asList(str));//将该值设置到list中
           skewedValues.add(sList);
         }
         break;
@@ -1202,6 +1204,7 @@ public abstract class BaseSemanticAnalyzer {
    *
    * @param child
    * @return
+   * STORED AS DIRECTORIES 是否被设计了
    */
   protected boolean analyzeStoredAdDirs(ASTNode child) {
     boolean storedAsDirs = false;

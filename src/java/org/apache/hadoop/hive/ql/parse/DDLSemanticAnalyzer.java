@@ -1655,6 +1655,7 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
     }
   }
 
+  //解析数据库的property属性键值对信息
   static HashMap<String, String> getProps(ASTNode prop) {
     HashMap<String, String> mapProp = new HashMap<String, String>();
     readProps(prop, mapProp);

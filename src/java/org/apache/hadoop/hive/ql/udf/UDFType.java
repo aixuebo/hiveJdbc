@@ -38,7 +38,7 @@ public @interface UDFType {
   /**
    * Using in analytical functions to specify that UDF implies an ordering
    *
-   * @return true if the function implies order
+   * @return true if the function implies order, true ÒâÎ¶×ÅÒªÅÅĞò
    */
   boolean impliesOrder() default false;
 }

@@ -159,20 +159,21 @@ public final class TypeInfoUtils {
    *          element of the array at the end. In case the size is smaller than
    *          the minimum possible number of arguments for the method, null will
    *          be returned.
+   *  返回该方法的参数集合,参数个数size,方法对象Method
    */
   public static List<TypeInfo> getParameterTypeInfos(Method m, int size) {
-    Type[] methodParameterTypes = m.getGenericParameterTypes();
+    Type[] methodParameterTypes = m.getGenericParameterTypes();//该方法的全部参数集合
 
     // Whether the method takes variable-length arguments
     // Whether the method takes an array like Object[],
     // or String[] etc in the last argument.
     Type lastParaElementType = TypeInfoUtils
         .getArrayElementType(methodParameterTypes.length == 0 ? null
-        : methodParameterTypes[methodParameterTypes.length - 1]);
-    boolean isVariableLengthArgument = (lastParaElementType != null);
+        : methodParameterTypes[methodParameterTypes.length - 1]);//获取最后一个参数,判断他是否是可变化参数,不是可变化的参数都返回null
+    boolean isVariableLengthArgument = (lastParaElementType != null);//最后一个参数是否是可变化参数
 
-    List<TypeInfo> typeInfos = null;
-    if (!isVariableLengthArgument) {
+    List<TypeInfo> typeInfos = null;//返回该方法的参数集合
+    if (!isVariableLengthArgument) {//不是可变化参数
       // Normal case, no variable-length arguments
       if (size != methodParameterTypes.length) {
         return null;
@@ -181,7 +182,7 @@ public final class TypeInfoUtils {
       for (Type methodParameterType : methodParameterTypes) {
         typeInfos.add(getExtendedTypeInfoFromJavaType(methodParameterType, m));
       }
-    } else {
+    } else {//最后一个参数是可变化参数
       // Variable-length arguments
       if (size < methodParameterTypes.length - 1) {
         return null;
@@ -213,7 +214,7 @@ public final class TypeInfoUtils {
 
   /**
    * @param typeName 可以是char(10) or decimal(10, 2).
-   * @return
+   * @return 返回char或者decimal
    */
   public static String getBaseName(String typeName) {
     int idx = typeName.indexOf('(');
@@ -228,7 +229,7 @@ public final class TypeInfoUtils {
    * returns true if both TypeInfos are of primitive type, and the primitive category matches.
    * @param ti1
    * @param ti2
-   * @return
+   * @return true表示两个参数都是原始类型的参数.并且原始类型都一样
    */
   public static boolean doPrimitiveCategoriesMatch(TypeInfo ti1, TypeInfo ti2) {
     if (ti1.getCategory() == Category.PRIMITIVE && ti2.getCategory() == Category.PRIMITIVE) {
@@ -253,9 +254,9 @@ public final class TypeInfoUtils {
   private static class TypeInfoParser {
 
     private static class Token {
-      public int position;
-      public String text;
-      public boolean isType;
+      public int position;//开始位置偏移量
+      public String text;//该token的真实值
+      public boolean isType;//true表示该token代表一个类型,false则不代表类型
 
       @Override
       public String toString() {
@@ -263,6 +264,7 @@ public final class TypeInfoUtils {
       }
     };
 
+    // 字母|数字| _ |.组成  返回true
     private static boolean isTypeChar(char c) {
       return Character.isLetterOrDigit(c) || c == '_' || c == '.';
     }
@@ -271,9 +273,10 @@ public final class TypeInfoUtils {
      * Tokenize the typeInfoString. The rule is simple: all consecutive
      * alphadigits and '_', '.' are in one token, and all other characters are
      * one character per token.
-     *
+     * 规则是连贯的  字母|数字| _ |.组成
      * tokenize("map<int,string>") should return
      * ["map","<","int",",","string",">"]
+     * 拆分成token数组集合
      */
     private static ArrayList<Token> tokenize(String typeInfoString) {
       ArrayList<Token> tokens = new ArrayList<Token>(0);
@@ -283,7 +286,7 @@ public final class TypeInfoUtils {
         // last character ends a token?
         if (end == typeInfoString.length()
             || !isTypeChar(typeInfoString.charAt(end - 1))
-            || !isTypeChar(typeInfoString.charAt(end))) {
+            || !isTypeChar(typeInfoString.charAt(end))) {//一直去找.直到找到文件最后、该位置不符合标准
           Token t = new Token();
           t.position = begin;
           t.text = typeInfoString.substring(begin, end);
@@ -296,15 +299,16 @@ public final class TypeInfoUtils {
       return tokens;
     }
 
+    //对参数进行拆分
     public TypeInfoParser(String typeInfoString) {
       this.typeInfoString = typeInfoString;
       typeInfoTokens = tokenize(typeInfoString);
     }
 
-    private final String typeInfoString;
-    private final ArrayList<Token> typeInfoTokens;
+    private final String typeInfoString;//待拆分的原始字符串
+    private final ArrayList<Token> typeInfoTokens;//拆分后的token集合
     private ArrayList<TypeInfo> typeInfos;
-    private int iToken;
+    private int iToken;//计数器
 
     public ArrayList<TypeInfo> parseTypeInfos() {
       typeInfos = new ArrayList<TypeInfo>();
@@ -327,6 +331,7 @@ public final class TypeInfoUtils {
       return typeInfos;
     }
 
+    //只是获取,不移动指针
     private Token peek() {
       if (iToken < typeInfoTokens.size()) {
         return typeInfoTokens.get(iToken);
@@ -339,6 +344,12 @@ public final class TypeInfoUtils {
       return expect(item, null);
     }
 
+    /**
+     * 当前的指针指向的token是否与期望的相同,相同则返回该token,不同则抛异常
+     * @param item type表示期望该token是类型token,name期望该token的text期望与alternative相同 ,否则text期望与alternative一定相同
+     * @param alternative 默认值
+     * @return
+     */
     private Token expect(String item, String alternative) {
       if (iToken >= typeInfoTokens.size()) {
         throw new IllegalArgumentException("Error: " + item

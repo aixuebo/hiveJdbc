@@ -23,7 +23,7 @@ import java.util.Map;
 
 /**
  * CreateTableLikeDesc.
- *
+ * 用like语句创建的table,table的属性信息、分区信息都在原始table中,因此不需要再该实体类中存在
  */
 @Explain(displayName = "Create Table")
 public class CreateTableLikeDesc extends DDLDesc implements Serializable {

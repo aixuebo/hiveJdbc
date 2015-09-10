@@ -412,10 +412,11 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
    * in aggregations.
    *
    * @param expressionTree
-   * @param aggregations
+   * @param aggregations 找到的聚合函数集合
    *          the key to the HashTable is the toStringTree() representation of
    *          the aggregation subtree.
    * @throws SemanticException
+   * 递归寻找聚合函数
    */
   private void doPhase1GetAllAggregations(ASTNode expressionTree,
       HashMap<String, ASTNode> aggregations, List<ASTNode> wdwFns) throws SemanticException {
@@ -431,7 +432,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       }
       if (expressionTree.getChild(0).getType() == HiveParser.Identifier) {
         String functionName = unescapeIdentifier(expressionTree.getChild(0)
-            .getText());
+            .getText());//函数名
         if(FunctionRegistry.impliesOrder(functionName)) {
           throw new SemanticException(ErrorMsg.MISSING_OVER_CLAUSE.getMsg(functionName));
         }
@@ -449,6 +450,8 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         }
       }
     }
+    
+    //递归寻找聚合函数
     for (int i = 0; i < expressionTree.getChildCount(); i++) {
       doPhase1GetAllAggregations((ASTNode) expressionTree.getChild(i),
           aggregations, wdwFns);
@@ -778,7 +781,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     if (ast.getToken() != null) {
       skipRecursion = true;
       switch (ast.getToken().getType()) {
-      case HiveParser.TOK_SELECTDI:
+      case HiveParser.TOK_SELECTDI://select distinct
         qb.countSelDi();
         // fall through
       case HiveParser.TOK_SELECT:
@@ -8304,7 +8307,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
 
     LOG.info("Starting Semantic Analysis");
 
-    // analyze and process the position alias
+    // analyze and process the position alias可以除了name之外,可以设置位置编号,前提是必须是true,因此将编号设置为select中的名字
     processPositionAlias(ast);
 
     // analyze create table command
@@ -8804,8 +8807,9 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
    * in the tblProp, the value in tblProp will be kept.
    *
    * @param table
-   *          property map
+   *          property map 是table自定义的属性信息
    * @return Modified table property map
+   * 为参数添加默认的属性信息
    */
   private Map<String, String> addDefaultProperties(Map<String, String> tblProp) {
     Map<String, String> retValue;
@@ -8836,30 +8840,49 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
    * Storage Format and put it in QB, and return false, indicating the rest of
    * the semantic analyzer need to deal with the select statement with respect
    * to the SerDe and Storage Format.
+   * 解析:
+    : KW_CREATE (ext=KW_EXTERNAL)? KW_TABLE ifNotExists? name=tableName
+      (  like=KW_LIKE likeName=tableName
+         tableLocation?
+         tablePropertiesPrefixed?
+       | (LPAREN columnNameTypeList RPAREN)?
+         tableComment?
+         tablePartition?
+         tableBuckets?
+         tableSkewed?
+         tableRowFormat?
+         tableFileFormat?
+         tableLocation?
+         tablePropertiesPrefixed?
+         (KW_AS selectStatement)?
+      )
    */
   private ASTNode analyzeCreateTable(ASTNode ast, QB qb)
       throws SemanticException {
-    String tableName = getUnescapedName((ASTNode) ast.getChild(0));
-    String likeTableName = null;
-    List<FieldSchema> cols = new ArrayList<FieldSchema>();
-    List<FieldSchema> partCols = new ArrayList<FieldSchema>();
-    List<String> bucketCols = new ArrayList<String>();
-    List<Order> sortCols = new ArrayList<Order>();
-    int numBuckets = -1;
-    String comment = null;
-    String location = null;
-    Map<String, String> tblProps = null;
+    String tableName = getUnescapedName((ASTNode) ast.getChild(0));//表名
+    String likeTableName = null;//like产生的新表名
+    List<FieldSchema> cols = new ArrayList<FieldSchema>();//创建的属性对象集合
+    List<FieldSchema> partCols = new ArrayList<FieldSchema>();//创建的分区属性对象集合
+    List<String> bucketCols = new ArrayList<String>();//仅仅获取数据库属性名称,并且输出都是小写的name,即需要在哪些属性上进行分桶划分
+    int numBuckets = -1;//总共分多少个桶
+    List<Order> sortCols = new ArrayList<Order>();//每一个桶里面按照哪些属性排序,以及排序顺序
+    String comment = null;//table的备注信息
+    String location = null;//数据存储的url
+    Map<String, String> tblProps = null;//数据库的额外属性键值对信息
     boolean ifNotExists = false;
-    boolean isExt = false;
-    ASTNode selectStmt = null;
+    boolean isExt = false;//是否是外部表
+    ASTNode selectStmt = null;//CREATE TABLE AS SELECT ...时候的select节点对象
     final int CREATE_TABLE = 0; // regular CREATE TABLE
     final int CTLT = 1; // CREATE TABLE LIKE ... (CTLT)
     final int CTAS = 2; // CREATE TABLE AS SELECT ... (CTAS)
     int command_type = CREATE_TABLE;
-    List<String> skewedColNames = new ArrayList<String>();
-    List<List<String>> skewedValues = new ArrayList<List<String>>();
+    
+  //create table T (c1 string, c2 string) skewed by (c1) on ('x1') [STORED AS DIRECTORIES] 表示在c1属性的值为x1的时候可能会数据发生偏移,因此在join的时候要先预估一下是否一个表的c1=x1的值能否很少,并且存储在内存中,如果是,则可以进行优化
+  //create table T (c1 string, c2 string) skewed by (c1,c2) on (('x11','x21'),('x12','x22')) [STORED AS DIRECTORIES] 表示在c1,c2属性的值为(x11,x21),或者(x21,x22)的时候可能会数据发生偏移,因此在join的时候要先预估一下是否一个表的(x11,x21),或者(x21,x22)的值能否很少,并且存储在内存中,如果是,则可以进行优化
+    List<String> skewedColNames = new ArrayList<String>();//在哪些属性上可以有优化的可能,即哪些属性上有数据偏移的可能
+    List<List<String>> skewedValues = new ArrayList<List<String>>();//这些属性在那些值上有优化可能,每一个元素对应一个List,因为每一个元素是一组
     Map<List<String>, String> listBucketColValuesMapping = new HashMap<List<String>, String>();
-    boolean storedAsDirs = false;
+    boolean storedAsDirs = false;//是否存储skewed by相关语句被设置
 
     RowFormatParams rowFormatParams = new RowFormatParams();
     StorageFormat storageFormat = new StorageFormat();
@@ -8889,13 +8912,13 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         break;
       case HiveParser.TOK_LIKETABLE:
         if (child.getChildCount() > 0) {
-          likeTableName = getUnescapedName((ASTNode) child.getChild(0));
+          likeTableName = getUnescapedName((ASTNode) child.getChild(0));//like产生的新表名字
           if (likeTableName != null) {
-            if (command_type == CTAS) {
+            if (command_type == CTAS) {//like的是一定要存在原始tale的
               throw new SemanticException(ErrorMsg.CTAS_CTLT_COEXISTENCE
                   .getMsg());
             }
-            if (cols.size() != 0) {
+            if (cols.size() != 0) {//like的是不需要设置属性集合的
               throw new SemanticException(ErrorMsg.CTLT_COLLST_COEXISTENCE
                   .getMsg());
             }
@@ -8919,7 +8942,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
             throw new SemanticException(ErrorMsg.CTAS_PARCOL_COEXISTENCE.getMsg());
           }
         }
-        if (isExt) {
+        if (isExt) {//create table as select的表示不能外部表
           throw new SemanticException(ErrorMsg.CTAS_EXTTBL_COEXISTENCE.getMsg());
         }
         command_type = CTAS;
@@ -8967,6 +8990,9 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       case HiveParser.TOK_FILEFORMAT_GENERIC:
         handleGenericFileFormat(child);
         break;
+        
+      //create table T (c1 string, c2 string) skewed by (c1) on ('x1') 表示在c1属性的值为x1的时候可能会数据发生偏移,因此在join的时候要先预估一下是否一个表的c1=x1的值能否很少,并且存储在内存中,如果是,则可以进行优化
+      //create table T (c1 string, c2 string) skewed by (c1,c2) on (('x11','x21'),('x12','x22')) 表示在c1,c2属性的值为(x11,x21),或者(x21,x22)的时候可能会数据发生偏移,因此在join的时候要先预估一下是否一个表的(x11,x21),或者(x21,x22)的值能否很少,并且存储在内存中,如果是,则可以进行优化
       case HiveParser.TOK_TABLESKEWED:
         /**
          * Throw an error if the user tries to use the DDL with
@@ -8974,7 +9000,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
          */
         HiveConf hiveConf = SessionState.get().getConf();
 
-        // skewed column names
+        // skewed column names TOK_TABCOLNAME 获取属性集合,这些属性是需要被优化的属性
         skewedColNames = analyzeSkewedTablDDLColNames(skewedColNames, child);
         // skewed value
         analyzeDDLSkewedValues(skewedValues, child);
@@ -8987,6 +9013,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       }
     }
 
+    //设置默认序列化信息
     storageFormat.fillDefaultStorageFormat(shared);
 
     if ((command_type == CTAS) && (storageFormat.storageHandler != null)) {
@@ -9012,7 +9039,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     switch (command_type) {
 
     case CREATE_TABLE: // REGULAR CREATE TABLE DDL
-      tblProps = addDefaultProperties(tblProps);
+      tblProps = addDefaultProperties(tblProps);//为参数添加默认的属性信息
 
       crtTblDesc = new CreateTableDesc(tableName, isExt, cols, partCols,
           bucketCols, sortCols, numBuckets, rowFormatParams.fieldDelim,
@@ -9033,8 +9060,9 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       break;
 
     case CTLT: // create table like <tbl_name>
-      tblProps = addDefaultProperties(tblProps);
+      tblProps = addDefaultProperties(tblProps);//为参数添加默认的属性信息
 
+      //用like语句创建的table,table的属性信息、分区信息都在原始table中,因此不需要再该实体类中存在
       CreateTableLikeDesc crtTblLikeDesc = new CreateTableLikeDesc(tableName, isExt,
           storageFormat.inputFormat, storageFormat.outputFormat, location,
           shared.serde, shared.serdeProps, tblProps, ifNotExists, likeTableName);
@@ -9045,7 +9073,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
 
     case CTAS: // create table as select
 
-      // Verify that the table does not already exist
+      // Verify that the table does not already exist 校验该table不能存在
       String databaseName;
       try {
         Table dumpTable = db.newTable(tableName);
@@ -9062,6 +9090,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
 
       tblProps = addDefaultProperties(tblProps);
 
+      //通过as select创建的table
       crtTblDesc = new CreateTableDesc(databaseName, tableName, isExt, cols, partCols,
           bucketCols, sortCols, numBuckets, rowFormatParams.fieldDelim,
           rowFormatParams.fieldEscape,
@@ -9197,7 +9226,9 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     }
   }
 
+  //可以除了name之外,可以设置位置编号,前提是必须是true,因此将编号设置为select中的名字
   // Process the position alias in GROUPBY and ORDERBY
+  //select aa alias1,bb,cc asa alias2 group by alias1 order by alias2 好像可以写成group by 0 order by 2 因此需要设置具体的值为alias1和alias2
   private void processPositionAlias(ASTNode ast) throws SemanticException {
     if (HiveConf.getBoolVar(conf,
           HiveConf.ConfVars.HIVE_GROUPBY_ORDERBY_POSITION_ALIAS) == false) {
@@ -9234,7 +9265,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       if (groupbyNode != null) {
         for (int child_pos = 0; child_pos < groupbyNode.getChildCount(); ++child_pos) {
           ASTNode node = (ASTNode) groupbyNode.getChild(child_pos);
-          if (node.getToken().getType() == HiveParser.Number) {
+          if (node.getToken().getType() == HiveParser.Number) {//如果是数字,则将group的Node设置在select中的名字
             int pos = Integer.parseInt(node.getText());
             if (pos > 0 && pos <= selectExpCnt) {
               groupbyNode.setChild(child_pos,
@@ -9251,7 +9282,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
 
       // replace each of the position alias in ORDERBY with the actual column name
       if (orderbyNode != null) {
-        isAllCol = false;
+        isAllCol = false;//是否select对应的是*查询,true表示是*查询
         for (int child_pos = 0; child_pos < selectNode.getChildCount(); ++child_pos) {
           ASTNode node = (ASTNode) selectNode.getChild(child_pos).getChild(0);
           if (node.getToken().getType() == HiveParser.TOK_ALLCOLREF) {
@@ -9261,8 +9292,8 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         for (int child_pos = 0; child_pos < orderbyNode.getChildCount(); ++child_pos) {
           ASTNode colNode = (ASTNode) orderbyNode.getChild(child_pos);
           ASTNode node = (ASTNode) colNode.getChild(0);
-          if (node.getToken().getType() == HiveParser.Number) {
-            if (!isAllCol) {
+          if (node.getToken().getType() == HiveParser.Number) {//如果是数字,则将order的Node设置在select中的名字
+            if (!isAllCol) {//必须不是*查询,否则没办法对应关系匹配
               int pos = Integer.parseInt(node.getText());
               if (pos > 0 && pos <= selectExpCnt) {
                 colNode.setChild(0, (BaseTree) selectNode.getChild(pos - 1).getChild(0));

@@ -33,7 +33,9 @@ import org.slf4j.LoggerFactory;
 
 /**
  * 返回数据库属性组装成的Order对象,用于order by子句中使用
-   * 每一个Order对象包含属性name的小写,以及该属性的排序规则,倒序还是正序
+   每一个Order对象包含属性name的小写,以及该属性的排序规则,倒序还是正序
+   
+   或者每一个桶里面按照哪些属性排序,以及排序顺序
  */
 public class Order implements org.apache.thrift.TBase<Order, Order._Fields>, java.io.Serializable, Cloneable {
   private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("Order");

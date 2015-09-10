@@ -44,11 +44,8 @@ catch (RecognitionException e) {
 }
 
 //-----------------------------------------------------------------------------------
-
-//Æ¥Åägroup by groupByExpression,groupByExpression,groupByExpression
-//Æ¥Åägroup by groupByExpression,groupByExpression,groupByExpression with rollup / with cube 
-//grouping set
-// group by a,b
+//GROUP BY expression,expression,expression [WITH ROLLUP | CUBE ] [GROUPING SETS (groupingSetExpression,groupingSetExpression) ]
+//×¢Òâ:groupingSetExpression= expression | (expression,expression,expression) | ()
 groupByClause
 @init { gParent.msgs.push("group by clause"); }
 @after { gParent.msgs.pop(); }
@@ -91,7 +88,7 @@ groupByExpression
     ;
 
 
-//having havingConditionÌõ¼þÓï¾ä
+//having expression
 havingClause
 @init { gParent.msgs.push("having clause"); }
 @after { gParent.msgs.pop(); }
@@ -107,7 +104,8 @@ havingCondition
     expression
     ;
 
-// order by a,b
+//1.ORDER BY expression [ASC | DESC],expression [ASC | DESC]
+//2.ORDER BY (expression [ASC | DESC],expression [ASC | DESC])
 orderByClause
 @init { gParent.msgs.push("order by clause"); }
 @after { gParent.msgs.pop(); }
@@ -121,6 +119,8 @@ orderByClause
     ( COMMA columnRefOrder)* -> ^(TOK_ORDERBY columnRefOrder+)
     ;
 
+//1.CLUSTER BY (expression,expression)
+//2.CLUSTER BY expression,expression
 clusterByClause
 @init { gParent.msgs.push("cluster by clause"); }
 @after { gParent.msgs.pop(); }
@@ -144,6 +144,8 @@ partitionByClause
     expression ((COMMA)=> COMMA expression)* -> ^(TOK_DISTRIBUTEBY expression+)
     ;
 
+//1.DISTRIBUTE BY expression,expression
+//1.DISTRIBUTE BY (expression,expression)
 distributeByClause
 @init { gParent.msgs.push("distribute by clause"); }
 @after { gParent.msgs.pop(); }
@@ -155,6 +157,8 @@ distributeByClause
     expression ((COMMA)=> COMMA expression)* -> ^(TOK_DISTRIBUTEBY expression+)
     ;
 
+//1.SORT BY expression [ASC | DESC],expression [ASC | DESC]
+//2.SORT BY (expression [ASC | DESC],expression [ASC | DESC])
 sortByClause
 @init { gParent.msgs.push("sort by clause"); }
 @after { gParent.msgs.pop(); }

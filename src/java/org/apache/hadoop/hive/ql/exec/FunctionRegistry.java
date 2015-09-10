@@ -930,11 +930,13 @@ public final class FunctionRegistry {
    * be "evaluate" for UDFRegistry, and "aggregate"/"evaluate"/"evaluatePartial"
    * for UDAFRegistry.
    * @throws UDFArgumentException
+   * 给定UDF的class以及方法名evaluate,和待执行方法的参数集合argumentClasses,寻找对应的方法返回
    */
   public static <T> Method getMethodInternal(Class<? extends T> udfClass,
       String methodName, boolean exact, List<TypeInfo> argumentClasses)
       throws UDFArgumentException {
 
+	  //符合方法名称的方法集合
     List<Method> mlist = new ArrayList<Method>();
 
     for (Method m : udfClass.getMethods()) {
@@ -1156,6 +1158,7 @@ public final class FunctionRegistry {
    * @param argumentsPassed
    *          The classes for the argument.
    * @return The matching method.
+   * 给定UDF的class以及方法集合,和待执行方法的参数集合argumentClasses,寻找对应的方法返回
    */
   public static Method getMethodInternal(Class<?> udfClass, List<Method> mlist, boolean exact,
       List<TypeInfo> argumentsPassed) throws UDFArgumentException {

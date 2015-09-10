@@ -44,6 +44,7 @@ public interface UDFMethodResolver {
    * @param argClasses
    *          The list of the argument types that need to matched with the
    *          evaluate function signature.
+   * 给定参数类型,返回对应的方法         
    */
   Method getEvalMethod(List<TypeInfo> argClasses) throws UDFArgumentException;
 }

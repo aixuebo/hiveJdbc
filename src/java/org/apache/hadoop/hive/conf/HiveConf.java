@@ -441,6 +441,8 @@ public class HiveConf extends Configuration {
     HIVEMULTIGROUPBYSINGLEREDUCER("hive.multigroupby.singlereducer", true),
     HIVE_MAP_GROUPBY_SORT("hive.map.groupby.sorted", false),
     HIVE_MAP_GROUPBY_SORT_TESTMODE("hive.map.groupby.sorted.testmode", false),
+    //GROUP BY groupByExpression (, groupByExpression)* groupByExpression可以除了name之外,可以设置位置编号,前提是必须是true
+    //In groupByExpression columns are specified by name, not by position number. However in Hive 0.11.0 and later, columns can be specified by position if hive.groupby.orderby.position.alias is set to true (the default is false).
     HIVE_GROUPBY_ORDERBY_POSITION_ALIAS("hive.groupby.orderby.position.alias", false),
     HIVE_NEW_JOB_GROUPING_SET_CARDINALITY("hive.new.job.grouping.set.cardinality", 30),
 

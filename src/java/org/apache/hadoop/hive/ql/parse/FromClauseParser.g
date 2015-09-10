@@ -45,7 +45,9 @@ catch (RecognitionException e) {
 
 //-----------------------------------------------------------------------------------
 
-//* 或者 tableName.* 或者dbName.tableName.*
+//tableName.*
+//dbName.tableName.*
+//*
 tableAllColumns
     : STAR
         -> ^(TOK_ALLCOLREF)
@@ -54,6 +56,8 @@ tableAllColumns
     ;
 
 // (table|column)
+//任意字符串,可以表示table名称或者列属性名称
+//xxx
 tableOrColumn
 @init { gParent.msgs.push("table or column identifier"); }
 @after { gParent.msgs.pop(); }
@@ -61,6 +65,8 @@ tableOrColumn
     identifier -> ^(TOK_TABLE_OR_COL identifier)
     ;
 
+//expression,expression,expression
+//多个表达式集合
 expressionList
 @init { gParent.msgs.push("expression list"); }
 @after { gParent.msgs.pop(); }
@@ -68,6 +74,8 @@ expressionList
     expression (COMMA expression)* -> ^(TOK_EXPLIST expression+)
     ;
 
+//identifier,identifier,identifier
+//任意字符串集合,定义别名集合
 aliasList
 @init { gParent.msgs.push("alias list"); }
 @after { gParent.msgs.pop(); }
@@ -97,6 +105,7 @@ uniqueJoinSource
     : KW_PRESERVE? fromSource uniqueJoinExpr
     ;
 
+//(expression,expression,expression)
 uniqueJoinExpr
 @init { gParent.msgs.push("unique join expression list"); }
 @after { gParent.msgs.pop(); }
@@ -104,11 +113,13 @@ uniqueJoinExpr
       -> ^(TOK_EXPLIST $e1*)
     ;
 
+//UNIQUEJOIN
 uniqueJoinToken
 @init { gParent.msgs.push("unique join"); }
 @after { gParent.msgs.pop(); }
     : KW_UNIQUEJOIN -> TOK_UNIQUEJOIN;
 
+//JOIN 、INNER JOIN、CROSS JOIN、LEFT [OUTER] JOIN 、RIGHT [OUTER] JOIN 、FULL [OUTER] JOIN 、LEFT SEMI JOIN
 joinToken
 @init { gParent.msgs.push("join type specifier"); }
 @after { gParent.msgs.pop(); }
@@ -138,6 +149,7 @@ lateralView
 	-> ^(TOK_LATERAL_VIEW ^(TOK_SELECT ^(TOK_SELEXPR function identifier* tableAlias)))
 	;
 
+//任意字符串,表示别名
 tableAlias
 @init {gParent.msgs.push("table alias"); }
 @after {gParent.msgs.pop(); }
@@ -152,13 +164,22 @@ fromSource
     ((Identifier LPAREN)=> partitionedTableFunction | tableSource | subQuerySource) (lateralView^)*
     ;
 
+//TABLESAMPLE(BUCKET 数字    OUT OF 数字  [ ON expression,expression ] )
+//对table进行抽样提取数据
 tableBucketSample
 @init { gParent.msgs.push("table bucket sample specification"); }
 @after { gParent.msgs.pop(); }
     :
-    KW_TABLESAMPLE LPAREN KW_BUCKET (numerator=Number) KW_OUT KW_OF (denominator=Number) (KW_ON expr+=expression (COMMA expr+=expression)*)? RPAREN -> ^(TOK_TABLEBUCKETSAMPLE $numerator $denominator $expr*)
+    KW_TABLESAMPLE LPAREN KW_BUCKET (numerator=Number) KW_OUT KW_OF (denominator=Number) (KW_ON expr+=expression (COMMA expr+=expression)*)? RPAREN 
+    -> ^(TOK_TABLEBUCKETSAMPLE $numerator $denominator $expr*)
     ;
 
+//对table进行抽样提取数据
+//1.TABLESAMPLE(数字    PERCENT)
+//2.TABLESAMPLE(数字    ROWS)
+//3.TABLESAMPLE(ByteLengthLiteral)
+//注意:
+//ByteLengthLiteral表示匹配数字+单位,即表示长度信息,即(Digit)+ ('b' | 'B' | 'k' | 'K' | 'm' | 'M' | 'g' | 'G')
 splitSample
 @init { gParent.msgs.push("table split sample specification"); }
 @after { gParent.msgs.pop(); }
@@ -171,6 +192,13 @@ splitSample
     -> ^(TOK_TABLESPLITSAMPLE TOK_LENGTH $numerator)
     ;
 
+//对table进行抽样提取数据
+//1.TABLESAMPLE(数字    PERCENT)
+//2.TABLESAMPLE(数字    ROWS)
+//3.TABLESAMPLE(ByteLengthLiteral)
+//4.TABLESAMPLE(BUCKET 数字    OUT OF 数字  [ ON expression,expression ] )
+//注意:
+//ByteLengthLiteral表示匹配数字+单位,即表示长度信息,即(Digit)+ ('b' | 'B' | 'k' | 'K' | 'm' | 'M' | 'g' | 'G')
 tableSample
 @init { gParent.msgs.push("table sample specification"); }
 @after { gParent.msgs.pop(); }
@@ -179,6 +207,14 @@ tableSample
     splitSample
     ;
 
+//[dbName.] tableName [(key=value,key=value,key)] [tableSample] [ as Identifier ]
+//注意:
+//1.(此时认为解析成key=null,即不需要value属性值)
+//tableSample函数解析如下
+//1.TABLESAMPLE(数字    PERCENT)
+//2.TABLESAMPLE(数字    ROWS)
+//3.TABLESAMPLE(ByteLengthLiteral)
+//4.TABLESAMPLE(BUCKET 数字    OUT OF 数字  [ ON expression,expression ] )
 tableSource
 @init { gParent.msgs.push("table source"); }
 @after { gParent.msgs.pop(); }
@@ -199,6 +235,8 @@ tableName
     -> ^(TOK_TABNAME $tab)
     ;
 
+//identifier.identifier 表示数据库.视图名称
+//identifier表示视图名
 viewName
 @init { gParent.msgs.push("view name"); }
 @after { gParent.msgs.pop(); }
@@ -207,6 +245,8 @@ viewName
     -> ^(TOK_TABNAME $db? $view)
     ;
 
+//(queryStatement UNION ALL queryStatement UNION ALL queryStatement) identifier
+//注意identifier表示最后子查询的别名
 subQuerySource
 @init { gParent.msgs.push("subquery source"); }
 @after { gParent.msgs.pop(); }
@@ -248,6 +288,7 @@ partitionedTableFunction
 
 //----------------------- Rules for parsing whereClause -----------------------------
 // where a=b and ...
+//WHERE expression(仅此一个表达式,不允许有逗号分割多个表达式)
 whereClause
 @init { gParent.msgs.push("where clause"); }
 @after { gParent.msgs.pop(); }

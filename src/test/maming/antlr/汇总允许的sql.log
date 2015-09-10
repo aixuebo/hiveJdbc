@@ -1,4 +1,6 @@
 汇总格式
+
+//queryStatement UNION ALL queryStatement UNION ALL queryStatement
 queryStatementExpression
     : queryStatement (queryOperator^ queryStatement)*
     ;
@@ -81,6 +83,55 @@ body
    ;
 
 ------------------------------------------------------------------------------------------
+创建table语句解析
+
+    : KW_CREATE (ext=KW_EXTERNAL)? KW_TABLE ifNotExists? name=tableName
+      (  like=KW_LIKE likeName=tableName
+         tableLocation?
+         tablePropertiesPrefixed?
+       | (LPAREN columnNameTypeList RPAREN)?
+         tableComment?
+         tablePartition?
+         tableBuckets?
+         tableSkewed?
+         tableRowFormat?
+         tableFileFormat?
+         tableLocation?
+         tablePropertiesPrefixed?
+         (KW_AS selectStatement)?
+      )
+      
+      
+    String tableName = getUnescapedName((ASTNode) ast.getChild(0));//表名
+    String likeTableName = null;//like产生的新表名
+    List<FieldSchema> cols = new ArrayList<FieldSchema>();//创建的属性对象集合
+    List<FieldSchema> partCols = new ArrayList<FieldSchema>();//创建的分区属性对象集合
+    List<String> bucketCols = new ArrayList<String>();//仅仅获取数据库属性名称,并且输出都是小写的name,即需要在哪些属性上进行分桶划分
+    int numBuckets = -1;//总共分多少个桶
+    List<Order> sortCols = new ArrayList<Order>();//每一个桶里面按照哪些属性排序,以及排序顺序
+    String comment = null;//table的备注信息
+    String location = null;//数据存储的url
+    Map<String, String> tblProps = null;//数据库的额外属性键值对信息
+    boolean ifNotExists = false;
+    boolean isExt = false;//是否是外部表
+    ASTNode selectStmt = null;//CREATE TABLE AS SELECT ...时候的select节点对象
+    final int CREATE_TABLE = 0; // regular CREATE TABLE
+    final int CTLT = 1; // CREATE TABLE LIKE ... (CTLT)
+    final int CTAS = 2; // CREATE TABLE AS SELECT ... (CTAS)
+    int command_type = CREATE_TABLE;
+    
+  //create table T (c1 string, c2 string) skewed by (c1) on ('x1') [STORED AS DIRECTORIES] 表示在c1属性的值为x1的时候可能会数据发生偏移,因此在join的时候要先预估一下是否一个表的c1=x1的值能否很少,并且存储在内存中,如果是,则可以进行优化
+  //create table T (c1 string, c2 string) skewed by (c1,c2) on (('x11','x21'),('x12','x22')) [STORED AS DIRECTORIES] 表示在c1,c2属性的值为(x11,x21),或者(x21,x22)的时候可能会数据发生偏移,因此在join的时候要先预估一下是否一个表的(x11,x21),或者(x21,x22)的值能否很少,并且存储在内存中,如果是,则可以进行优化
+    List<String> skewedColNames = new ArrayList<String>();//在哪些属性上可以有优化的可能,即哪些属性上有数据偏移的可能
+    List<List<String>> skewedValues = new ArrayList<List<String>>();//这些属性在那些值上有优化可能,每一个元素对应一个List,因为每一个元素是一组
+    Map<List<String>, String> listBucketColValuesMapping = new HashMap<List<String>, String>();
+    boolean storedAsDirs = false;//是否存储skewed by相关语句被设置
+
+    RowFormatParams rowFormatParams = new RowFormatParams();
+    StorageFormat storageFormat = new StorageFormat();
+    AnalyzeCreateCommonVars shared = new AnalyzeCreateCommonVars();
+    
+------------------------------------------------------------------------------------------
 1.insertClause(新增段落)
 //方式1:INSERT OVERWRITE LOCAL DIRECTORY "path" [IF NOT EXISTS ]
 //方式2:INSERT OVERWRITE LOCAL DIRECTORY "path" ROW FORMAT DELIMITED [FIELDS terminated by xxx [ESCAPED by xx] ]    [COLLECTION ITEMS terminated by xxx ]    [MAP KEYS terminated by xxx ]  [LINES terminated by xxx ] [IF NOT EXISTS ]
@@ -101,10 +152,41 @@ e.selectExpression
 f.precedenceOrExpression 规则太复杂了
 
 
-3.lateralView
+3.fromClause
+
+4.lateralView
 //1.LATERAL VIEW OUTER function tableAlias [ as xxx | as xxx,xxx,xxx]
 //2.LATERAL VIEW function tableAlias [ as xxx | as xxx,xxx,xxx]
 //注意
 //1.tableAlias是任意字符串
 //2.可以设置多个别名
 lateralView
+
+5.whereClause
+//WHERE expression(仅此一个表达式,不允许有逗号分割多个表达式)
+
+6.groupByClause
+//GROUP BY expression,expression,expression [WITH ROLLUP | CUBE ] [GROUPING SETS (groupingSetExpression,groupingSetExpression) ]
+//注意:groupingSetExpression= expression | (expression,expression,expression) | ()
+
+7.havingClause
+//having expression
+
+8.orderByClause
+//1.ORDER BY expression [ASC | DESC],expression [ASC | DESC]
+//2.ORDER BY (expression [ASC | DESC],expression [ASC | DESC])
+
+9.clusterByClause
+//1.CLUSTER BY (expression,expression)
+//2.CLUSTER BY expression,expression
+
+10.distributeByClause
+//1.DISTRIBUTE BY expression,expression
+//1.DISTRIBUTE BY (expression,expression)
+
+11.sortByClause
+//1.SORT BY expression [ASC | DESC],expression [ASC | DESC]
+//2.SORT BY (expression [ASC | DESC],expression [ASC | DESC])
+
+12.limitClause
+LIMIT 数字

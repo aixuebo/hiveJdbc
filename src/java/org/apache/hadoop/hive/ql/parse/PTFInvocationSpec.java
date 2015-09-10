@@ -489,7 +489,7 @@ public class PTFInvocationSpec {
 
   public static class OrderExpression extends PartitionExpression
   {
-    Order order;
+    Order order;//ÕýÐò»¹ÊÇÄæÐò
 
     public OrderExpression() {}
 

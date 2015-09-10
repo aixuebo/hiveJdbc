@@ -1573,6 +1573,8 @@ tableBuckets
 
 //SKEWED BY (属性字符串,属性字符串) on (属性值集合xxx,xxx) [STORED AS DIRECTORIES]
 //或者SKEWED BY (属性字符串,属性字符串) on (多组属性值集合 (xxx,xxx),(xxx,xxx),(xxx,xxx) ) [STORED AS DIRECTORIES]
+//create table T (c1 string, c2 string) skewed by (c1) on ('x1') 表示在c1属性的值为x1的时候可能会数据发生偏移,因此在join的时候要先预估一下是否一个表的c1=x1的值能否很少,并且存储在内存中,如果是,则可以进行优化
+//create table T (c1 string, c2 string) skewed by (c1,c2) on (('x11','x21'),('x12','x22')) 表示在c1,c2属性的值为(x11,x21),或者(x21,x22)的时候可能会数据发生偏移,因此在join的时候要先预估一下是否一个表的(x11,x21),或者(x21,x22)的值能否很少,并且存储在内存中,如果是,则可以进行优化
 tableSkewed
 @init { msgs.push("table skewed specification"); }
 @after { msgs.pop(); }
@@ -1589,6 +1591,7 @@ rowFormat
     |   -> ^(TOK_SERDE)
     ;
 
+//RECORDREADER "XXX"
 recordReader
 @init { msgs.push("record reader specification"); }
 @after { msgs.pop(); }
@@ -1596,6 +1599,7 @@ recordReader
     |   -> ^(TOK_RECORDREADER)
     ;
 
+//RECORDWRITER "XXX"
 recordWriter
 @init { msgs.push("record writer specification"); }
 @after { msgs.pop(); }
@@ -1652,7 +1656,8 @@ tablePropertiesPrefixed
     ;
 
 //存储table的属性键值对信息集合
-//格式(key=value,key=value)
+//格式(key=value,key=value,key)
+//(此时认为解析成key=null,即不需要value属性值)
 tableProperties
 @init { msgs.push("table properties"); }
 @after { msgs.pop(); }
@@ -1893,6 +1898,7 @@ columnNameComment
     -> ^(TOK_TABCOL $colName TOK_NULL $comment?)
     ;
 
+//expression [ASC | DESC]
 columnRefOrder
 @init { msgs.push("column order"); }
 @after { msgs.pop(); }
@@ -1995,13 +2001,14 @@ unionType
     : KW_UNIONTYPE LESSTHAN colTypeList GREATERTHAN -> ^(TOK_UNIONTYPE colTypeList)
     ;
 
+//UNION ALL
 queryOperator
 @init { msgs.push("query operator"); }
 @after { msgs.pop(); }
     : KW_UNION KW_ALL -> ^(TOK_UNION)
     ;
 
-// select statement select ... from ... where ... group by ... order by ...
+// queryStatement UNION ALL queryStatement UNION ALL queryStatement
 queryStatementExpression
     : queryStatement (queryOperator^ queryStatement)*
     ;
