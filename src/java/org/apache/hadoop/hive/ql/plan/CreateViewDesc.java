@@ -27,7 +27,7 @@ import org.apache.hadoop.hive.ql.exec.Utilities;
 
 /**
  * CreateViewDesc.
- *
+ * 创建一个视图
  */
 @Explain(displayName = "Create View")
 public class CreateViewDesc extends DDLDesc implements Serializable {

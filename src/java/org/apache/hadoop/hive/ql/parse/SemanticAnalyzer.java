@@ -208,7 +208,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
   private List<FieldSchema> resultSchema;
   private CreateViewDesc createVwDesc;
   private ArrayList<String> viewsExpanded;
-  private ASTNode viewSelect;
+  private ASTNode viewSelect;//创建视图时,select部分的对象
   private final UnparseTranslator unparseTranslator;
   private final GlobalLimitCtx globalLimitCtx = new GlobalLimitCtx();
 
@@ -8311,9 +8311,9 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     processPositionAlias(ast);
 
     // analyze create table command
-    if (ast.getToken().getType() == HiveParser.TOK_CREATETABLE) {
+    if (ast.getToken().getType() == HiveParser.TOK_CREATETABLE) {//创建table语句
       // if it is not CTAS, we don't need to go further and just return
-      if ((child = analyzeCreateTable(ast, qb)) == null) {
+      if ((child = analyzeCreateTable(ast, qb)) == null) {//返回的child是select语句块
         return;
       }
     } else {
@@ -8323,6 +8323,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     // analyze create view command
     if (ast.getToken().getType() == HiveParser.TOK_CREATEVIEW ||
         ast.getToken().getType() == HiveParser.TOK_ALTERVIEW_AS) {
+      //创建视图,视图仅仅是表象,后期还是要select查询的,返回的child就是select查询部分的对象
       child = analyzeCreateView(ast, qb);
       SessionState.get().setCommandType(HiveOperation.CREATEVIEW);
       if (child == null) {
@@ -8857,6 +8858,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
          (KW_AS selectStatement)?
       )
    */
+  //返回select语句块
   private ASTNode analyzeCreateTable(ASTNode ast, QB qb)
       throws SemanticException {
     String tableName = getUnescapedName((ASTNode) ast.getChild(0));//表名
@@ -9111,17 +9113,26 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     return null;
   }
 
+  /**
+KW_CREATE (orReplace)? KW_VIEW (ifNotExists)? name=tableName
+        (LPAREN columnNameCommentList RPAREN)? tableComment? viewPartition?
+        tablePropertiesPrefixed?
+        KW_AS
+        selectStatement
+   * 创建视图,视图仅仅是表象,后期还是要select查询的
+   * 返回select的节点对象
+   */
   private ASTNode analyzeCreateView(ASTNode ast, QB qb)
       throws SemanticException {
-    String tableName = getUnescapedName((ASTNode) ast.getChild(0));
-    List<FieldSchema> cols = null;
+    String tableName = getUnescapedName((ASTNode) ast.getChild(0));//视图名称
+    List<FieldSchema> cols = null;//视图需要的列属性对象集合
     boolean ifNotExists = false;
-    boolean orReplace = false;
+    boolean orReplace = false;//true表示要替换所有的列
     boolean isAlterViewAs = false;
-    String comment = null;
-    ASTNode selectStmt = null;
-    Map<String, String> tblProps = null;
-    List<String> partColNames = null;
+    String comment = null;//视图的备注
+    ASTNode selectStmt = null;//视图对应的select节点对象
+    Map<String, String> tblProps = null;//视图的额外属性键值对
+    List<String> partColNames = null;//视图分区字段集合,是字符串,因为分区只需要字符串即可
 
     LOG.info("Creating view " + tableName + " position="
         + ast.getCharPositionInLine());

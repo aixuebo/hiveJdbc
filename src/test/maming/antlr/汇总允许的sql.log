@@ -131,6 +131,30 @@ body
     StorageFormat storageFormat = new StorageFormat();
     AnalyzeCreateCommonVars shared = new AnalyzeCreateCommonVars();
     
+---创建视图---------------------------------------------------------------------------------------    
+createViewStatement
+@init {
+    msgs.push("create view statement");
+}
+@after { msgs.pop(); }
+KW_CREATE ( OR REPLACE )? KW_VIEW (ifNotExists)? name=tableName
+        (LPAREN columnNameCommentList RPAREN)? tableComment? viewPartition?
+        tablePropertiesPrefixed?
+        KW_AS
+        selectStatement
+        
+        
+    String tableName = getUnescapedName((ASTNode) ast.getChild(0));//视图名称
+    List<FieldSchema> cols = null;//视图需要的列属性对象集合
+    boolean ifNotExists = false;
+    boolean orReplace = false;//true表示要替换所有的列
+    boolean isAlterViewAs = false;
+    String comment = null;//视图的备注
+    ASTNode selectStmt = null;//视图对应的select节点对象
+    Map<String, String> tblProps = null;//视图的额外属性键值对
+    List<String> partColNames = null;//视图分区字段集合,是字符串,因为分区只需要字符串即可
+    
+    
 ------------------------------------------------------------------------------------------
 1.insertClause(新增段落)
 //方式1:INSERT OVERWRITE LOCAL DIRECTORY "path" [IF NOT EXISTS ]
