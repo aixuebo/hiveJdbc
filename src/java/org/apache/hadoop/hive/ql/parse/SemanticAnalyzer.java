@@ -358,6 +358,13 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     }
   }
 
+  /**
+   * 从select语句中获取聚合函数
+   * 该方法是递归的,因为存在函数到嵌套函数的,比如min(string())
+   * @param selExpr select语句对应的语法树
+   * @param qb
+   * @param dest
+   */
   private LinkedHashMap<String, ASTNode> doPhase1GetAggregationsFromSelect(
       ASTNode selExpr, QB qb, String dest) throws SemanticException {
 
@@ -367,6 +374,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     List<ASTNode> wdwFns = new ArrayList<ASTNode>();
     for (int i = 0; i < selExpr.getChildCount(); ++i) {
       ASTNode function = (ASTNode) selExpr.getChild(i).getChild(0);
+      //真正去递归寻找函数,该方法是递归的,因为存在函数到嵌套函数的,比如min(string())
       doPhase1GetAllAggregations((ASTNode) function, aggregationTrees, wdwFns);
     }
 
@@ -395,13 +403,16 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     return aggregationTrees;
   }
 
+  /**
+   * 为select中每一个属性设置别名
+   */
   private void doPhase1GetColumnAliasesFromSelect(
       ASTNode selectExpr, QBParseInfo qbp) {
-    for (int i = 0; i < selectExpr.getChildCount(); ++i) {
+    for (int i = 0; i < selectExpr.getChildCount(); ++i) {//循环每一个属性
       ASTNode selExpr = (ASTNode) selectExpr.getChild(i);
       if ((selExpr.getToken().getType() == HiveParser.TOK_SELEXPR)
-          && (selExpr.getChildCount() == 2)) {
-        String columnAlias = unescapeIdentifier(selExpr.getChild(1).getText());
+          && (selExpr.getChildCount() == 2)) {//存在别名
+        String columnAlias = unescapeIdentifier(selExpr.getChild(1).getText());//获取别名
         qbp.setExprToColumnAlias((ASTNode) selExpr.getChild(0), columnAlias);
       }
     }
@@ -417,6 +428,8 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
    *          the aggregation subtree.
    * @throws SemanticException
    * 递归寻找聚合函数
+   * 真正去递归寻找函数,该方法是递归的,因为存在函数到嵌套函数的,比如min(string())
+   * 会将聚合函数添加到aggregations参数中,窗口函数中添加到wdwFns集合中
    */
   private void doPhase1GetAllAggregations(ASTNode expressionTree,
       HashMap<String, ASTNode> aggregations, List<ASTNode> wdwFns) throws SemanticException {
@@ -458,6 +471,9 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     }
   }
 
+  /**
+   * 过滤,只要distinct函数集合
+   */
   private List<ASTNode> doPhase1GetDistinctFuncExprs(
       HashMap<String, ASTNode> aggregationTrees) throws SemanticException {
     List<ASTNode> exprs = new ArrayList<ASTNode>();
@@ -490,15 +506,31 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
    * an association from the alias to the table AST in parse info.
    *
    * @return the alias of the table
+//[dbName.] tableName [(key=value,key=value,key)] [tableSample] [ as Identifier ]
+//注意:
+//1.(此时认为解析成key=null,即不需要value属性值)
+//tableSample函数解析如下
+//1.TABLESAMPLE(数字    PERCENT)
+//2.TABLESAMPLE(数字    ROWS)
+//3.TABLESAMPLE(ByteLengthLiteral)
+//4.TABLESAMPLE(BUCKET 数字    OUT OF 数字  [ ON expression,expression ] )
+tableSource
+@init { gParent.msgs.push("table source"); }
+@after { gParent.msgs.pop(); }
+    : tabname=tableName (props=tableProperties)? (ts=tableSample)? (KW_AS? alias=Identifier)?
+    -> ^(TOK_TABREF $tabname $props? $ts? $alias?)
+    ;
+    
+参数tabref是from子句,返回别名字符串
    */
   private String processTable(QB qb, ASTNode tabref) throws SemanticException {
     // For each table reference get the table name
     // and the alias (if alias is not present, the table name
     // is used as an alias)
-    int aliasIndex = 0;
-    int propsIndex = -1;
-    int tsampleIndex = -1;
-    int ssampleIndex = -1;
+    int aliasIndex = 0;//第几个节点是别名节点
+    int propsIndex = -1;//第几个节点是属性节点
+    int tsampleIndex = -1;//第几个节点是按桶抽样节点
+    int ssampleIndex = -1;//第几个节点是按表抽样节点
     for (int index = 1; index < tabref.getChildCount(); index++) {
       ASTNode ct = (ASTNode) tabref.getChild(index);
       if (ct.getToken().getType() == HiveParser.TOK_TABLEBUCKETSAMPLE) {
@@ -516,7 +548,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
 
     String tabIdName = getUnescapedName(tableTree);
 
-    String alias;
+    String alias;//别名要么自己设置了,要么是数据库表的名字
     if (aliasIndex != 0) {
       alias = unescapeIdentifier(tabref.getChild(aliasIndex).getText());
     }
@@ -531,14 +563,16 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     }
 
     // If the alias is already there then we have a conflict
-    if (qb.exists(alias)) {
+    if (qb.exists(alias)) {//别名不允许冲突
       throw new SemanticException(ErrorMsg.AMBIGUOUS_TABLE_ALIAS.getMsg(tabref
           .getChild(aliasIndex)));
     }
-    if (tsampleIndex >= 0) {
+    
+    
+    if (tsampleIndex >= 0) {//TABLESAMPLE(BUCKET 数字    OUT OF 数字  [ ON expression,expression ] )
       ASTNode sampleClause = (ASTNode) tabref.getChild(tsampleIndex);
-      ArrayList<ASTNode> sampleCols = new ArrayList<ASTNode>();
-      if (sampleClause.getChildCount() > 2) {
+      ArrayList<ASTNode> sampleCols = new ArrayList<ASTNode>();//存储on后面的表达式集合
+      if (sampleClause.getChildCount() > 2) {//解析on后面的表达式集合
         for (int i = 2; i < sampleClause.getChildCount(); i++) {
           sampleCols.add((ASTNode) sampleClause.getChild(i));
         }
@@ -563,17 +597,21 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         }
       }
     } else if (ssampleIndex >= 0) {
+    	//1.TABLESAMPLE(数字    PERCENT)
+    	//2.TABLESAMPLE(数字    ROWS)
+    	//3.TABLESAMPLE(ByteLengthLiteral)
       ASTNode sampleClause = (ASTNode) tabref.getChild(ssampleIndex);
 
-      Tree type = sampleClause.getChild(0);
+      Tree type = sampleClause.getChild(0);//类型PERCENT、ROWS、ByteLengthLiteral
       Tree numerator = sampleClause.getChild(1);
-      String value = unescapeIdentifier(numerator.getText());
+      String value = unescapeIdentifier(numerator.getText());//数字或者字符串
 
 
       SplitSample sample;
       if (type.getType() == HiveParser.TOK_PERCENT) {
+    	//校验输入格式.必须是CombineHiveInputFormat格式
         assertCombineInputFormat(numerator, "Percentage");
-        Double percent = Double.valueOf(value).doubleValue();
+        Double percent = Double.valueOf(value).doubleValue();//校验百分比
         if (percent < 0  || percent > 100) {
           throw new SemanticException(generateErrorMessage((ASTNode) numerator,
               "Sampling percentage should be between 0 and 100"));
@@ -584,6 +622,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         sample = new SplitSample(Integer.valueOf(value));
       } else {
         assert type.getType() == HiveParser.TOK_LENGTH;
+        //校验输入格式.必须是CombineHiveInputFormat格式
         assertCombineInputFormat(numerator, "Total Length");
         long length = Integer.valueOf(value.substring(0, value.length() - 1));
         char last = value.charAt(value.length() - 1);
@@ -595,12 +634,13 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
           length <<= 30;
         }
         int seedNum = conf.getIntVar(ConfVars.HIVESAMPLERANDOMNUM);
+        //获取多少字节数
         sample = new SplitSample(length, seedNum);
       }
       String alias_id = getAliasId(alias, qb);
       nameToSplitSample.put(alias_id, sample);
     }
-    // Insert this map into the stats
+    // Insert this map into the stats 设置别名的映射关系
     qb.setTabAlias(alias, tabIdName);
     qb.addAlias(alias);
 
@@ -615,6 +655,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     return alias;
   }
 
+  //校验输入格式.必须是CombineHiveInputFormat格式
   private void assertCombineInputFormat(Tree numerator, String message) throws SemanticException {
     String inputFormat = HiveConf.getVar(conf, HiveConf.ConfVars.HIVEINPUTFORMAT);
     if (!inputFormat.equals(CombineHiveInputFormat.class.getName())) {
@@ -685,6 +726,22 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     for (int num = 0; num < numChildren; num++) {
       ASTNode child = (ASTNode) join.getChild(num);
       if (child.getToken().getType() == HiveParser.TOK_TABREF) {
+    	  /**
+			//[dbName.] tableName [(key=value,key=value,key)] [tableSample] [ as Identifier ]
+			//注意:
+			//1.(此时认为解析成key=null,即不需要value属性值)
+			//tableSample函数解析如下
+			//1.TABLESAMPLE(数字    PERCENT)
+			//2.TABLESAMPLE(数字    ROWS)
+			//3.TABLESAMPLE(ByteLengthLiteral)
+			//4.TABLESAMPLE(BUCKET 数字    OUT OF 数字  [ ON expression,expression ] )
+			tableSource
+			@init { gParent.msgs.push("table source"); }
+			@after { gParent.msgs.pop(); }
+			    : tabname=tableName (props=tableProperties)? (ts=tableSample)? (KW_AS? alias=Identifier)?
+			    -> ^(TOK_TABREF $tabname $props? $ts? $alias?)
+			    ;
+    	   */
         processTable(qb, child);
       } else if (child.getToken().getType() == HiveParser.TOK_SUBQUERY) {
         processSubQuery(qb, child);
@@ -788,28 +845,48 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         qb.countSel();
         qbp.setSelExprForClause(ctx_1.dest, ast);
 
-        if (((ASTNode) ast.getChild(0)).getToken().getType() == HiveParser.TOK_HINTLIST) {
+        if (((ASTNode) ast.getChild(0)).getToken().getType() == HiveParser.TOK_HINTLIST) {//设置select中的hints节点
           qbp.setHints((ASTNode) ast.getChild(0));
         }
 
+        //返回聚合函数集合,方法是递归的,因为存在函数到嵌套函数的,比如min(string()),因此value是一个节点信息,通过该信息可以获取嵌套关系
         LinkedHashMap<String, ASTNode> aggregations = doPhase1GetAggregationsFromSelect(ast,
             qb, ctx_1.dest);
+        //为select中每一个属性设置别名
         doPhase1GetColumnAliasesFromSelect(ast, qbp);
+        //设置集合函数映射关系,用于group by等后续操作使用select的聚合参数地方
         qbp.setAggregationExprsForClause(ctx_1.dest, aggregations);
-        qbp.setDistinctFuncExprsForClause(ctx_1.dest,
-        doPhase1GetDistinctFuncExprs(aggregations));
+        //过滤,只要distinct函数集合
+        qbp.setDistinctFuncExprsForClause(ctx_1.dest,doPhase1GetDistinctFuncExprs(aggregations));
         break;
 
       case HiveParser.TOK_WHERE:
         qbp.setWhrExprForClause(ctx_1.dest, ast);
         break;
 
-      case HiveParser.TOK_INSERT_INTO:
+      case HiveParser.TOK_INSERT_INTO://仅仅针对INSERT INTO语句
         String currentDatabase = SessionState.get().getCurrentDatabase();
         String tab_name = getUnescapedName((ASTNode) ast.getChild(0).getChild(0), currentDatabase);
         qbp.addInsertIntoTable(tab_name);
 
-      case HiveParser.TOK_DESTINATION:
+        /**
+selectStatement
+   :
+   selectClause
+   fromClause
+   whereClause?
+   groupByClause?
+   havingClause?
+   orderByClause?
+   clusterByClause?
+   distributeByClause?
+   sortByClause?
+   window_clause?
+   limitClause? -> ^(TOK_QUERY fromClause ^(TOK_INSERT ^(TOK_DESTINATION ^(TOK_DIR TOK_TMP_FILE))
+                     selectClause whereClause? groupByClause? havingClause? orderByClause? clusterByClause?
+                     distributeByClause? sortByClause? window_clause? limitClause?))
+         */
+      case HiveParser.TOK_DESTINATION://目标
         ctx_1.dest = "insclause-" + ctx_1.nextNum;
         ctx_1.nextNum++;
 
@@ -834,6 +911,22 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
 
         // Check if this is a subquery / lateral view
         ASTNode frm = (ASTNode) ast.getChild(0);
+        /**
+//[dbName.] tableName [(key=value,key=value,key)] [tableSample] [ as Identifier ]
+//注意:
+//1.(此时认为解析成key=null,即不需要value属性值)
+//tableSample函数解析如下
+//1.TABLESAMPLE(数字    PERCENT)
+//2.TABLESAMPLE(数字    ROWS)
+//3.TABLESAMPLE(ByteLengthLiteral)
+//4.TABLESAMPLE(BUCKET 数字    OUT OF 数字  [ ON expression,expression ] )
+tableSource
+@init { gParent.msgs.push("table source"); }
+@after { gParent.msgs.pop(); }
+    : tabname=tableName (props=tableProperties)? (ts=tableSample)? (KW_AS? alias=Identifier)?
+    -> ^(TOK_TABREF $tabname $props? $ts? $alias?)
+    ;
+         */
         if (frm.getToken().getType() == HiveParser.TOK_TABREF) {
           processTable(qb, frm);
         } else if (frm.getToken().getType() == HiveParser.TOK_SUBQUERY) {
@@ -887,7 +980,6 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         }
 
         break;
-
       case HiveParser.TOK_ORDERBY:
         // Get the order by aliases - these are aliased to the entries in the
         // select list
@@ -906,7 +998,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         // Get the groupby aliases - these are aliased to the entries in the
         // select list
         queryProperties.setHasGroupBy(true);
-        if (qbp.getJoinExpr() != null) {
+        if (qbp.getJoinExpr() != null) {//是否在有join表链接的情况下,依然设置了group by语句
           queryProperties.setHasJoinFollowedByGroupBy(true);
         }
         if (qbp.getSelForClause(ctx_1.dest).getToken().getType() == HiveParser.TOK_SELECTDI) {

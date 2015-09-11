@@ -28,16 +28,34 @@ import java.util.ArrayList;
  * in the appropriate fields. The afore-mentioned sampling clause causes the 1st
  * bucket to be picked out of the 2 buckets created by hashing on c1.
  * 
+ *    * //[dbName.] tableName [(key=value,key=value,key)] [tableSample] [ as Identifier ]
+//注意:
+//1.(此时认为解析成key=null,即不需要value属性值)
+//tableSample函数解析如下
+//1.TABLESAMPLE(数字    PERCENT)
+//2.TABLESAMPLE(数字    ROWS)
+//3.TABLESAMPLE(ByteLengthLiteral)
+//4.TABLESAMPLE(BUCKET 数字    OUT OF 数字  [ ON expression,expression ] )
+tableSource
+@init { gParent.msgs.push("table source"); }
+@after { gParent.msgs.pop(); }
+    : tabname=tableName (props=tableProperties)? (ts=tableSample)? (KW_AS? alias=Identifier)?
+    -> ^(TOK_TABREF $tabname $props? $ts? $alias?)
+    ;
+    该类是from子句用于抽样提取,该类代表解析以下字符:TABLESAMPLE(BUCKET 数字    OUT OF 数字  [ ON expression,expression ] )
+    
  */
 public class TableSample {
 
   /**
    * The numerator of the TABLESAMPLE clause.
+   * 第一个参数
    */
   private int numerator;
 
   /**
    * The denominator of the TABLESAMPLE clause.
+   * 第二个参数
    */
   private int denominator;
 
@@ -48,6 +66,7 @@ public class TableSample {
    * on the tables clustering column(as specified when the table was created).
    * In case the table does not have any clustering column, the usage of a table
    * sample clause without an ON part is disallowed by the compiler
+   * on后面的表达式集合
    */
   private ArrayList<ASTNode> exprs;
 

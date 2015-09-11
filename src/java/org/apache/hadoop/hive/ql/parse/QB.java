@@ -42,10 +42,10 @@ public class QB {
   private final int numGbys = 0;
   private int numSels = 0;
   private int numSelDi = 0;
-  private HashMap<String, String> aliasToTabs;
-  private HashMap<String, QBExpr> aliasToSubq;
-  private HashMap<String, Map<String, String>> aliasToProps;
-  private List<String> aliases;
+  private HashMap<String, String> aliasToTabs;//设置别名key,和数据库表名value的映射关系
+  private HashMap<String, QBExpr> aliasToSubq;//设置别名key,和子查询表名value的映射关系
+  private HashMap<String, Map<String, String>> aliasToProps;//为table设置对应的全局属性,key是数据库的表别名,value是该数据库对应的信息,这些信息都是查询sql中存储的
+  private List<String> aliases;//所有的别名集合
   private QBParseInfo qbp;
   private QBMetaData qbm;
   private QBJoinTree qbjoin;

@@ -33,26 +33,26 @@ import org.apache.hadoop.hive.ql.parse.BaseSemanticAnalyzer.tableSpec;
 
 /**
  * Implementation of the parse information related to a query block.
- *
+ * 进一步解析一个select from where group order 一整条查询语句表达式
  **/
 public class QBParseInfo {
 
-  private final boolean isSubQ;
+  private final boolean isSubQ;//是否包含子查询
   private final String alias;
   private ASTNode joinExpr;
-  private ASTNode hints;
-  private final HashMap<String, ASTNode> aliasToSrc;
-  private final HashMap<String, ASTNode> nameToDest;
-  private final HashMap<String, TableSample> nameToSample;
-  private final Map<ASTNode, String> exprToColumnAlias;
+  private ASTNode hints;//select中的hint节点
+  private final HashMap<String, ASTNode> aliasToSrc;//别名为key,value为from子句
+  private final HashMap<String, ASTNode> nameToDest;//key是目标,value是该目标对应的根节点
+  private final HashMap<String, TableSample> nameToSample;//from的抽样子句,key是table的别名
+  private final Map<ASTNode, String> exprToColumnAlias;//映射select中每一个属性和对应的别名,key是属性节点,value是别名
   private final Map<String, ASTNode> destToSelExpr;
-  private final HashMap<String, ASTNode> destToWhereExpr;
-  private final HashMap<String, ASTNode> destToGroupby;
-  private final Set<String> destRollups;
-  private final Set<String> destCubes;
-  private final Set<String> destGroupingSets;
-  private final Map<String, ASTNode> destToHaving;
-  private final HashSet<String> insertIntoTables;
+  private final HashMap<String, ASTNode> destToWhereExpr;//where语句的语法对象为value,key是目标,即可能包含嵌套的子查询
+  private final HashMap<String, ASTNode> destToGroupby;//group by语句的语法对象为value,key是目标,即可能包含嵌套的子查询
+  private final Set<String> destRollups;//存储有roll by的key目标
+  private final Set<String> destCubes;//存储有cube by的key目标
+  private final Set<String> destGroupingSets;//存储有groupSet的key目标
+  private final Map<String, ASTNode> destToHaving;//having语句的语法对象为value,key是目标,即可能包含嵌套的子查询
+  private final HashSet<String> insertIntoTables;//涉及到的insert into 到哪个表集合,该集合内容格式是db.tableName,注意:仅仅针对INSERT INTO语句
 
   private boolean isAnalyzeCommand; // used for the analyze command (statistics)
   private boolean isInsertToTable;  // used for insert overwrite command (statistics)
@@ -72,18 +72,18 @@ public class QBParseInfo {
   /**
    * ClusterBy is a short name for both DistributeBy and SortBy.
    */
-  private final HashMap<String, ASTNode> destToClusterby;
+  private final HashMap<String, ASTNode> destToClusterby;//Cluster by语句的语法对象为value,key是目标,即可能包含嵌套的子查询
   /**
    * DistributeBy controls the hashcode of the row, which determines which
    * reducer the rows will go to.
    */
-  private final HashMap<String, ASTNode> destToDistributeby;
+  private final HashMap<String, ASTNode> destToDistributeby;//Distribute by语句的语法对象为value,key是目标,即可能包含嵌套的子查询
   /**
    * SortBy controls the reduce keys, which affects the order of rows that the
    * reducer receives.
    */
 
-  private final HashMap<String, ASTNode> destToSortby;
+  private final HashMap<String, ASTNode> destToSortby;//sort by语句的语法对象为value,key是目标,即可能包含嵌套的子查询
 
   /**
    * Maping from table/subquery aliases to all the associated lateral view nodes.
@@ -93,12 +93,15 @@ public class QBParseInfo {
   private final HashMap<String, ASTNode> destToLateralView;
 
   /* Order by clause */
-  private final HashMap<String, ASTNode> destToOrderby;
-  private final HashMap<String, Integer> destToLimit;
+  private final HashMap<String, ASTNode> destToOrderby;//order by 对应的数字为value,key是目标,即可能包含嵌套的子查询
+  private final HashMap<String, Integer> destToLimit;//limit对应的数字为value,key是目标,即可能包含嵌套的子查询
   private int outerQueryLimit;
 
-  // used by GroupBy
+  // used by GroupBy 该存储每一个select中存储的聚合函数,因为存在函数到嵌套函数的,比如min(string()),因此value是一个节点信息,通过该信息可以获取嵌套关系
+  //key是目标,即可能包含嵌套的子查询
+  //value中key是集合函数的名称,value是聚合函数对应对应的节点,通过该信息可以获取嵌套关系
   private final LinkedHashMap<String, LinkedHashMap<String, ASTNode>> destToAggregationExprs;
+  //过滤,只要distinct函数集合,value就是该集合,key是目标,即可能包含嵌套的子查询
   private final HashMap<String, List<ASTNode>> destToDistinctFuncExprs;
 
   // used by Windowing

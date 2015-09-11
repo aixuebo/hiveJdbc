@@ -33,18 +33,18 @@ package org.apache.hadoop.hive.ql;
 public class QueryProperties {
 
   boolean hasJoin = false;
-  boolean hasGroupBy = false;
-  boolean hasOrderBy = false;
-  boolean hasSortBy = false;
-  boolean hasJoinFollowedByGroupBy = false;
+  boolean hasGroupBy = false;//是否设置了group by
+  boolean hasOrderBy = false;//是否设置了order by
+  boolean hasSortBy = false;//是否设置了sort by
+  boolean hasJoinFollowedByGroupBy = false;//是否在有join表链接的情况下,依然设置了group by语句
   boolean hasPTF = false;
   boolean hasWindowing = false;
 
   // does the query have a using clause
   boolean usesScript = false;
 
-  boolean hasDistributeBy = false;
-  boolean hasClusterBy = false;
+  boolean hasDistributeBy = false;//是否设置了Distribute by
+  boolean hasClusterBy = false;//是否设置了Cluster by
   boolean mapJoinRemoved = false;
   boolean hasMapGroupBy = false;
 
