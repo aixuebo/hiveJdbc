@@ -25,6 +25,7 @@ import org.apache.hadoop.hive.ql.parse.SemanticException;
 /**
  * Rule interface for Operators Used in operator dispatching to dispatch
  * process/visitor functions for operators.
+ * 规则接口
  */
 public interface Rule {
 

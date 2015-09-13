@@ -27,12 +27,14 @@ import org.apache.hadoop.hive.ql.parse.SemanticException;
  * Dispatches calls to relevant method in processor. The user registers various
  * rules with the dispatcher, and the processor corresponding to closest
  * matching rule is fired.
+ *  * 每一个规则Rule对应一个该对象,即处理该Node节点的规则
+ * 因此通过规则,可以找到处理该node节点的对象NodeProcessor,分发该node到NodeProcessor对象实现类
  */
 public class DefaultRuleDispatcher implements Dispatcher {
 
-  private final Map<Rule, NodeProcessor> procRules;
-  private final NodeProcessorCtx procCtx;
-  private final NodeProcessor defaultProc;
+  private final Map<Rule, NodeProcessor> procRules;//每一个规则和对应的节点处理器映射
+  private final NodeProcessorCtx procCtx;//上下文对象
+  private final NodeProcessor defaultProc;//默认没有匹配到规则的时候,执行的节点处理器
 
   /**
    * Constructor.
@@ -66,6 +68,7 @@ public class DefaultRuleDispatcher implements Dispatcher {
 
     // find the firing rule
     // find the rule from the stack specified
+	//遍历所有规则,找到最可能实现的规则
     Rule rule = null;
     int minCost = Integer.MAX_VALUE;
     for (Rule r : procRules.keySet()) {
@@ -76,6 +79,7 @@ public class DefaultRuleDispatcher implements Dispatcher {
       }
     }
 
+    //通过规则找到对应的节点处理器
     NodeProcessor proc;
 
     if (rule == null) {
@@ -84,6 +88,7 @@ public class DefaultRuleDispatcher implements Dispatcher {
       proc = procRules.get(rule);
     }
 
+    //针对节点处理器进行调用
     // Do nothing in case proc is null
     if (proc != null) {
       // Call the process function

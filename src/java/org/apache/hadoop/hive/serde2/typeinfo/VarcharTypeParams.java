@@ -32,7 +32,7 @@ import org.apache.hadoop.io.WritableUtils;
 public class VarcharTypeParams extends BaseTypeParams implements Serializable {
   private static final long serialVersionUID = 1L;
 
-  public int length;
+  public int length;//要求的字符串长度
 
   /**
    * 校验,必须有字符长度.并且长度要小于65535

@@ -23,9 +23,8 @@ import org.apache.commons.logging.LogFactory;
 
 /**
  * Implementation of the query block expression.
- * 
+ * 查询语句之间的关系
  **/
-
 public class QBExpr {
 
   private static final Log LOG = LogFactory.getLog("hive.ql.parse.QBExpr");
@@ -39,10 +38,10 @@ public class QBExpr {
   };
 
   private Opcode opcode;
-  private QBExpr qbexpr1;
-  private QBExpr qbexpr2;
-  private QB qb;
-  private String alias;
+  private QBExpr qbexpr1;//当为UNION的时候,需要两个查询语句,因此分别是qbexpr1和qbexpr2
+  private QBExpr qbexpr2;//当为UNION的时候,需要两个查询语句,因此分别是qbexpr1和qbexpr2
+  private QB qb;//对应的查询sql对象
+  private String alias;//该子查询的别名
 
   public String getAlias() {
     return alias;

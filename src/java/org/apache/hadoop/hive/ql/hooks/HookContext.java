@@ -35,6 +35,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 /**
  * Hook Context keeps all the necessary information for all the hooks.
  * New implemented hook can get the query plan, job conf and the list of all completed tasks from this hook context
+ * 上下文对象
  */
 public class HookContext {
 

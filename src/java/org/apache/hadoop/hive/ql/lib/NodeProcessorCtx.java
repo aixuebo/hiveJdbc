@@ -20,6 +20,7 @@ package org.apache.hadoop.hive.ql.lib;
 
 /**
  * Operator Processor Context.
+ * 上下文对象
  */
 public interface NodeProcessorCtx {
 }

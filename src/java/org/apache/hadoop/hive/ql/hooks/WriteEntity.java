@@ -20,17 +20,21 @@ package org.apache.hadoop.hive.ql.hooks;
 
 import java.io.Serializable;
 
-import org.apache.hadoop.hive.ql.metadata.Partition;
 import org.apache.hadoop.hive.ql.metadata.DummyPartition;
+import org.apache.hadoop.hive.ql.metadata.Partition;
 import org.apache.hadoop.hive.ql.metadata.Table;
 
 /**
  * This class encapsulates an object that is being written to by the query. This
  * object may be a table, partition, dfs directory or a local directory.
+ * 数据写入哪一个table,或者DummyPartition 或者Partition 或者写入到一个d对应的文件中,该文件可以是本地文件,也可以是HDFS文件
+ * 并且包含一个boolean表示是否成功写完
  */
 public class WriteEntity extends Entity implements Serializable {
 
-  /**
+	private static final long serialVersionUID = 1L;
+
+/**
    * Only used by serialization.
    */
   public WriteEntity() {
@@ -76,6 +80,7 @@ public class WriteEntity extends Entity implements Serializable {
    *          The name of the directory that is being written to.
    * @param islocal
    *          Flag to decide whether this directory is local or in dfs.
+   *          写入到一个d对应的文件中,该文件可以是本地文件,也可以是HDFS文件
    */
   public WriteEntity(String d, boolean islocal) {
     this(d, islocal, true);

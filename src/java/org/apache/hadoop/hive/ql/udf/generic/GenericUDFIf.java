@@ -42,17 +42,21 @@ public class GenericUDFIf extends GenericUDF {
     argumentOIs = arguments;
     returnOIResolver = new GenericUDFUtils.ReturnObjectInspectorResolver(true);
 
+    //该函数必须有三个参数
     if (arguments.length != 3) {
       throw new UDFArgumentLengthException(
           "The function IF(expr1,expr2,expr3) accepts exactly 3 arguments.");
     }
 
+    //校验第一个参数必须是基础类型,并且必须是boolean或者void类型
     boolean conditionTypeIsOk = (arguments[0].getCategory() == ObjectInspector.Category.PRIMITIVE);
     if (conditionTypeIsOk) {
       PrimitiveObjectInspector poi = ((PrimitiveObjectInspector) arguments[0]);
       conditionTypeIsOk = (poi.getPrimitiveCategory() == PrimitiveObjectInspector.PrimitiveCategory.BOOLEAN
           || poi.getPrimitiveCategory() == PrimitiveObjectInspector.PrimitiveCategory.VOID);
     }
+    
+    //必须是boolean或者void类型
     if (!conditionTypeIsOk) {
       throw new UDFArgumentTypeException(0,
           "The first argument of function IF should be \""
@@ -60,8 +64,7 @@ public class GenericUDFIf extends GenericUDF {
           + arguments[0].getTypeName() + "\" is found");
     }
 
-    if (!(returnOIResolver.update(arguments[1]) && returnOIResolver
-        .update(arguments[2]))) {
+    if (!(returnOIResolver.update(arguments[1]) && returnOIResolver.update(arguments[2]))) {
       throw new UDFArgumentTypeException(2,
           "The second and the third arguments of function IF should have the same type, "
           + "but they are different: \"" + arguments[1].getTypeName()

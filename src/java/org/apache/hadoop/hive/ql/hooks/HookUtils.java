@@ -39,6 +39,7 @@ public class HookUtils {
    * @throws ClassNotFoundException
    * @throws IllegalAccessException
    * @throws InstantiationException
+   * 获取所有的hook实现类集合
    */
   public static <T extends Hook> List<T> getHooks(HiveConf conf,
       ConfVars hookConfVar, Class<T> clazz)

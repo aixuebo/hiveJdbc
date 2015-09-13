@@ -32,13 +32,13 @@ package org.apache.hadoop.hive.ql;
  */
 public class QueryProperties {
 
-  boolean hasJoin = false;
+  boolean hasJoin = false;//from子句是否有join子句
   boolean hasGroupBy = false;//是否设置了group by
   boolean hasOrderBy = false;//是否设置了order by
   boolean hasSortBy = false;//是否设置了sort by
   boolean hasJoinFollowedByGroupBy = false;//是否在有join表链接的情况下,依然设置了group by语句
-  boolean hasPTF = false;
-  boolean hasWindowing = false;
+  boolean hasPTF = false;//from子句使用了partitionTableFunctionSource
+  boolean hasWindowing = false;//使用了窗口函数
 
   // does the query have a using clause
   boolean usesScript = false;

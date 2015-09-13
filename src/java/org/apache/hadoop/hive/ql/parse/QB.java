@@ -31,9 +31,8 @@ import org.apache.hadoop.hive.ql.plan.CreateTableDesc;
 
 /**
  * Implementation of the query block.
- *
+ * 表示一次查询语句定义的信息,该信息可能也是子查询中的一次查询
  **/
-
 public class QB {
 
   private static final Log LOG = LogFactory.getLog("hive.ql.parse.QB");
@@ -58,6 +57,7 @@ public class QB {
   // used by PTFs
   /*
    * This map maintains the PTFInvocationSpec for each PTF chain invocation in this QB.
+   * partitionTableFunctionSource对应的节点作为key,value是该partitionTableFunctionSource对应的解析后的对象
    */
   private HashMap<ASTNode, PTFInvocationSpec> ptfNodeToSpec;
   /*

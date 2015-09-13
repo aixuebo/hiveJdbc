@@ -22,7 +22,8 @@ import org.apache.hadoop.hive.serde2.typeinfo.PrimitiveTypeSpec;
 
 /**
  * PrimitiveObjectInspector.
- *
+ * 基础类型的具体类型、以及参数的解析、
+ * 以及java/hadoop的序列化对象class
  */
 public interface PrimitiveObjectInspector extends ObjectInspector, PrimitiveTypeSpec {
 
@@ -36,29 +37,34 @@ public interface PrimitiveObjectInspector extends ObjectInspector, PrimitiveType
 
   /**
    * Get the primitive category of the PrimitiveObjectInspector.
+   * 基础类型的具体分类
    */
   PrimitiveCategory getPrimitiveCategory();
 
   /**
    * Get the Primitive Writable class which is the return type of
    * getPrimitiveWritableObject() and copyToPrimitiveWritableObject().
+   * 使用hadoop序列化类
    */
   Class<?> getPrimitiveWritableClass();
 
   /**
    * Return the data in an instance of primitive writable Object. If the Object
    * is already a primitive writable Object, just return o.
+   * 使用hadoop序列化对象
    */
   Object getPrimitiveWritableObject(Object o);
 
   /**
    * Get the Java Primitive class which is the return type of
    * getJavaPrimitiveObject().
+   * 使用java序列化进行的class对象
    */
   Class<?> getJavaPrimitiveClass();
 
   /**
    * Get the Java Primitive object.
+   * 使用java序列化进行序列化
    */
   Object getPrimitiveJavaObject(Object o);
 
@@ -75,6 +81,7 @@ public interface PrimitiveObjectInspector extends ObjectInspector, PrimitiveType
    * Whether the ObjectInspector prefers to return a Primitive Writable Object
    * instead of a Primitive Java Object. This can be useful for determining the
    * most efficient way to getting data out of the Object.
+   * true表示该原始对象可以支持hadoop的序列化,从而不需要进行java序列化
    */
   boolean preferWritable();
 
@@ -82,12 +89,14 @@ public interface PrimitiveObjectInspector extends ObjectInspector, PrimitiveType
    * If the type has type parameters (such as varchar length, or decimal precision/scale),
    * then return the parameters for the type.
    * @return A BaseTypeParams object representing the parameters for the type, or null
+   * 如果类型有参数,要描述参数类型,例如char(10) or decimal(10, 2).
    */
   BaseTypeParams getTypeParams();
 
   /**
    * Set the type parameters for the type.
    * @param newParams type parameters for the type
+   * 如果类型有参数,要描述参数类型,例如char(10) or decimal(10, 2).
    */
   void setTypeParams(BaseTypeParams newParams);
 }

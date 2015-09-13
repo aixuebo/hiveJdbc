@@ -38,8 +38,8 @@ public final class StructTypeInfo extends TypeInfo implements Serializable {
 
   private static final long serialVersionUID = 1L;
 
-  private ArrayList<String> allStructFieldNames;//每一个属性集合
-  private ArrayList<TypeInfo> allStructFieldTypeInfos;//每一个属性对应的类型对象集合
+  private ArrayList<String> allStructFieldNames;//集合,属性的name集合
+  private ArrayList<TypeInfo> allStructFieldTypeInfos;//集合,每一个属性对应的类型对象集合
 
   /**
    * For java serialization use only.
@@ -70,6 +70,7 @@ public final class StructTypeInfo extends TypeInfo implements Serializable {
 
   /**
    * For java serialization use only.
+   * 设置属性名称集合
    */
   public void setAllStructFieldNames(ArrayList<String> allStructFieldNames) {
     this.allStructFieldNames = allStructFieldNames;
@@ -77,6 +78,7 @@ public final class StructTypeInfo extends TypeInfo implements Serializable {
 
   /**
    * For java serialization use only.
+   * 设置每一个属性名对应的类型
    */
   public void setAllStructFieldTypeInfos(
       ArrayList<TypeInfo> allStructFieldTypeInfos) {
@@ -105,7 +107,7 @@ public final class StructTypeInfo extends TypeInfo implements Serializable {
   }
 
   /**
-   * 返回某一个属性域对应的类型对象
+   * 通过参数属性名,找到该属性对应的类型
    */
   public TypeInfo getStructFieldTypeInfo(String field) {
     String fieldLowerCase = field.toLowerCase();

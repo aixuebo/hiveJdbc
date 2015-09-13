@@ -25,6 +25,8 @@ import org.apache.hadoop.hive.ql.parse.SemanticException;
 /**
  * Dispatcher interface for Operators Used in operator graph walking to dispatch
  * process/visitor functions for operators.
+ * 每一个规则Rule对应一个该对象,即处理该Node节点的规则
+ * 因此通过规则,可以找到处理该node节点的对象NodeProcessor,分发该node到NodeProcessor对象实现类
  */
 public interface Dispatcher {
 

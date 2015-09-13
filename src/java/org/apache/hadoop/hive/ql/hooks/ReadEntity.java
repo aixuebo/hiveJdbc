@@ -28,14 +28,17 @@ import org.apache.hadoop.hive.ql.metadata.Table;
 /**
  * This class encapsulates the information on the partition and tables that are
  * read by the query.
+ * 表示要读取哪张表或者读取哪个partation
  */
 public class ReadEntity extends Entity implements Serializable {
 
   // Consider a query like: select * from V, where the view V is defined as:
   // select * from T
   // The inputs will contain V and T (parent: V)
-
-  // For views, the entities can be nested - by default, entities are at the top level
+	
+	private static final long serialVersionUID = 1L;
+// For views, the entities can be nested - by default, entities are at the top level
+	//视图是需要嵌套的,因为查询sql是查询一个视图V,而视图还要查询真正的表T,因此V就是父读实体对象
   private final Set<ReadEntity> parents = new HashSet<ReadEntity>();
 
   /**

@@ -29,14 +29,14 @@ package org.apache.hadoop.hive.ql.plan;
  * STORED AS RCFILE;
  *
  * Skewed column is "value".
- * 1. It's position in table column is 1.
- * 2. It's position in skewed column list is 0.
+ * 1. It's position in table column is 1.在table中计数为1
+ * 2. It's position in skewed column list is 0.在skew中计数为0
  *
  * This information will be used in {@FileSinkOperator} generateListBucketingDirName
  */
 public class SkewedColumnPositionPair {
-  private int tblColPosition;
-  private int skewColPosition;
+  private int tblColPosition;//该属性在table中的位置,从0开始计数
+  private int skewColPosition;//该属性在skew中的位置,从0开始计数
 
   public SkewedColumnPositionPair () {}
 

@@ -31,6 +31,7 @@ import org.apache.hadoop.hive.metastore.api.Table;
 /**
  * This class contains the lineage information that is passed
  * to the PreExecution hook.
+ * 该对象属于表述多表关联的join语句之间的关联关系基础信息
  */
 public class LineageInfo implements Serializable {
 
@@ -42,10 +43,10 @@ public class LineageInfo implements Serializable {
   /**
    * Enum to track dependency. This enum has the following values:
    * 1. SIMPLE - Indicates that the column is derived from another table column
-   *             with no transformations e.g. T2.c1 = T1.c1.
+   *             with no transformations e.g. T2.c1 = T1.c1.表示不需要转化
    * 2. EXPRESSION - Indicates that the column is derived from a UDF, UDAF, UDTF or
    *                 set operations like union on columns on other tables
-   *                 e.g. T2.c1 = T1.c1 + T3.c1.
+   *                 e.g. T2.c1 = T1.c1 + T3.c1. 表达式.表示需要转化而来的
    * 4. SCRIPT - Indicates that the column is derived from the output
    *             of a user script through a TRANSFORM, MAP or REDUCE syntax
    *             or from the output of a PTF chain execution.
@@ -58,6 +59,7 @@ public class LineageInfo implements Serializable {
    * Table or Partition data container. We need this class because the output
    * of the query can either go to a table or a partition within a table. The
    * data container class subsumes both of these.
+   * 数据容器,存储数据是用table还是partition
    */
   public static class DataContainer implements Serializable {
 
@@ -128,11 +130,13 @@ public class LineageInfo implements Serializable {
 
     /**
      * The data container for this key.
+     * 该key在哪一个容器里面放着
      */
     private final DataContainer dc;
 
     /**
      * The field schema for this key.
+     * 依赖的key类型:表示数据库表的一个属性,包含name、类型、注释
      */
     private final FieldSchema fld;
 
@@ -194,6 +198,7 @@ public class LineageInfo implements Serializable {
 
   /**
    * Base Column information.
+   * 包含哪个table、table别名、colume三者,代表了一个join操作中的关联关系
    */
   public static class BaseColumnInfo implements Serializable {
 
@@ -212,6 +217,7 @@ public class LineageInfo implements Serializable {
      * and that denotes that the expression is dependent on the row
      * of the table and not particular column. This can happen in case
      * of count(1).
+     * 该列可以是null,也可以是一个表达式,表示两个表之间需要用哪个列去做关联关系
      */
     private FieldSchema column;
 
@@ -244,6 +250,9 @@ public class LineageInfo implements Serializable {
     }
   }
 
+  /**
+   * table和别名的映射关系
+   */
   public static class TableAliasInfo implements Serializable {
 
     /**
@@ -292,6 +301,7 @@ public class LineageInfo implements Serializable {
 
   /**
    * This class tracks the dependency information for the base column.
+   * 该对象属于表述多表关联的join语句之间的关联关系
    */
   public static class Dependency implements Serializable {
 
@@ -312,6 +322,7 @@ public class LineageInfo implements Serializable {
 
     /**
      * The list of base columns that the particular column depends on.
+     * 在on操作中的集合,即哪些属性去做多表的关联
      */
     private List<BaseColumnInfo> baseCols;
 
@@ -362,6 +373,9 @@ public class LineageInfo implements Serializable {
    * The map contains an index from the (datacontainer, columnname) to the
    * dependency vector for that tuple. This is used to generate the
    * dependency vectors during the walk of the operator tree.
+   * 
+   * 该对象属于表述多表关联的join语句之间的关联关系
+   * key表示哪个table/partition的哪个key做关联,value表示具体的关联关系表达式
    */
   protected Map<DependencyKey, Dependency> index;
 

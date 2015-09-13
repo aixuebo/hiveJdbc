@@ -25,6 +25,7 @@ import org.apache.hadoop.hive.ql.parse.SemanticException;
 
 /**
  * Interface for operator graph walker.
+ * Ö´ÐÐÍ¼½Ó¿Ú
  */
 public interface GraphWalker {
 

@@ -52,7 +52,7 @@ public class QBParseInfo {
   private final Set<String> destCubes;//存储有cube by的key目标
   private final Set<String> destGroupingSets;//存储有groupSet的key目标
   private final Map<String, ASTNode> destToHaving;//having语句的语法对象为value,key是目标,即可能包含嵌套的子查询
-  private final HashSet<String> insertIntoTables;//涉及到的insert into 到哪个表集合,该集合内容格式是db.tableName,注意:仅仅针对INSERT INTO语句
+  private final HashSet<String> insertIntoTables;//涉及到的insert into 到哪个表集合,该集合内容格式是db.tableName,注意:仅仅针对INSERT INTO语句,如果一个数据库是分桶的,是不允许向该数据库进行insert插入数据的
 
   private boolean isAnalyzeCommand; // used for the analyze command (statistics)
   private boolean isInsertToTable;  // used for insert overwrite command (statistics)

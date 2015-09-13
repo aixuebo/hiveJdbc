@@ -38,6 +38,8 @@ public class UtilsTest {
 	
 	@Test
 	public void test3(){
-		System.out.println(System.getenv());
+		//System.out.println(System.getenv());
+		System.out.println(0x80);
+		System.out.println(Integer.toBinaryString(128));
 	}
 }

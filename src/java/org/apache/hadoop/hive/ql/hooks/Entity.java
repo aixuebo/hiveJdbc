@@ -22,16 +22,16 @@ import java.io.Serializable;
 import java.net.URI;
 import java.util.Map;
 
-import org.apache.hadoop.hive.ql.metadata.Partition;
 import org.apache.hadoop.hive.ql.metadata.DummyPartition;
+import org.apache.hadoop.hive.ql.metadata.Partition;
 import org.apache.hadoop.hive.ql.metadata.Table;
-import org.apache.hadoop.hive.ql.session.SessionState;
-import org.apache.hadoop.hive.conf.HiveConf;
 
 /**
  * This class encapsulates an object that is being read or written to by the
  * query. This object may be a table, partition, dfs directory or a local
  * directory.
+ * 数据读取或者写入哪一个table,或者DummyPartition 或者Partition 或者写入到一个d对应的文件中,该文件可以是本地文件,也可以是HDFS文件
+ * 并且包含一个boolean表示是否成功完成
  */
 public class Entity implements Serializable {
   private static final long serialVersionUID = 1L;
@@ -60,6 +60,7 @@ public class Entity implements Serializable {
 
   /**
    * The directory if this is a directory.
+   * 写入的路径
    */
   private String d;
 
@@ -72,6 +73,7 @@ public class Entity implements Serializable {
   /**
    * Whether the output is complete or not. For eg, for dynamic partitions, the
    * complete output may not be known
+   * 是否写入完成
    */
   private boolean complete;
 
@@ -203,6 +205,7 @@ public class Entity implements Serializable {
 
   /**
    * Get the parameter map of the Entity.
+   * 获取table或者partition的动态属性设置的键值对
    */
   public Map<String, String> getParameters() {
     if (p != null) {

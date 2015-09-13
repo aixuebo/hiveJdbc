@@ -202,7 +202,7 @@ public enum ErrorMsg {
   TABLE_DATA_EXISTS(10119, "Table exists and contains data files"),
   INCOMPATIBLE_SCHEMA(10120, "The existing table is not compatible with the import spec. "),
   EXIM_FOR_NON_NATIVE(10121, "Export/Import cannot be done for a non-native table. "),
-  INSERT_INTO_BUCKETIZED_TABLE(10122, "Bucketized tables do not support INSERT INTO:"),
+  INSERT_INTO_BUCKETIZED_TABLE(10122, "Bucketized tables do not support INSERT INTO:"),//如果一个数据库是分桶的,是不允许向该数据库进行insert插入数据的
   NO_COMPARE_BIGINT_STRING(10123, "In strict mode, comparing bigints and strings is not allowed, "
       + "it may result in a loss of precision. "
       + "If you really want to perform the operation, set hive.mapred.mode=nonstrict"),

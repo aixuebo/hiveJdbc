@@ -24,6 +24,7 @@ import org.apache.hadoop.hive.ql.parse.SemanticException;
 /**
  * Base class for processing operators which is no-op. The specific processors
  * can register their own context with the dispatcher.
+ * 每一个规则Rule对应一个该对象,即处理该Node节点的规则
  */
 public interface NodeProcessor {
 

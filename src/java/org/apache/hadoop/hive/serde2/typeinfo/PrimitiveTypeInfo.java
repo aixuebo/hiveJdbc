@@ -65,10 +65,12 @@ public class PrimitiveTypeInfo extends TypeInfo implements Serializable, Primiti
     return getPrimitiveTypeEntry().primitiveCategory;
   }
 
+  //基础类型hadoop的序列化类
   public Class<?> getPrimitiveWritableClass() {
     return PrimitiveObjectInspectorUtils.getTypeEntryFromTypeName(typeName).primitiveWritableClass;
   }
 
+  //基础类型java的序列化类
   public Class<?> getPrimitiveJavaClass() {
     return PrimitiveObjectInspectorUtils.getTypeEntryFromTypeName(typeName).primitiveJavaClass;
   }

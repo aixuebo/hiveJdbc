@@ -25,6 +25,7 @@ import org.apache.hadoop.io.Writable;
 /**
  * Base type for type-specific params, such as char(10) or decimal(10, 2).
  * 类型基数类,可以设置类型的参数
+ * 该对象实现了hadoop的序列化、java的序列化
  */
 public abstract class BaseTypeParams implements Writable, Serializable {
 
@@ -45,6 +46,7 @@ public abstract class BaseTypeParams implements Writable, Serializable {
 
   public abstract String toString();
 
+  //先解析参数,然后校验
   public void set(String[] params) throws SerDeException {
     populateParams(params);
     validateParams();
@@ -55,6 +57,7 @@ public abstract class BaseTypeParams implements Writable, Serializable {
   public boolean hasCharacterMaximumLength() {
     return false;
   }
+  
   //如果有最大字符限制,则限制字符是多少,例如char(10),最多允许输入10个字符
   public int getCharacterMaximumLength() {
     return -1;

@@ -323,6 +323,9 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         queryProperties);
   }
 
+  /**
+   * from子句中的子查询操作
+   */
   @SuppressWarnings("nls")
   public void doPhase1QBExpr(ASTNode ast, QBExpr qbexpr, String id, String alias)
       throws SemanticException {
@@ -664,18 +667,26 @@ tableSource
     }
   }
 
+  /**
+   * from子句,用于子查询,必须有别名
+   * @param qb
+   * @param subq
+   * @return
+   * @throws SemanticException
+   */
   private String processSubQuery(QB qb, ASTNode subq) throws SemanticException {
 
-    // This is a subquery and must have an alias
+    // This is a subquery and must have an alias必须有别名
     if (subq.getChildCount() != 2) {
       throw new SemanticException(ErrorMsg.NO_SUBQUERY_ALIAS.getMsg(subq));
     }
-    ASTNode subqref = (ASTNode) subq.getChild(0);
-    String alias = unescapeIdentifier(subq.getChild(1).getText());
+    ASTNode subqref = (ASTNode) subq.getChild(0);//子查询节点
+    String alias = unescapeIdentifier(subq.getChild(1).getText());//别名
 
     // Recursively do the first phase of semantic analysis for the subquery
     QBExpr qbexpr = new QBExpr(alias);
 
+    //设置查询语句之间的关系
     doPhase1QBExpr(subqref, qbexpr, qb.getId(), alias);
 
     // If the alias is already there then we have a conflict
@@ -692,6 +703,9 @@ tableSource
     return alias;
   }
 
+  /**
+   * 是否是join节点
+   */
   private boolean isJoinToken(ASTNode node) {
     if ((node.getToken().getType() == HiveParser.TOK_JOIN)
         || (node.getToken().getType() == HiveParser.TOK_CROSSJOIN)
@@ -743,9 +757,9 @@ tableSource
 			    ;
     	   */
         processTable(qb, child);
-      } else if (child.getToken().getType() == HiveParser.TOK_SUBQUERY) {
+      } else if (child.getToken().getType() == HiveParser.TOK_SUBQUERY) {//from子句,用于子查询,必须有别名
         processSubQuery(qb, child);
-      } else if (child.getToken().getType() == HiveParser.TOK_PTBLFUNCTION) {
+      } else if (child.getToken().getType() == HiveParser.TOK_PTBLFUNCTION) {//from子句使用了partitionTableFunctionSource
         queryProperties.setHasPTF(true);
         processPTF(qb, child);
         PTFInvocationSpec ptfInvocationSpec = qb.getPTFInvocationSpec(child);
@@ -764,7 +778,7 @@ tableSource
         // JOIN src2 ...
         throw new SemanticException(ErrorMsg.LATERAL_VIEW_WITH_JOIN
             .getMsg(join));
-      } else if (isJoinToken(child)) {
+      } else if (isJoinToken(child)) {//是否from子句带有join部分,fromSource ( joinToken^ fromSource (KW_ON! expression)
         processJoin(qb, child);
       }
     }
@@ -929,12 +943,12 @@ tableSource
          */
         if (frm.getToken().getType() == HiveParser.TOK_TABREF) {
           processTable(qb, frm);
-        } else if (frm.getToken().getType() == HiveParser.TOK_SUBQUERY) {
+        } else if (frm.getToken().getType() == HiveParser.TOK_SUBQUERY) {//from子句,用于子查询,必须有别名
           processSubQuery(qb, frm);
         } else if (frm.getToken().getType() == HiveParser.TOK_LATERAL_VIEW ||
             frm.getToken().getType() == HiveParser.TOK_LATERAL_VIEW_OUTER) {
           processLateralView(qb, frm);
-        } else if (isJoinToken(frm)) {
+        } else if (isJoinToken(frm)) {//incorrect
           queryProperties.setHasJoin(true);
           processJoin(qb, frm);
           qbp.setJoinExpr(frm);
@@ -1165,17 +1179,18 @@ tableSource
       // This is needed for tracking the dependencies for inputs, along with their parents.
       Map<String, ObjectPair<String, ReadEntity>> aliasToViewInfo =
           new HashMap<String, ObjectPair<String, ReadEntity>>();
+      //循环所有数据库别名
       for (String alias : tabAliases) {
-        String tab_name = qb.getTabNameForAlias(alias);
+        String tab_name = qb.getTabNameForAlias(alias);//通过别名找到具体的数据库名字
         Table tab = null;
-        try {
+        try {//校验数据库是否存在
           tab = db.getTable(tab_name);
         } catch (InvalidTableException ite) {
           throw new SemanticException(ErrorMsg.INVALID_TABLE.getMsg(qb
               .getParseInfo().getSrcForAlias(alias)));
         }
 
-        // Disallow INSERT INTO on bucketized tables
+        // Disallow INSERT INTO on bucketized tables 如果一个数据库是分桶的,是不允许向该数据库进行insert插入数据的
         if (qb.getParseInfo().isInsertIntoTable(tab.getDbName(), tab.getTableName()) &&
             tab.getNumBuckets() > 0) {
           throw new SemanticException(ErrorMsg.INSERT_INTO_BUCKETIZED_TABLE.
@@ -1194,7 +1209,7 @@ tableSource
               getMsg("Table " + getUnescapedName(qb.getParseInfo().getSrcForAlias(alias))));
         }
 
-        if (tab.isView()) {
+        if (tab.isView()) {//如果该table是一个视图
           if (qb.getParseInfo().isAnalyzeCommand()) {
             throw new SemanticException(ErrorMsg.ANALYZE_VIEW.getMsg());
           }
@@ -1420,6 +1435,7 @@ tableSource
     }
   }
 
+  //如果该tab是一个视图
   private void replaceViewReferenceWithDefinition(QB qb, Table tab,
       String tab_name, String alias) throws SemanticException {
 
@@ -9673,10 +9689,12 @@ KW_CREATE (orReplace)? KW_VIEW (ifNotExists)? name=tableName
   }
 
   /*
+   * 在from的节点树上调用该函数,from节点使用了partitionTableFunctionSource函数
    * - invoked during FROM AST tree processing, on encountering a PTF invocation.
    * - tree form is
    *   ^(TOK_PTBLFUNCTION name partitionTableFunctionSource partitioningSpec? arguments*)
    * - setup a PTFInvocationSpec for this top level PTF invocation.
+   * from子句使用了partitionTableFunctionSource
    */
   private void processPTF(QB qb, ASTNode ptf) throws SemanticException{
 

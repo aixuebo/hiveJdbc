@@ -64,13 +64,16 @@ import org.apache.hadoop.io.WritableUtils;
  *
  * SerDe classes should call the static functions in this library to create an
  * ObjectInspector to return to the caller of SerDe2.getObjectInspector().
- * 基础类型的附加信息
+ * 基础类型对象的工具类
  */
 public final class PrimitiveObjectInspectorUtils {
   private static Log LOG = LogFactory.getLog(PrimitiveObjectInspectorUtils.class);
 
   /**
    * TypeEntry stores information about a Hive Primitive TypeInfo.
+   * 该对象表示一个属性的类型具体分类,以及java类型和包装类型、hadoop针对该类型的序列化对象
+   * 
+   * 注意:该类属性可以被序列化到hadoop中存储
    */
   public static class PrimitiveTypeEntry implements Writable, Cloneable, PrimitiveTypeSpec {
 
@@ -81,24 +84,27 @@ public final class PrimitiveObjectInspectorUtils {
 
     /**
      * primitiveJavaType refers to java types like int, double, etc.
+     * 原始java类型,比如int,double
      */
     public Class<?> primitiveJavaType;
     /**
      * primitiveJavaClass refers to java classes like Integer, Double, String
      * etc.
+     * 原始的java类型的包装类,比如Integer,Double,String等
      */
     public Class<?> primitiveJavaClass;
     /**
      * writableClass refers to hadoop Writable classes like IntWritable,
      * DoubleWritable, Text etc.
+     * hadoop的序列化原始类,比如IntWritable、Text
      */
     public Class<?> primitiveWritableClass;
     /**
      * typeName is the name of the type as in DDL.
      */
     public String typeName;
-    public Class<?> typeParamsClass;
-    public BaseTypeParams typeParams;
+    public Class<?> typeParamsClass;//参数的class类
+    public BaseTypeParams typeParams;//参数对象
 
     PrimitiveTypeEntry(
         PrimitiveObjectInspector.PrimitiveCategory primitiveCategory,
@@ -232,12 +238,18 @@ public final class PrimitiveObjectInspectorUtils {
     }
   }
 
+  //基础对象的分类与PrimitiveTypeEntry对应关系
   static final Map<PrimitiveCategory, PrimitiveTypeEntry> primitiveCategoryToTypeEntry = new HashMap<PrimitiveCategory, PrimitiveTypeEntry>();
+  //基础对象的基本类型,例如int、double与PrimitiveTypeEntry对应关系
   static final Map<Class<?>, PrimitiveTypeEntry> primitiveJavaTypeToTypeEntry = new HashMap<Class<?>, PrimitiveTypeEntry>();
+  //基础对象的包装类型,例如Integer、Double与PrimitiveTypeEntry对应关系
   static final Map<Class<?>, PrimitiveTypeEntry> primitiveJavaClassToTypeEntry = new HashMap<Class<?>, PrimitiveTypeEntry>();
+  //基础对象的HADOOP序列化对象,例如Text与PrimitiveTypeEntry对应关系
   static final Map<Class<?>, PrimitiveTypeEntry> primitiveWritableClassToTypeEntry = new HashMap<Class<?>, PrimitiveTypeEntry>();
+  //基础对象的字符串名字,例如Text与PrimitiveTypeEntry对应关系
   static final Map<String, PrimitiveTypeEntry> typeNameToTypeEntry = new HashMap<String, PrimitiveTypeEntry>();
 
+  //添加参数类型
   static void addParameterizedType(PrimitiveTypeEntry t) {
     typeNameToTypeEntry.put(t.toString(), t);
   }
@@ -330,6 +342,7 @@ public final class PrimitiveObjectInspectorUtils {
   /**
    * Return Whether the class is a Java Primitive type or a Java Primitive
    * class.
+   * 通过int、double查找对应的原始的java类型的包装类,比如Integer,Double,String等
    */
   public static Class<?> primitiveJavaTypeToClass(Class<?> clazz) {
     PrimitiveTypeEntry t = primitiveJavaTypeToTypeEntry.get(clazz);
@@ -338,6 +351,7 @@ public final class PrimitiveObjectInspectorUtils {
 
   /**
    * Whether the class is a Java Primitive type or a Java Primitive class.
+   * 判断类型是否是java的八个基本类型,true返回是
    */
   public static boolean isPrimitiveJava(Class<?> clazz) {
     return primitiveJavaTypeToTypeEntry.get(clazz) != null
@@ -346,6 +360,7 @@ public final class PrimitiveObjectInspectorUtils {
 
   /**
    * Whether the class is a Java Primitive type.
+   * 判断参数是否是java的八个基本类型,不包含包装类型
    */
   public static boolean isPrimitiveJavaType(Class<?> clazz) {
     return primitiveJavaTypeToTypeEntry.get(clazz) != null;
@@ -353,6 +368,7 @@ public final class PrimitiveObjectInspectorUtils {
 
   /**
    * Whether the class is a Java Primitive class.
+   * 判断参数是否是java的八个包装类型
    */
   public static boolean isPrimitiveJavaClass(Class<?> clazz) {
     return primitiveJavaClassToTypeEntry.get(clazz) != null;
@@ -360,6 +376,7 @@ public final class PrimitiveObjectInspectorUtils {
 
   /**
    * Whether the class is a Hive Primitive Writable class.
+   * 判断参数是否是HADOOP序列化对象,例如Text
    */
   public static boolean isPrimitiveWritableClass(Class<?> clazz) {
     return primitiveWritableClassToTypeEntry.get(clazz) != null;

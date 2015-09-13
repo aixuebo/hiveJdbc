@@ -26,6 +26,7 @@ import org.apache.hadoop.hive.ql.parse.SemanticException;
  * Implentation of the Rule interface for Nodes Used in Node dispatching to dispatch
  * process/visitor functions for Nodes.  The cost method returns 1 if there is an exact
  * match between the expression and the stack, otherwise -1.
+ * 精准匹配规则
  */
 public class RuleExactMatch implements Rule {
 

@@ -22,7 +22,7 @@ import org.apache.hadoop.hive.serde2.objectinspector.PrimitiveObjectInspector.Pr
 
 /**
  * Interface to encapsulate retrieving of type information, for the object inspector factory.
- * 基础类型的额外接口
+ * 基础类型的额外接口,包含基础类型的具体分类、如果类型有参数,要描述参数类型
  */
 public interface PrimitiveTypeSpec {
   /**
@@ -34,6 +34,7 @@ public interface PrimitiveTypeSpec {
   /**
    * @return Type params referred to by the PrimitiveTypeSpec
    * 需要获取该基础类型的参数对象
+   * 如果类型有参数,要描述参数类型,例如char(10) or decimal(10, 2).
    */
   BaseTypeParams getTypeParams();
 }

@@ -26,7 +26,7 @@ import org.apache.hadoop.hive.serde2.objectinspector.primitive.PrimitiveObjectIn
  */
 public class ParameterizedPrimitiveTypeUtils {
 
-	//返回接触类型的参数对象
+	//对象为基础类型的时候,才能有参数,否则返回null
   public static BaseTypeParams getTypeParamsFromTypeInfo(TypeInfo typeInfo) {
     BaseTypeParams typeParams = null;//获取该基础类型的参数,比如字符长度等信息
     if (typeInfo instanceof PrimitiveTypeInfo) {
@@ -36,12 +36,12 @@ public class ParameterizedPrimitiveTypeUtils {
     return typeParams;
   }
 
-//返回接触类型的参数对象
+//返回基础类型的参数对象
   public static BaseTypeParams getTypeParamsFromPrimitiveTypeEntry(PrimitiveTypeEntry typeEntry) {
     return typeEntry.typeParams;
   }
 
-//返回接触类型的参数对象
+//返回基础类型的参数对象
   public static BaseTypeParams getTypeParamsFromPrimitiveObjectInspector(
       PrimitiveObjectInspector oi) {
     return oi.getTypeParams();

@@ -52,7 +52,9 @@ import org.apache.hadoop.io.Text;
 public final class GenericUDFUtils {
   /**
    * Checks if b is the first byte of a UTF-8 character.
-   * 
+   * 0xc0表示192,二进制是11000000
+   * 0x80表示128,二进制是10000000
+   * 检查是否是UTF-8编码
    */
   public static boolean isUtfStartByte(byte b) {
     return (b & 0xC0) != 0x80;

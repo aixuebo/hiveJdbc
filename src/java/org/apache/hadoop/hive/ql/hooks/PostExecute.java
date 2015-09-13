@@ -31,7 +31,7 @@ public interface PostExecute extends Hook {
 
   /**
    * The run command that is called just before the execution of the query.
-   *
+   * 查询命令后执行该接口,进行后续处理,没有返回值,仅仅是处理,但是有异常可以抛出,停止查询流程
    * @param sess
    *          The session state.
    * @param inputs

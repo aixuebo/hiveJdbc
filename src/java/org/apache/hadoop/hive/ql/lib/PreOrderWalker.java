@@ -23,6 +23,7 @@ import org.apache.hadoop.hive.ql.parse.SemanticException;
 /**
  * base class for operator graph walker this class takes list of starting ops
  * and walks them one by one.
+ * °´Ë³ÐòµÄ
  */
 public class PreOrderWalker extends DefaultGraphWalker {
 

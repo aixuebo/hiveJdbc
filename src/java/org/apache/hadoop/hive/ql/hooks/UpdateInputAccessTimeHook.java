@@ -32,11 +32,13 @@ import org.apache.hadoop.hive.ql.metadata.Table;
 /**
  * Implementation of a pre execute hook that updates the access
  * times for all the inputs.
+ * 更新输入的数据源的最后修改时间
  */
 public class UpdateInputAccessTimeHook {
 
   private static final String LAST_ACCESS_TIME = "lastAccessTime";
 
+  //查询前处理hook
   public static class PreExec implements PreExecute {
     Hive db;
 
@@ -58,18 +60,20 @@ public class UpdateInputAccessTimeHook {
 
       for(ReadEntity re: inputs) {
         // Set the last query time
-        ReadEntity.Type typ = re.getType();
+        ReadEntity.Type typ = re.getType();//输入类型 TABLE, PARTITION, DUMMYPARTITION, DFS_DIR, LOCAL_DIR
         switch(typ) {
         // It is possible that read and write entities contain a old version
         // of the object, before it was modified by StatsTask.
         // Get the latest versions of the object
+        //因为读或者写的时候,可能有一个老版本的对象,属于类似事务的隔离级别相关,因此有必要更改最后访问时间
+        //设置该table的最后一次访问时间
         case TABLE: {
           Table t = db.getTable(re.getTable().getTableName());
           t.setLastAccessTime(lastAccessTime);
           db.alterTable(t.getTableName(), t);
           break;
         }
-        case PARTITION: {
+        case PARTITION: {//设置table和对应的partition的最后修改时间
           Partition p = re.getPartition();
           Table t = db.getTable(p.getTable().getTableName());
           p = db.getPartition(t, p.getSpec(), false);
