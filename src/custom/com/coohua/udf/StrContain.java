@@ -6,7 +6,7 @@ import org.apache.hadoop.io.Text;
 
 /**
  * 实现string的contains方法
- * true返回1,false返回0
+ * true返回1,false返回0 
  * create temporary function  strContain as 'com.coohua.udf.StrContain'; 
  */
 @Description(name = "strContains",
