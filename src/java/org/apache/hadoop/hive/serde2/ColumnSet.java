@@ -22,7 +22,7 @@ import java.util.ArrayList;
 
 /**
  * ColumnSet.
- *
+ *  Ù–‘nameºØ∫œ
  */
 public class ColumnSet {
   public ArrayList<String> col;

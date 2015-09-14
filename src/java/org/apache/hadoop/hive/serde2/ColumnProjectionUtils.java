@@ -26,41 +26,47 @@ import org.apache.hadoop.util.StringUtils;
 
 /**
  * ColumnProjectionUtils.
- *
+ * 属性规则攻击
  */
 public final class ColumnProjectionUtils {
 
-  public static final String READ_COLUMN_IDS_CONF_STR = "hive.io.file.readcolumn.ids";
+  public static final String READ_COLUMN_IDS_CONF_STR = "hive.io.file.readcolumn.ids";//将整数集合转化为逗号拆分的字符串,比如2,3,4,5,并且存储该字符串
   public static final String READ_COLUMN_NAMES_CONF_STR = "hive.io.file.readcolumn.names";
 
   /**
    * Sets read columns' ids(start from zero) for RCFile's Reader. Once a column
    * is included in the list, RCFile's reader will not skip its value.
-   * 
+   * 重新设置ids集合,覆盖操作
    */
   public static void setReadColumnIDs(Configuration conf, List<Integer> ids) {
-    String id = toReadColumnIDString(ids);
-    setReadColumnIDConf(conf, id);
+    String id = toReadColumnIDString(ids);//将整数集合转化为逗号拆分的字符串,比如2,3,4,5
+    setReadColumnIDConf(conf, id);//设置ids到配置文件中
   }
 
   /**
    * Sets read columns' ids(start from zero) for RCFile's Reader. Once a column
    * is included in the list, RCFile's reader will not skip its value.
-   * 
+   * 重新设置ids集合,追加ids集合
    */
   public static void appendReadColumnIDs(Configuration conf, List<Integer> ids) {
-    String id = toReadColumnIDString(ids);
+    String id = toReadColumnIDString(ids);//将整数集合转化为逗号拆分的字符串,比如2,3,4,5
     if (id != null) {
-      String old = conf.get(READ_COLUMN_IDS_CONF_STR, null);
+      String old = conf.get(READ_COLUMN_IDS_CONF_STR, null);///获取以前设置的
       String newConfStr = id;
-      if (old != null) {
+      if (old != null) {//新的id集合和老的id集合汇总
         newConfStr = newConfStr + StringUtils.COMMA_STR + old;
       }
 
+      //追加两个汇总ids集合到conf中
       setReadColumnIDConf(conf, newConfStr);
     }
   }
 
+  /**
+   * 重新设置ids集合,追加ids集合,返回aa,bb,cc
+   * @param conf
+   * @param cols
+   */
   public static void appendReadColumnNames(Configuration conf,
                                            List<String> cols) {
     if (cols != null) {
@@ -71,7 +77,7 @@ public final class ColumnProjectionUtils {
         if (first) {
           first = false;
         } else {
-          result.append(',');
+          result.append(',');//追加,号
         }
         result.append(col);
       }
@@ -88,6 +94,9 @@ public final class ColumnProjectionUtils {
     conf.set(READ_COLUMN_IDS_CONF_STR, id);
   }
 
+  /**
+   * 将整数集合转化为逗号拆分的字符串,比如2,3,4,5
+   */
   private static String toReadColumnIDString(List<Integer> ids) {
     String id = null;
     if (ids != null) {
@@ -105,6 +114,7 @@ public final class ColumnProjectionUtils {
   /**
    * Returns an array of column ids(start from zero) which is set in the given
    * parameter <tt>conf</tt>.
+   * 将ids的字符串格式转化成集合
    */
   public static ArrayList<Integer> getReadColumnIDs(Configuration conf) {
     if (conf == null) {
@@ -125,6 +135,7 @@ public final class ColumnProjectionUtils {
 
   /**
    * Clears the read column ids set in the conf, and will read all columns.
+   * 设置为空
    */
   public static void setFullyReadColumns(Configuration conf) {
     conf.set(READ_COLUMN_IDS_CONF_STR, "");

@@ -3,12 +3,9 @@ package maming;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.sql.Date;
-import java.util.Locale;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.ArrayList;
+import java.util.List;
 
-import org.apache.commons.io.FileUtils;
 import org.junit.Test;
 
 public class UtilsTest {
@@ -38,8 +35,27 @@ public class UtilsTest {
 	
 	@Test
 	public void test3(){
-		//System.out.println(System.getenv());
-		System.out.println(0x80);
-		System.out.println(Integer.toBinaryString(128));
+
+		List<String> cols = new ArrayList<String>();
+
+		cols.add("aaa");
+		cols.add("bbb");
+		cols.add("ccc");
+		
+	    if (cols != null) {
+	        String old = "";
+	        StringBuilder result = new StringBuilder(old);
+	        boolean first = old.isEmpty();
+	        for(String col: cols) {
+	        	System.out.println(first);
+	          if (first) {
+	            first = false;
+	          } else {
+	            result.append(',');
+	          }
+	          result.append(col);
+	        }
+	        System.out.println(result.toString());
+	      }
 	}
 }
