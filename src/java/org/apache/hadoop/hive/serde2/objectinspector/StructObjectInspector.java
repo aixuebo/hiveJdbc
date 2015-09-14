@@ -28,11 +28,13 @@ public abstract class StructObjectInspector implements ObjectInspector {
   // ** Methods that does not need a data object **
   /**
    * Returns all the fields.
+   * 存储该对象所有的属性集合
    */
   public abstract List<? extends StructField> getAllStructFieldRefs();
 
   /**
    * Look up a field.
+   * 通过属性名获取属性对象
    */
   public abstract StructField getStructFieldRef(String fieldName);
 
@@ -51,6 +53,9 @@ public abstract class StructObjectInspector implements ObjectInspector {
     return false;
   }
 
+  /**
+   * 打印该对象,以及该对象每一个属性的对象类型信息
+   */
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();

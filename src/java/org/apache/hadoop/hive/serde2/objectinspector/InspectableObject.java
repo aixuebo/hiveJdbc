@@ -20,7 +20,7 @@ package org.apache.hadoop.hive.serde2.objectinspector;
 
 /**
  * Simple wrapper of object with ObjectInspector.
- * 
+ * 简单的对对象检查器进行包装
  * TODO: we need to redefine the hashCode and equals methods, so that it can be
  * put into a HashMap as a key.
  * 
@@ -30,7 +30,7 @@ package org.apache.hadoop.hive.serde2.objectinspector;
 public class InspectableObject {
 
   public Object o;
-  public ObjectInspector oi;
+  public ObjectInspector oi;//被包装的 对象检查器
 
   public InspectableObject() {
     this(null, null);

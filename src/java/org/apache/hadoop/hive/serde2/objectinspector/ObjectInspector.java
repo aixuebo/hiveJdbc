@@ -35,6 +35,8 @@ package org.apache.hadoop.hive.serde2.objectinspector;
  * also makes sure hashCode() and equals() methods of java.lang.Object directly
  * works for ObjectInspector as well.
  * 根据该属性类型,设置处理属性的类型
+ * 
+ * 对象检查器
  */
 public interface ObjectInspector extends Cloneable {
 

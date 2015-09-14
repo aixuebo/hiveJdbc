@@ -41,10 +41,10 @@ class ColumnarStructObjectInspector extends StructObjectInspector {
       .getLog(ColumnarStructObjectInspector.class.getName());
 
   protected static class MyField implements StructField {
-    protected int fieldID;
-    protected String fieldName;
-    protected ObjectInspector fieldObjectInspector;
-    protected String fieldComment;
+    protected int fieldID;//属性是该对象的第几个属性
+    protected String fieldName;//属性名称
+    protected ObjectInspector fieldObjectInspector;//属性对象信息,即该属性属于哪个类型的
+    protected String fieldComment;//属性备注
 
     public MyField(int fieldID, String fieldName,
         ObjectInspector fieldObjectInspector) {
@@ -80,6 +80,7 @@ class ColumnarStructObjectInspector extends StructObjectInspector {
     }
   }
 
+  //该对象的属性集合
   protected List<MyField> fields;
 
   @Override
@@ -101,6 +102,9 @@ class ColumnarStructObjectInspector extends StructObjectInspector {
     init(structFieldNames, structFieldObjectInspectors, structFieldComments);
   }
 
+  /**
+   * 属性名称、属性类型、属性备注 三个的集合,三个的数量应该是一样的,一对一的关系
+   */
   protected void init(List<String> structFieldNames,
       List<ObjectInspector> structFieldObjectInspectors,
       List<String> structFieldComments) {
