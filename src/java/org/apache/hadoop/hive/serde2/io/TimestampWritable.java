@@ -51,7 +51,7 @@ import org.apache.hadoop.io.WritableUtils;
  *      0.1    -> 1
  *      0.01   -> 10
  *      0.001  -> 100
- *
+ * hadoop可以序列化的时间对象
  */
 public class TimestampWritable implements WritableComparable<TimestampWritable> {
   static final private Log LOG = LogFactory.getLog(TimestampWritable.class);

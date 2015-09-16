@@ -32,17 +32,26 @@ import org.apache.hadoop.io.Text;
  * 
  * Always use the ObjectInspectorFactory to create new ObjectInspector objects,
  * instead of directly creating an instance of this class.
+ * 集合,该集合存储的元素对象,一个集合只能存储一种元素
+ * 属于Category.List分类
  */
 public class LazyListObjectInspector implements ListObjectInspector {
 
   public static final Log LOG = LogFactory.getLog(LazyListObjectInspector.class
       .getName());
 
+  //该集合存储的元素对象,一个集合只能存储一种元素
   ObjectInspector listElementObjectInspector;
 
-  byte separator;
+  byte separator;//使用该字符进行拆分
   Text nullSequence;
-  boolean escaped;
+  boolean escaped;//是否需要转义
+  /**
+   * 需要转义的字符,如果escaped=true,则当遇见escapeChar的时候,则将escapeChar+之后的字符都原样的输出,比如escapeChar=\ 则当遇见12\3的时候,会输出12\3
+   * 再例如escapeChar=\,separator=,
+   * 输入:12\,45,555
+   * 输出:12\,45和555
+   */
   byte escapeChar;
 
   /**
@@ -69,6 +78,8 @@ public class LazyListObjectInspector implements ListObjectInspector {
   }
 
   // with data
+  //data是LazyArray类型的对象
+  //return返回LazyArray集合中第index个元素的值
   @Override
   public Object getListElement(Object data, int index) {
     if (data == null) {
@@ -78,6 +89,8 @@ public class LazyListObjectInspector implements ListObjectInspector {
     return array.getListElementObject(index);
   }
 
+  //data是LazyArray类型的对象
+  //返回集合元素的个数
   @Override
   public int getListLength(Object data) {
     if (data == null) {
@@ -87,6 +100,8 @@ public class LazyListObjectInspector implements ListObjectInspector {
     return array.getListLength();
   }
 
+  //data是LazyArray类型的对象
+  //返回集合元素集合
   @Override
   public List<?> getList(Object data) {
     if (data == null) {
@@ -96,6 +111,7 @@ public class LazyListObjectInspector implements ListObjectInspector {
     return array.getList();
   }
 
+  //array<类型对象>
   @Override
   public String getTypeName() {
     return org.apache.hadoop.hive.serde.serdeConstants.LIST_TYPE_NAME + "<"

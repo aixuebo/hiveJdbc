@@ -31,7 +31,7 @@ import org.apache.hadoop.hive.serde2.lazy.objectinspector.primitive.LazyByteObje
  * Delight, (Addison Wesley, 2002)</a> as well as <a
  * href="http://aggregate.org/MAGIC/">The Aggregate's Magic Algorithms</a>.
  * </p>
- * 
+ * 存储一个byte字节
  */
 public class LazyByte extends
     LazyPrimitive<LazyByteObjectInspector, ByteWritable> {
@@ -89,6 +89,7 @@ public class LazyByte extends
    * @return byte the value represented by the argument
    * @throws NumberFormatException
    *           if the argument could not be parsed as a byte quantity.
+   *  从字节数组中获取int值,将该值转换成byte
    */
   public static byte parseByte(byte[] bytes, int start, int length, int radix) {
     int intValue = LazyInteger.parseInt(bytes, start, length, radix);

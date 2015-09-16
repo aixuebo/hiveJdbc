@@ -88,6 +88,7 @@ public class ByteWritable implements WritableComparable {
 
     /**
      * Compare the buffers in serialized form.
+     * 仅仅比较第一个字节即可
      */
     @Override
     public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2) {

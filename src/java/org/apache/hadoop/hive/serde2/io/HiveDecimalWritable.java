@@ -31,14 +31,17 @@ import org.apache.hadoop.hive.serde2.lazybinary.LazyBinaryUtils.VInt;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableUtils;
 
+/**
+ * HiveDecimal对象的hadoop序列化反序列化对象
+ */
 public class HiveDecimalWritable implements WritableComparable<HiveDecimalWritable> {
 
   static final private Log LOG = LogFactory.getLog(HiveDecimalWritable.class);
 
-  private byte[] internalStorage = new byte[0];
-  private int scale;
+  private byte[] internalStorage = new byte[0];//使用字节数组存储HiveDecimal对象
+  private int scale;//比例,即小数部分
 
-  private final VInt vInt = new VInt(); // reusable integer
+  private final VInt vInt = new VInt(); // reusable integer 记录可变的int,最终int的值和int所占字节大小存储到该对象中
 
   public HiveDecimalWritable() {
   }

@@ -21,14 +21,15 @@ import java.util.Map;
 
 /**
  * MapObjectInspector.
- *
+ * 定义Map对象,key和value一定是固定的两个对象
  */
 public interface MapObjectInspector extends ObjectInspector {
 
   // ** Methods that does not need a data object **
-  // Map Type
+  // Map Type 获取map的key的对象类型
   ObjectInspector getMapKeyObjectInspector();
 
+  //获取map的value对象类型
   ObjectInspector getMapValueObjectInspector();
 
   // ** Methods that need a data object **
@@ -37,6 +38,7 @@ public interface MapObjectInspector extends ObjectInspector {
   // In rare cases that key is not primitive, the user is responsible for
   // defining
   // the hashCode() and equals() methods of the key class.
+  //data是LazyMap类型,需要强转,然后获取key对应的value值
   Object getMapValueElement(Object data, Object key);
 
   /**
@@ -47,11 +49,13 @@ public interface MapObjectInspector extends ObjectInspector {
    * will be used in multiple places in the code.
    * 
    * However it's OK if the Map object is part of the Object data.
+   * data是LazyMap类型,需要强转,返回该map对象即可
    */
   Map<?, ?> getMap(Object data);
 
   /**
    * returns -1 for NULL map.
+   * data是LazyMap类型,需要强转,获取map存放的元素数量
    */
   int getMapSize(Object data);
 }

@@ -27,6 +27,9 @@ import org.apache.hadoop.hive.serde2.lazy.objectinspector.primitive.LazyBinaryOb
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 
+/**
+ * 存储字节数组
+ */
 public class LazyBinary extends LazyPrimitive<LazyBinaryObjectInspector, BytesWritable> {
 
   private static final Log LOG = LogFactory.getLog(LazyBinary.class);
@@ -44,6 +47,9 @@ public class LazyBinary extends LazyPrimitive<LazyBinaryObjectInspector, BytesWr
     data = new BytesWritable(bytes);
   }
 
+  /**
+   * 从字节数组中解析length个字节,如果是base64编码的,还需要解码
+   */
   @Override
   public void init(ByteArrayRef bytes, int start, int length) {
 

@@ -48,9 +48,15 @@ public class LazyUnionObjectInspector implements UnionObjectInspector {
     return ObjectInspectorUtils.getStandardUnionTypeName(this);
   }
 
-  byte separator;
-  Text nullSequence;
-  boolean escaped;
+  byte separator;//拆分字符
+  Text nullSequence;//当值与nullSequence对应的值相同的时候,则要设置为null
+  boolean escaped;//是否需要转义
+  /**
+   * 需要转义的字符,如果escaped=true,则当遇见escapeChar的时候,则将escapeChar+之后的字符都原样的输出,比如escapeChar=\ 则当遇见12\3的时候,会输出12\3
+   * 再例如escapeChar=\,separator=,
+   * 输入:12\,45,555
+   * 输出:12\,45和555
+   */
   byte escapeChar;
 
   protected LazyUnionObjectInspector(

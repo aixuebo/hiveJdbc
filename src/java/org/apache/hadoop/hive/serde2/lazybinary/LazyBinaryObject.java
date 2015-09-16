@@ -23,9 +23,10 @@ import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 /**
  * LazyBinaryObject stores an object in a binary format in a byte[]. For
  * example, a double takes four bytes.
- * 
+ * 用字节数组的方式存储该对象的二进制,比如一个double类型的就用4个字节存储
  * A LazyBinaryObject can represent any primitive object or hierarchical object
  * like string, list, map or struct.
+ * 该对象可以代表任何原始类型、String、list、map、struct等类型
  */
 public abstract class LazyBinaryObject<OI extends ObjectInspector> extends LazyObjectBase {
 

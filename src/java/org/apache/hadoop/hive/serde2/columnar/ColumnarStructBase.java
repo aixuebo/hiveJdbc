@@ -37,7 +37,7 @@ public abstract class ColumnarStructBase implements SerDeStatsStruct {
      * use an array instead of only one object in case in future hive does not do
      * the byte copy.
      */
-    ByteArrayRef cachedByteArrayRef;
+    ByteArrayRef cachedByteArrayRef;//缓存字节数组对象
     BytesRefWritable rawBytesField;
     boolean inited;
     boolean fieldSkipped;
@@ -139,7 +139,7 @@ public abstract class ColumnarStructBase implements SerDeStatsStruct {
     }
 
     for (int i = 0; i < num; i++) {
-      ObjectInspector foi = fieldRefs.get(i).getFieldObjectInspector();
+      ObjectInspector foi = fieldRefs.get(i).getFieldObjectInspector();//每一个属性对应的类型
       fieldInfoList[i] = new FieldInfo(
           createLazyObjectBase(foi),
           !notSkippedColumnIDs.contains(i),

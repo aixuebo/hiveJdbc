@@ -64,6 +64,7 @@ public class LazyUnion extends
    * Set the row data for this LazyUnion.
    *
    * @see LazyObject#init(ByteArrayRef, int, int)
+   * 仅仅初始化字节数组,但是不会去解析
    */
   @Override
   public void init(ByteArrayRef bytes, int start, int length) {

@@ -31,7 +31,7 @@ import org.apache.hadoop.io.BooleanWritable;
  * Delight, (Addison Wesley, 2002)</a> as well as <a
  * href="http://aggregate.org/MAGIC/">The Aggregate's Magic Algorithms</a>.
  * </p>
- * 
+ * 从字节数组中获取true或者false字节内容,用来判断是否是设置true还是false作为hadoop的序列化对象
  */
 public class LazyBoolean extends
     LazyPrimitive<LazyBooleanObjectInspector, BooleanWritable> {

@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.hive.serde2.lazy;
 
+/**
+ * 懒加载,当需要的时候再会调用getobject对象获取值,否则不会去调用
+ * 
+ * 懒加载方式都是通过LazyFactory工厂,调用init方法创建的,其他方式创建的不属于懒加载方式
+ */
 public abstract class LazyObjectBase {
 
   /**
@@ -32,6 +37,7 @@ public abstract class LazyObjectBase {
    * @param length
    *          The length of the data, starting from "start"
    * @see ByteArrayRef
+   * 使用字节数组初始化具体对象的内容，例如如果懒加载对象是double的，则字节数组中有4位就是可以组成double内容
    */
   public abstract void init(ByteArrayRef bytes, int start, int length);
 

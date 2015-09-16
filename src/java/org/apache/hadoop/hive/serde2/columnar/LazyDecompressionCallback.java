@@ -24,6 +24,7 @@ import java.io.IOException;
  * Used to call back lazy decompression process.
  *
  * @see org.apache.hadoop.hive.serde2.columnar.BytesRefWritable
+ * Ω‚—πÀı
  */
 public interface LazyDecompressionCallback {
 

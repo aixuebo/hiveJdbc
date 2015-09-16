@@ -55,6 +55,7 @@ public final class LazyBinaryUtils {
    * @param offset
    *          the array offset
    * @return the integer
+   * 从字节数组中获取4个字节组装成int
    */
   public static int byteArrayToInt(byte[] b, int offset) {
     int value = 0;
@@ -73,6 +74,7 @@ public final class LazyBinaryUtils {
    * @param offset
    *          the array offset
    * @return the long
+   * 从字节数组中获取8个字节组装成long
    */
   public static long byteArrayToLong(byte[] b, int offset) {
     long value = 0;
@@ -91,6 +93,7 @@ public final class LazyBinaryUtils {
    * @param offset
    *          the array offset
    * @return the short
+   * 从字节数组中获取2个字节组装成short
    */
   public static short byteArrayToShort(byte[] b, int offset) {
     short value = 0;
@@ -150,6 +153,7 @@ public final class LazyBinaryUtils {
    *          offset of this field
    * @param recordInfo
    *          modify this byteinfo object and return it
+   * 根据参数objectInspector不同类型,设置recordInfo对象值
    */
   public static void checkObjectByteInfo(ObjectInspector objectInspector,
       byte[] bytes, int offset, RecordInfo recordInfo) {
@@ -243,6 +247,7 @@ public final class LazyBinaryUtils {
 
   /**
    * A zero-compressed encoded long.
+   * 记录可变的long,最终long的值和long所占字节大小存储到该对象中
    */
   public static class VLong {
     public VLong() {
@@ -250,8 +255,8 @@ public final class LazyBinaryUtils {
       length = 0;
     }
 
-    public long value;
-    public byte length;
+    public long value;//该变长的long的value值
+    public byte length;//该可变长long所占用字节长度
   };
 
   /**
@@ -263,10 +268,11 @@ public final class LazyBinaryUtils {
    *          offset of the array to read from
    * @param vlong
    *          storing the deserialized long and its size in byte
+   * 读取变长的long对象,将值存储到VLong对象中
    */
   public static void readVLong(byte[] bytes, int offset, VLong vlong) {
     byte firstByte = bytes[offset];
-    vlong.length = (byte) WritableUtils.decodeVIntSize(firstByte);
+    vlong.length = (byte) WritableUtils.decodeVIntSize(firstByte);//读取变长的long的应有长度
     if (vlong.length == 1) {
       vlong.value = firstByte;
       return;
@@ -282,6 +288,7 @@ public final class LazyBinaryUtils {
 
   /**
    * A zero-compressed encoded integer.
+   * 记录可变的int,最终int的值和int所占字节大小存储到该对象中
    */
   public static class VInt {
     public VInt() {
@@ -309,10 +316,11 @@ public final class LazyBinaryUtils {
    *          offset of the array to read from
    * @param vInt
    *          storing the deserialized int and its size in byte
+   *  读取变长的int对象,将值存储到VInt对象中 
    */
   public static void readVInt(byte[] bytes, int offset, VInt vInt) {
     byte firstByte = bytes[offset];
-    vInt.length = (byte) WritableUtils.decodeVIntSize(firstByte);
+    vInt.length = (byte) WritableUtils.decodeVIntSize(firstByte);//需要占用的字节大小
     if (vInt.length == 1) {
       vInt.value = firstByte;
       return;
@@ -333,6 +341,7 @@ public final class LazyBinaryUtils {
    *          the byte array/stream
    * @param i
    *          the int
+   * 将int值变成可变字节数组,存储到输出流中         
    */
   public static void writeVInt(Output byteStream, int i) {
     writeVLong(byteStream, i);
@@ -344,6 +353,7 @@ public final class LazyBinaryUtils {
    * @param bytes the byte array
    * @param offset the offset in the byte array where the VLong is stored
    * @return the long
+   * 从字节数组的offset中读取一个可变字节数组组成的long值返回
    */
   public static long readVLongFromByteArray(final byte[] bytes, int offset) {
     byte firstByte = bytes[offset++];
@@ -367,13 +377,19 @@ public final class LazyBinaryUtils {
    *          the byte array/stream
    * @param l
    *          the long
+   * 将long的值存储在bytes数组中,从0位置开始存储
+   * @return 返回一共占用多少个字节存储该long
    */
   public static int writeVLongToByteArray(byte[] bytes, long l) {
     return LazyBinaryUtils.writeVLongToByteArray(bytes, 0, l);
   }
 
+  /**
+   * 将long的值存储在bytes数组中,从offset位置开始存储
+   * @return 返回一共占用多少个字节存储该long
+   */
   public static int writeVLongToByteArray(byte[] bytes, int offset, long l) {
-    if (l >= -112 && l <= 127) {
+    if (l >= -112 && l <= 127) {//用一个字节就可以存储long了
       bytes[offset] = (byte) l;
       return 1;
     }
@@ -402,6 +418,7 @@ public final class LazyBinaryUtils {
     return 1 + len;
   }
 
+  //每一个线程缓存一个字节数组,用于复用,该字节数组中存储随后要使用的long的字节信息
   private static ThreadLocal<byte[]> vLongBytesThreadLocal = new ThreadLocal<byte[]>() {
     @Override
     public byte[] initialValue() {
@@ -409,12 +426,14 @@ public final class LazyBinaryUtils {
     }
   };
 
+  //将long类型的值,使用可变数组存储起来,并且将其输出到输出流中
   public static void writeVLong(Output byteStream, long l) {
     byte[] vLongBytes = vLongBytesThreadLocal.get();
     int len = LazyBinaryUtils.writeVLongToByteArray(vLongBytes, l);
     byteStream.write(vLongBytes, 0, len);
   }
 
+  //缓存
   static HashMap<TypeInfo, ObjectInspector> cachedLazyBinaryObjectInspector = new HashMap<TypeInfo, ObjectInspector>();
 
   /**

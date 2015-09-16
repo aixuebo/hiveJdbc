@@ -24,10 +24,11 @@ import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
  *
  * A LazyObject can represent any primitive object or hierarchical object like
  * array, map or struct.
+ * 该类描述成一个具体的对象类型,包含任何基础类型、list、array、map或者struct,但是该对象仅仅指代一种数据类型
  */
 public abstract class LazyObject<OI extends ObjectInspector> extends LazyObjectBase {
 
-  protected OI oi;
+  protected OI oi;//泛型对象,可以通过该对象知道要处理的是什么类型的对象
 
   /**
    * Create a LazyObject.

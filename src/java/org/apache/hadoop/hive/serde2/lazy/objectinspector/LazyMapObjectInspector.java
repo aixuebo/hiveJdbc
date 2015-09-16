@@ -32,19 +32,27 @@ import org.apache.hadoop.io.Text;
  * 
  * Always use the ObjectInspectorFactory to create new ObjectInspector objects,
  * instead of directly creating an instance of this class.
+ * 定义Map对象,key和value一定是固定的两个对象
+ * 属于Category.MAP分类
  */
 public class LazyMapObjectInspector implements MapObjectInspector {
 
   public static final Log LOG = LogFactory.getLog(LazyMapObjectInspector.class
       .getName());
 
-  ObjectInspector mapKeyObjectInspector;
-  ObjectInspector mapValueObjectInspector;
+  ObjectInspector mapKeyObjectInspector;//key的对象类型
+  ObjectInspector mapValueObjectInspector;//value的对象类型
 
-  byte itemSeparator;
-  byte keyValueSeparator;
-  Text nullSequence;
-  boolean escaped;
+  byte itemSeparator;//每一组key-value的分隔符
+  byte keyValueSeparator;//key-value之间的分隔符
+  Text nullSequence;//value或者key的null值,当key或者value与nullSequence相同时,key/value将被设置成null
+  boolean escaped;//是否需要转义
+  /**
+   * 需要转义的字符,如果escaped=true,则当遇见escapeChar的时候,则将escapeChar+之后的字符都原样的输出,比如escapeChar=\ 则当遇见12\3的时候,会输出12\3
+   * 再例如escapeChar=\,separator=,
+   * 输入:12\,45,555
+   * 输出:12\,45和555
+   */
   byte escapeChar;
 
   /**
@@ -69,6 +77,7 @@ public class LazyMapObjectInspector implements MapObjectInspector {
     return Category.MAP;
   }
 
+  //map<key的类型,value的类型>
   @Override
   public String getTypeName() {
     return org.apache.hadoop.hive.serde.serdeConstants.MAP_TYPE_NAME + "<"
@@ -86,6 +95,9 @@ public class LazyMapObjectInspector implements MapObjectInspector {
     return mapValueObjectInspector;
   }
 
+  /**
+   * data是LazyMap类型,需要强转,然后获取key对应的value值
+   */
   @Override
   public Object getMapValueElement(Object data, Object key) {
     if (data == null) {
@@ -94,6 +106,7 @@ public class LazyMapObjectInspector implements MapObjectInspector {
     return ((LazyMap) data).getMapValueElement(key);
   }
 
+  //data是LazyMap类型,需要强转,返回该map对象即可
   @Override
   public Map<?, ?> getMap(Object data) {
     if (data == null) {
@@ -102,6 +115,7 @@ public class LazyMapObjectInspector implements MapObjectInspector {
     return ((LazyMap) data).getMap();
   }
 
+  //data是LazyMap类型,需要强转,获取map存放的元素数量
   @Override
   public int getMapSize(Object data) {
     if (data == null) {

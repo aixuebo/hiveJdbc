@@ -31,6 +31,9 @@ import org.apache.hadoop.io.Text;
  *
  * LazyMap does not deal with the case of a NULL map. That is handled by the
  * parent LazyObject.
+ * 
+ * 懒加载,只有需要的时候才真正意义的去解析数据
+ * 解析Map,key是基础类型,value是任意类型,key-value类型一定是初始化的时候就固定好的
  */
 public class LazyMap extends LazyNonPrimitive<LazyMapObjectInspector> {
 
@@ -51,7 +54,7 @@ public class LazyMap extends LazyNonPrimitive<LazyMapObjectInspector> {
    * The beginning position of key[i]. Only valid when the data is parsed. Note
    * that keyStart[mapSize] = begin + length + 1; that makes sure we can use the
    * same formula to compute the length of each value in the map.
-   * 存储每一个key-value的开始位置
+   * 存储每一个key-value的开始位置,连续两个位置之差,就是一个key-value所占用的字节总数
    */
   int[] keyStart;
 
@@ -94,6 +97,7 @@ public class LazyMap extends LazyNonPrimitive<LazyMapObjectInspector> {
    * Set the row data for this LazyArray.
    *
    * @see LazyObject#init(ByteArrayRef, int, int)
+   * 初始化数据,将数据传入,但是不去解析
    */
   @Override
   public void init(ByteArrayRef bytes, int start, int length) {
@@ -128,11 +132,12 @@ public class LazyMap extends LazyNonPrimitive<LazyMapObjectInspector> {
 
   /**
    * Parse the byte[] and fill keyStart, keyEnd.
+   * 解析字节数组
    */
   private void parse() {
     parsed = true;
 
-    byte itemSeparator = oi.getItemSeparator();//没有个元素的分隔符
+    byte itemSeparator = oi.getItemSeparator();//每个元素的分隔符
     byte keyValueSeparator = oi.getKeyValueSeparator();//map中key-value的分隔符
     boolean isEscaped = oi.isEscaped();
     byte escapeChar = oi.getEscapeChar();
@@ -176,7 +181,7 @@ public class LazyMap extends LazyNonPrimitive<LazyMapObjectInspector> {
           keyValueSeparatorPosition = elementByteEnd;
         }
         if (isEscaped && bytes[elementByteEnd] == escapeChar
-            && elementByteEnd + 1 < arrayByteEnd) {
+            && elementByteEnd + 1 < arrayByteEnd) {//遇见转义字符,则将转义字符的下一个字符也一起跳跃过去,不需要被解析了
           // ignore the char after escape_char
           elementByteEnd += 2;
         } else {
@@ -210,6 +215,7 @@ public class LazyMap extends LazyNonPrimitive<LazyMapObjectInspector> {
    * @param key
    *          The key object that we are looking for.
    * @return The corresponding value object, or NULL if not found
+   * 获取map中存储的key对应的value值
    */
   public Object getMapValueElement(Object key) {
     if (!parsed) {
@@ -217,16 +223,20 @@ public class LazyMap extends LazyNonPrimitive<LazyMapObjectInspector> {
     }
     // search for the key
     for (int i = 0; i < mapSize; i++) {
+      //获取key
       LazyPrimitive<?, ?> lazyKeyI = uncheckedGetKey(i);
-      if (lazyKeyI == null) {
+      if (lazyKeyI == null) {//说明该key不存在
         continue;
       }
       // getWritableObject() will convert LazyPrimitive to actual primitive
       // writable objects.
+      //获取key对应的值,注意获取的是可序列化的
       Object keyI = lazyKeyI.getWritableObject();
       if (keyI == null) {
         continue;
       }
+      
+      //如果key对应的值与参数相同,则获取对应的value
       if (keyI.equals(key)) {
         // Got a match, return the value
         LazyObject v = uncheckedGetValue(i);
@@ -242,11 +252,14 @@ public class LazyMap extends LazyNonPrimitive<LazyMapObjectInspector> {
    *
    * @param index
    *          The index into the array starting from 0
+   * 获取第index位置的value值         
    */
   private LazyObject uncheckedGetValue(int index) {
-    if (valueInited[index]) {
+    if (valueInited[index]) {//如果被初始化了,则直接获取
       return valueObjects[index];
     }
+    
+    //设置value已经被初始化了
     valueInited[index] = true;
     Text nullSequence = oi.getNullSequence();
     int valueIBegin = keyEnd[index] + 1;
@@ -254,9 +267,10 @@ public class LazyMap extends LazyNonPrimitive<LazyMapObjectInspector> {
     if (valueILength < 0
         || ((valueILength == nullSequence.getLength()) && 0 == LazyUtils
         .compare(bytes.getData(), valueIBegin, valueILength, nullSequence
-        .getBytes(), 0, nullSequence.getLength()))) {
+        .getBytes(), 0, nullSequence.getLength()))) {//如果value的值与nullSequence相同,则设置value为null
       return valueObjects[index] = null;
     }
+    //创建value对象,并且调用初始化方法
     valueObjects[index] = LazyFactory
         .createLazyObject(oi.getMapValueObjectInspector());
     valueObjects[index].init(bytes, valueIBegin, valueILength);
@@ -268,23 +282,27 @@ public class LazyMap extends LazyNonPrimitive<LazyMapObjectInspector> {
    *
    * @param index
    *          The index into the array starting from 0
+   * 获取第index个对应的key         
    */
   private LazyPrimitive<?, ?> uncheckedGetKey(int index) {
 	  //如果该key已经被加载过了,则直接过去即可
     if (keyInited[index]) {
       return keyObjects[index];
     }
+    
+    //设置该key被加载了
     keyInited[index] = true;
 
     Text nullSequence = oi.getNullSequence();
-    int keyIBegin = keyStart[index];
+    int keyIBegin = keyStart[index];//key的起始位置
     int keyILength = keyEnd[index] - keyStart[index];//key所占字节长度
     if (keyILength < 0
         || ((keyILength == nullSequence.getLength()) && 0 == LazyUtils.compare(
         bytes.getData(), keyIBegin, keyILength, nullSequence.getBytes(), 0,
-        nullSequence.getLength()))) {
+        nullSequence.getLength()))) {//如果key的信息与nullSequence相同,则设置key为null
       return keyObjects[index] = null;
     }
+    //初始化该key,并且调用该key的init方法
     // Keys are always primitive
     keyObjects[index] = LazyFactory
         .createLazyPrimitiveClass((PrimitiveObjectInspector) oi.getMapKeyObjectInspector());
@@ -303,6 +321,7 @@ public class LazyMap extends LazyNonPrimitive<LazyMapObjectInspector> {
    * will be Writable primitive objects.
    *
    * @return the map object
+   * 获取key-value对象的集合,并且缓存起来
    */
   public Map<Object, Object> getMap() {
     if (!parsed) {
@@ -335,6 +354,7 @@ public class LazyMap extends LazyNonPrimitive<LazyMapObjectInspector> {
    * Get the size of the map represented by this LazyMap.
    *
    * @return The size of the map, -1 for NULL map.
+   * 获取map存放的元素数量
    */
   public int getMapSize() {
     if (!parsed) {

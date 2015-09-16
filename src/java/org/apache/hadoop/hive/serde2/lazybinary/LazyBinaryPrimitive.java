@@ -28,7 +28,9 @@ import org.apache.hadoop.io.Writable;
  * LazyBinaryBoolean class.
  * 
  * There is no null flag any more,
- * 
+ * 接收两个泛型,
+ * 第二个泛型是该对象类型
+ * 第二个泛型是该对象必须接受hadoop的序列化
  */
 public abstract class LazyBinaryPrimitive<OI extends ObjectInspector, T extends Writable>
     extends LazyBinaryObject<OI> {
@@ -41,6 +43,7 @@ public abstract class LazyBinaryPrimitive<OI extends ObjectInspector, T extends 
     super(copy.oi);
   }
 
+  //具体的hadoop的序列化和反序列化的对象,该对象包含值
   T data;
 
   /**

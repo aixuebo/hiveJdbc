@@ -19,6 +19,7 @@ package org.apache.hadoop.hive.serde2.objectinspector.primitive;
 
 /**
  * A SettableLongObjectInspector can set a long value to an object.
+ * 一个可设置long类型的value值的对象
  */
 public interface SettableLongObjectInspector extends LongObjectInspector {
 
@@ -27,11 +28,13 @@ public interface SettableLongObjectInspector extends LongObjectInspector {
    * 
    * In most cases the returned value should be the same as o, but in case o is
    * unmodifiable, this will return a new object with new value.
+   * 将value的值设置到o中
    */
   Object set(Object o, long value);
 
   /**
    * Create an object with the value.
+   * 根据value值创建一个o对象
    */
   Object create(long value);
 }

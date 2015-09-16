@@ -40,7 +40,7 @@ import org.apache.hadoop.io.WritableUtils;
  *
  * Dates are of the format
  *    YYYY-MM-DD
- *
+ * 时间序列化,仅仅需要存储"距离1970-01-01多少天"即可表示任何时间格式
  */
 public class DateWritable implements WritableComparable<DateWritable> {
   private static final Log LOG = LogFactory.getLog(DateWritable.class);
@@ -57,6 +57,7 @@ public class DateWritable implements WritableComparable<DateWritable> {
   };
 
   // Internal representation is an integer representing day offset from our epoch value 1970-01-01
+  //表示距离1970-01-01多少天,通过该值可以获取各种时间格式
   private int daysSinceEpoch = 0;
 
   /* Constructors */
@@ -93,6 +94,7 @@ public class DateWritable implements WritableComparable<DateWritable> {
       return;
     }
 
+    //将d转化成距离1970-01-01多少天
     set(dateToDays(d));
   }
 
@@ -103,11 +105,13 @@ public class DateWritable implements WritableComparable<DateWritable> {
   /**
    *
    * @return Date value corresponding to the date in the local time zone
+   * 将距离1970-01-01多少天,转化成应该是什么时间戳
    */
   public Date get() {
     return new Date(daysToMillis(daysSinceEpoch));
   }
 
+  //表示距离1970-01-01多少天,通过该值可以获取各种时间格式
   public int getDays() {
     return daysSinceEpoch;
   }
@@ -115,21 +119,25 @@ public class DateWritable implements WritableComparable<DateWritable> {
   /**
    *
    * @return time in seconds corresponding to this DateWritable
+   * 将距离1970-01-01多少天,转化成应该是什么时间戳,时间戳单位是秒
    */
   public long getTimeInSeconds() {
     return get().getTime() / 1000;
   }
 
+  //对应于函数getTimeInSeconds,参数l的单位是秒,因此要*1000表示时间戳
   public static Date timeToDate(long l) {
     return new Date(l * 1000);
   }
 
+  //将距离1970-01-01多少天,转化成应该是什么时间戳
   public static long daysToMillis(int d) {
     // Convert from day offset to ms in UTC, then apply local timezone offset.
     long millisUtc = d * MILLIS_PER_DAY;
     return millisUtc - LOCAL_TIMEZONE.get().getOffset(millisUtc);
   }
 
+  //将d转化成距离1970-01-01多少天
   public static int dateToDays(Date d) {
     // convert to equivalent time in UTC, then get day offset
     long millisLocal = d.getTime();

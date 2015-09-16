@@ -21,6 +21,7 @@ import org.apache.hadoop.io.LongWritable;
 
 /**
  * A WritableLongObjectInspector inspects a LongWritable Object.
+ * 可以hadoop序列化的long对象
  */
 public class WritableLongObjectInspector extends
     AbstractPrimitiveWritableObjectInspector implements

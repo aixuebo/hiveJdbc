@@ -31,7 +31,7 @@ public class HiveDecimal implements Comparable<HiveDecimal> {
 
   public static final HiveDecimal ZERO = new HiveDecimal(BigDecimal.ZERO);
 
-  public static final int MAX_PRECISION = 38; // fits into 128 bits
+  public static final int MAX_PRECISION = 38; // fits into 128 bits 精准度
 
   public static final HiveDecimal ONE = new HiveDecimal(BigDecimal.ONE);
 
@@ -88,6 +88,7 @@ public class HiveDecimal implements Comparable<HiveDecimal> {
      return bd.toPlainString();
   }
 
+  //重新设置小数点后位数,产生新的对象
   public HiveDecimal setScale(int i) {
     return new HiveDecimal(bd.setScale(i));
   }
@@ -146,6 +147,9 @@ public class HiveDecimal implements Comparable<HiveDecimal> {
     return bd.byteValue();
   }
 
+  /**
+   * 第二个参数是模式BigDecimal.ROUND_HALF_UP,表示四舍五入
+   */
   public HiveDecimal setScale(int adjustedScale, int rm) {
     return new HiveDecimal(bd.setScale(adjustedScale, rm));
   }
@@ -158,6 +162,7 @@ public class HiveDecimal implements Comparable<HiveDecimal> {
     return new HiveDecimal(bd.multiply(dec.bd));
   }
 
+  //eg:0.09869999999999999606981049282694584690034389495849609375 返回9869999999999999606981049282694584690034389495849609375
   public BigInteger unscaledValue() {
     return bd.unscaledValue();
   }
@@ -195,7 +200,7 @@ public class HiveDecimal implements Comparable<HiveDecimal> {
       // Special case for 0, because java doesn't strip zeros correctly on that number.
       d = BigDecimal.ZERO;
     } else {
-      d = d.stripTrailingZeros();
+      d = d.stripTrailingZeros();//23500.000 移除后面的0,改成23500或者2.35E4
       if (d.scale() < 0) {
         // no negative scale decimals
         d = d.setScale(0);
@@ -204,6 +209,13 @@ public class HiveDecimal implements Comparable<HiveDecimal> {
     return d;
   }
 
+  /**
+   * 格式化BigDecimal
+   * @param d 等待被格式化的BigDecimal对象
+   * @param precision 要求最后格式化之后的精确度
+   * @param allowRounding 是否当value真实值的精确度大于参数precision的精确度的时候,允许进行剪切精确度.比如四舍五入方式
+   * @return
+   */
   private BigDecimal normalize(BigDecimal d, int precision, boolean allowRounding) {
     if (d == null) {
       return null;

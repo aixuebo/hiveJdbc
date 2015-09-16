@@ -23,6 +23,7 @@ package org.apache.hadoop.hive.serde2.lazy;
  * The LazyObject hierarchy uses a reference to a single ByteArrayRef, so that
  * it's much faster to switch to the next row and release the reference to the
  * old row (so that the system can do garbage collection if needed).
+ * 仅仅存储字节数组
  */
 public class ByteArrayRef {
 

@@ -35,6 +35,7 @@ public class LazyBinaryLong extends
     data = new LongWritable();
   }
 
+  //复制参数的值
   LazyBinaryLong(LazyBinaryLong copy) {
     super(copy);
     data = new LongWritable(copy.data.get());
@@ -47,6 +48,7 @@ public class LazyBinaryLong extends
 
   @Override
   public void init(ByteArrayRef bytes, int start, int length) {
+	//通过字节数组,解析对应的long值,赋值到VLong对象中
     LazyBinaryUtils.readVLong(bytes.getData(), start, vLong);
     assert (length == vLong.length);
     data.set(vLong.value);

@@ -30,6 +30,8 @@ import org.apache.hadoop.io.WritableFactory;
 /**
  * <tt>BytesRefWritable</tt> referenced a section of byte array. It can be used
  * to avoid unnecessary byte copy.
+ * 
+ * 只有当需要byte字节数组的时候,才会真的去解压缩
  */
 public class BytesRefWritable implements Writable, Comparable<BytesRefWritable> {
 
@@ -40,7 +42,7 @@ public class BytesRefWritable implements Writable, Comparable<BytesRefWritable> 
   int length = 0;
   byte[] bytes = null;
 
-  LazyDecompressionCallback lazyDecompressObj;
+  LazyDecompressionCallback lazyDecompressObj;//解压缩对象,只有当需要byte字节数组的时候,才会真的去解压缩
 
   /**
    * Create a zero-size bytes.
@@ -92,6 +94,9 @@ public class BytesRefWritable implements Writable, Comparable<BytesRefWritable> 
     length = len;
   }
 
+  /**
+   * 只有当需要byte字节数组的时候,才会真的去解压缩
+   */
   private void lazyDecompress() throws IOException {
     if (bytes == null && lazyDecompressObj != null) {
       bytes = lazyDecompressObj.decompress();
@@ -103,9 +108,10 @@ public class BytesRefWritable implements Writable, Comparable<BytesRefWritable> 
    * 
    * @return a new copied byte array
    * @throws IOException
+   * 复制一组字节数组
    */
   public byte[] getBytesCopy() throws IOException {
-    lazyDecompress();
+    lazyDecompress();//只有当需要byte字节数组的时候,才会真的去解压缩
     byte[] bb = new byte[length];
     System.arraycopy(bytes, start, bb, 0, length);
     return bb;
@@ -115,6 +121,7 @@ public class BytesRefWritable implements Writable, Comparable<BytesRefWritable> 
    * Returns the underlying bytes.
    * 
    * @throws IOException
+   * 获取当前字节数组
    */
   public byte[] getData() throws IOException {
     lazyDecompress();
@@ -147,6 +154,7 @@ public class BytesRefWritable implements Writable, Comparable<BytesRefWritable> 
     lazyDecompressObj = newData;
   }
 
+  //将字节数组写入输出流
   public void writeDataTo(DataOutput out) throws IOException {
     lazyDecompress();
     out.write(bytes, start, length);
@@ -158,6 +166,7 @@ public class BytesRefWritable implements Writable, Comparable<BytesRefWritable> 
    * the array. Please use set() whenever possible.
    * 
    * @see #set(byte[], int, int)
+   * 从输入流中读取信息,序列化和反序列化
    */
   public void readFields(DataInput in) throws IOException {
     int len = in.readInt();
@@ -169,6 +178,7 @@ public class BytesRefWritable implements Writable, Comparable<BytesRefWritable> 
     in.readFully(bytes, start, length);
   }
 
+  //序列化和反序列化
   /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     lazyDecompress();

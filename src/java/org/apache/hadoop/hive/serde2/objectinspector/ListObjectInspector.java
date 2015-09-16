@@ -31,11 +31,13 @@ public interface ListObjectInspector extends ObjectInspector {
   // ** Methods that need a data object **
   /**
    * returns null for null list, out-of-the-range index.
+   * 参数data是一个集合对象,需要强转,获取该对象的第index位置元素
    */
   Object getListElement(Object data, int index);
 
   /**
    * returns -1 for data = null.
+   * 参数data是一个集合对象,需要强转,获取该集合一共存在多少个元素
    */
   int getListLength(Object data);
 
@@ -47,6 +49,7 @@ public interface ListObjectInspector extends ObjectInspector {
    * ListObjectInspector will be used in multiple places in the code.
    * 
    * However it's OK if the List object is part of the Object data.
+   * 参数data是一个集合对象,需要强转,获取该元素集合
    */
   List<?> getList(Object data);
 

@@ -35,20 +35,21 @@ public class LazyString extends LazyPrimitive<LazyStringObjectInspector, Text> {
     data = new Text(copy.data);
   }
 
+  //懒加载方式
   @Override
   public void init(ByteArrayRef bytes, int start, int length) {
-    if (oi.isEscaped()) {
-      byte escapeChar = oi.getEscapeChar();
-      byte[] inputBytes = bytes.getData();
+    if (oi.isEscaped()) {//是否需要转义
+      byte escapeChar = oi.getEscapeChar();//转义字符,例如\
+      byte[] inputBytes = bytes.getData();//字节数组
 
       // First calculate the length of the output string
       int outputLength = 0;
-      for (int i = 0; i < length; i++) {
-        if (inputBytes[start + i] != escapeChar) {
+      for (int i = 0; i < length; i++) {//循环字节数组有效数据部分
+        if (inputBytes[start + i] != escapeChar) {//是否存在一个转移字符
           outputLength++;
-        } else {
-          outputLength++;
-          i++;
+        } else {//是转义字符
+          outputLength++;//输出+1即可,即取消\的计数
+          i++;//跳过需要转义的字符
         }
       }
 
@@ -59,14 +60,14 @@ public class LazyString extends LazyPrimitive<LazyStringObjectInspector, Text> {
       // We need to copy the data byte by byte only in case the
       // "outputLength < length" (which means there is at least one escaped
       // byte.
-      if (outputLength < length) {
-        int k = 0;
+      if (outputLength < length) {//说明肯定有转义字符,因此判断一下去除转义字符后的数据是否与outputLength字符数量相同
+        int k = 0;//输出outputBytes字节数组的下标
         byte[] outputBytes = data.getBytes();
         for (int i = 0; i < length; i++) {
           byte b = inputBytes[start + i];
           if (b != escapeChar || i == length - 1) {
             outputBytes[k++] = b;
-          } else {
+          } else {//是转义字符,因此仅仅要转义字符后面的字符
             // get the next byte
             i++;
             outputBytes[k++] = inputBytes[start + i];
