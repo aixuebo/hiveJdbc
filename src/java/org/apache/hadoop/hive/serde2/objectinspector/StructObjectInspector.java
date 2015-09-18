@@ -34,18 +34,21 @@ public abstract class StructObjectInspector implements ObjectInspector {
 
   /**
    * Look up a field.
-   * 通过属性名获取属性对象
+   * 将fieldName对应的fields对象获取出来
+   * 其中参数fieldName可能是属性名字,也可能是属性下标
    */
   public abstract StructField getStructFieldRef(String fieldName);
 
   // ** Methods that need a data object **
   /**
    * returns null for data = null.
+   * 获取某一个属性的值,其中data是LazyStruct对象,通过待获取属性值的属性index下标,获取第index个属性的值
    */
   public abstract Object getStructFieldData(Object data, StructField fieldRef);
 
   /**
    * returns null for data = null.
+   * 获取该struct对象的每一个属性对应的值集合,集合的顺序是属性的顺序
    */
   public abstract List<Object> getStructFieldsDataAsList(Object data);
 

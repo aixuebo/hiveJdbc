@@ -96,10 +96,12 @@ public class LazySimpleSerDe extends AbstractSerDe {
    * Return the byte value of the number string.
    *
    * @param altValue
-   *          The string containing a number.
+   *          The string containing a number.包含数字的参数
    * @param defaultVal
    *          If the altValue does not represent a number, return the
    *          defaultVal.
+   * 从字符串参数理论上是数字,127以内的数字,如果非数字则抛异常,则返回第一个字节即可
+   * 如果是数字,则byte就是该数字对应的字节,例如altValue=89,返回值就是89,(char)89,返回则是Y  
    */
   public static byte getByte(String altValue, byte defaultVal) {
     if (altValue != null && altValue.length() > 0) {
@@ -114,20 +116,20 @@ public class LazySimpleSerDe extends AbstractSerDe {
 
   /**
    * SerDeParameters.
-   *
+   * 序列化和反序列化的参数明细信息
    */
   public static class SerDeParameters {
-    byte[] separators = DefaultSeparators;
-    String nullString;
-    Text nullSequence;
-    TypeInfo rowTypeInfo;
-    boolean lastColumnTakesRest;
-    List<String> columnNames;
-    List<TypeInfo> columnTypes;
+    byte[] separators = DefaultSeparators;//包含1,2,3,其他扩展字符,目的是为了拆分等作用
+    String nullString;//默认是\\N
+    Text nullSequence;//是hadoop序列化后的空值,即new Text(nullString)
+    TypeInfo rowTypeInfo;//记录整行的数据需要的属性集合和属性类型集合,即是columnNames和columnTypes的整合
+    boolean lastColumnTakesRest;//是否允许最后一个属性的数据值是一直到文章最后一个字节为止
+    List<String> columnNames;//属性名称集合
+    List<TypeInfo> columnTypes;//属性的类型集合
 
-    boolean escaped;
-    byte escapeChar;
-    boolean[] needsEscape;
+    boolean escaped;//是否需要转义
+    byte escapeChar;//转义字符,该值是127以内的数字,或者字符串就获取第一个char作为转义字符
+    boolean[] needsEscape;//从0-127的byte中,需要转义的字符有哪些,返回true的位置,就是需要转义的字符位置
 
     public List<TypeInfo> getColumnTypes() {
       return columnTypes;
@@ -170,6 +172,7 @@ public class LazySimpleSerDe extends AbstractSerDe {
     }
   }
 
+  //序列化和反序列化的参数明细信息
   SerDeParameters serdeParams = null;
 
   /**
@@ -184,6 +187,7 @@ public class LazySimpleSerDe extends AbstractSerDe {
   public void initialize(Configuration job, Properties tbl)
       throws SerDeException {
 
+	//初始化序列化和反序列化的参数明细信息
     serdeParams = LazySimpleSerDe.initSerdeParams(job, tbl, getClass()
         .getName());
 
@@ -231,11 +235,10 @@ public class LazySimpleSerDe extends AbstractSerDe {
         tbl.getProperty(SERIALIZATION_EXTEND_NESTING_LEVELS);
     if(extendedNesting == null || !extendedNesting.equalsIgnoreCase("true")){
       //use the default smaller set of separators for backward compatibility
-      for (int i = 3; i < serdeParams.separators.length; i++) {
+      for (int i = 3; i < serdeParams.separators.length; i++) {//设置默认扩展字符
         serdeParams.separators[i] = (byte) (i + 1);
       }
-    }
-    else{
+    } else{//设置扩展字符
       //If extended nesting is enabled, set the extended set of separator chars
 
       final int MAX_CTRL_CHARS = 29;
@@ -276,15 +279,18 @@ public class LazySimpleSerDe extends AbstractSerDe {
           Arrays.copyOfRange(extendedSeparators, 0, extendedSeparatorsIdx);
     }
 
+    //设置空值
     serdeParams.nullString = tbl.getProperty(
         serdeConstants.SERIALIZATION_NULL_FORMAT, "\\N");
     serdeParams.nullSequence = new Text(serdeParams.nullString);
 
+    //设置是否允许最后一个属性的数据值是一直到文章最后一个字节为止
     String lastColumnTakesRestString = tbl
         .getProperty(serdeConstants.SERIALIZATION_LAST_COLUMN_TAKES_REST);
     serdeParams.lastColumnTakesRest = (lastColumnTakesRestString != null && lastColumnTakesRestString
         .equalsIgnoreCase("true"));
 
+    //从Properties属性中解析一个表的所有属性name集合和属性type类型集合,并且将结果设置到SerDeParameters对象中
     LazyUtils.extractColumnInfo(tbl, serdeParams, serdeName);
 
     // Create the LazyObject for storing the rows
@@ -292,11 +298,14 @@ public class LazySimpleSerDe extends AbstractSerDe {
         serdeParams.columnNames, serdeParams.columnTypes);
 
     // Get the escape information
+    //转义字符的key,value是127以内的数字,或者字符串就获取第一个char作为转义字符,如果该key对应的value不是空,则说明需要转义
     String escapeProperty = tbl.getProperty(serdeConstants.ESCAPE_CHAR);
     serdeParams.escaped = (escapeProperty != null);
     if (serdeParams.escaped) {
       serdeParams.escapeChar = getByte(escapeProperty, (byte) '\\');
     }
+    
+    //从0-127的byte中,需要转义的字符有哪些,返回true的位置,就是需要转义的字符位置
     if (serdeParams.escaped) {
       serdeParams.needsEscape = new boolean[128];
       for (int i = 0; i < 128; i++) {

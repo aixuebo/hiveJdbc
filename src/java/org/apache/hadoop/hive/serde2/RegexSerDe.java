@@ -70,16 +70,18 @@ public class RegexSerDe extends AbstractSerDe {
 
   public static final Log LOG = LogFactory.getLog(RegexSerDe.class.getName());
 
-  int numColumns;
+  
   String inputRegex;//正则表达式字符串
-
   Pattern inputPattern;//正则表达式对象
 
-  StructObjectInspector rowOI;
-  List<Object> row;
+  StructObjectInspector rowOI;//每行的每一列的name和属性类型等映射信息
+  List<Object> row;//每行的数据解析后的值
+  
+  int numColumns;//属性个数
   List<TypeInfo> columnTypes;//每一个列属性对应的类型
-  Object[] outputFields;
-  Text outputRowText;
+  
+  Object[] outputFields;//输出的每一列的值
+  Text outputRowText;//最后输出的一行
 
   boolean alreadyLoggedNoMatch = false;//true表示已经对不匹配正则表达式的line打印了输出
   boolean alreadyLoggedPartialMatch = false;
@@ -112,7 +114,7 @@ public class RegexSerDe extends AbstractSerDe {
           "This table does not have serde property \"input.regex\"!");
     }
 
-
+    //属性集合
     List<String> columnNames = Arrays.asList(columnNameProperty.split(","));
     columnTypes = TypeInfoUtils
         .getTypeInfosFromTypeString(columnTypeProperty);
@@ -208,7 +210,7 @@ public class RegexSerDe extends AbstractSerDe {
     // If do not match, ignore the line, return a row with all nulls.不匹配则返回null
     if (!m.matches()) {
       unmatchedRowsCount++;
-        if (!alreadyLoggedNoMatch) {
+        if (!alreadyLoggedNoMatch) {//打印日志,仅仅打印一行即可
          // Report the row if its the first time
          LOG.warn("" + unmatchedRowsCount + " unmatched rows are found: " + rowText);
          alreadyLoggedNoMatch = true;
@@ -219,7 +221,9 @@ public class RegexSerDe extends AbstractSerDe {
     // Otherwise, return the row.匹配,为row对象设置值
     for (int c = 0; c < numColumns; c++) {
       try {
+    	//获取每一个正则表达式匹配的值
         String t = m.group(c+1);
+        //该属性对应的类型
         TypeInfo typeInfo = columnTypes.get(c);
         String typeName = typeInfo.getTypeName();
 

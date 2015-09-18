@@ -153,7 +153,7 @@ public final class LazyBinaryUtils {
    *          offset of this field
    * @param recordInfo
    *          modify this byteinfo object and return it
-   * 根据参数objectInspector不同类型,设置recordInfo对象值
+   * 根据参数objectInspector不同类型,设置recordInfo对象值,根据不同类型,设置需要多少个字节
    */
   public static void checkObjectByteInfo(ObjectInspector objectInspector,
       byte[] bytes, int offset, RecordInfo recordInfo) {
@@ -237,7 +237,7 @@ public final class LazyBinaryUtils {
     case MAP:
     case STRUCT:
       recordInfo.elementOffset = 4;
-      recordInfo.elementSize = LazyBinaryUtils.byteArrayToInt(bytes, offset);
+      recordInfo.elementSize = LazyBinaryUtils.byteArrayToInt(bytes, offset);//返回元素数量
       break;
     default: {
       throw new RuntimeException("Unrecognized non-primitive type: " + category);

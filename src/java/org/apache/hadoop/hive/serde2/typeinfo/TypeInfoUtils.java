@@ -299,7 +299,7 @@ public final class TypeInfoUtils {
       return tokens;
     }
 
-    //对参数进行拆分
+    //对参数进行拆分,参数eg:string:string:string
     public TypeInfoParser(String typeInfoString) {
       this.typeInfoString = typeInfoString;
       typeInfoTokens = tokenize(typeInfoString);
@@ -730,6 +730,8 @@ public final class TypeInfoUtils {
     return result;
   }
 
+  //参数eg:string:string:string
+  //解析参数,每一个参数都是一个属性的类型信息
   public static ArrayList<TypeInfo> getTypeInfosFromTypeString(String typeString) {
     TypeInfoParser parser = new TypeInfoParser(typeString);
     return parser.parseTypeInfos();

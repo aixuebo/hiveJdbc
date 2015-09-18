@@ -317,6 +317,7 @@ public final class ObjectInspectorUtils {
     return result;
   }
 
+  //struct<fieldName:fieldType,fieldName:fieldType>
   public static String getStandardStructTypeName(StructObjectInspector soi) {
     StringBuilder sb = new StringBuilder();
     sb.append("struct<");

@@ -26,7 +26,7 @@ import org.apache.hadoop.util.StringUtils;
 
 /**
  * ColumnProjectionUtils.
- * 属性规则攻击
+ * 属性规则映射
  */
 public final class ColumnProjectionUtils {
 

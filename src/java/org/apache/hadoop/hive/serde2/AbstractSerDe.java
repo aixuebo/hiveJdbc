@@ -54,6 +54,7 @@ public abstract class AbstractSerDe implements SerDe {
    * constant since the function will reuse the Writable object. If the client
    * wants to keep a copy of the Writable, the client needs to clone the
    * returned value.
+   * 序列化
    */
   public abstract Writable serialize(Object obj, ObjectInspector objInspector)
       throws SerDeException;
@@ -73,6 +74,7 @@ public abstract class AbstractSerDe implements SerDe {
    * @param blob
    *          The Writable object containing a serialized object
    * @return A Java object representing the contents in the blob.
+   * 反序列化
    */
   public abstract Object deserialize(Writable blob) throws SerDeException;
 

@@ -43,4 +43,10 @@ public class RunTest {
 	    System.out.println(dx.toPlainString());
 		
 	}
+	
+	@Test
+	public void test3(){
+		String altValue = "1";
+		System.out.println(Byte.valueOf(altValue).byteValue());
+	}
 }

@@ -335,20 +335,29 @@ public final class LazyUtils {
     return hash;
   }
 
+  /**
+   * 从Properties属性中解析一个表的所有属性name集合和属性type类型集合,并且将结果设置到SerDeParameters对象中
+   * @param tbl
+   * @param serdeParams
+   * @param serdeName 仅仅用于日志输出
+   * @throws SerDeException
+   */
   public static void extractColumnInfo(Properties tbl, SerDeParameters serdeParams,
       String serdeName) throws SerDeException {
-    // Read the configuration parameters
+    // Read the configuration parameters解析属性名称集合
     String columnNameProperty = tbl.getProperty(serdeConstants.LIST_COLUMNS);
-    // NOTE: if "columns.types" is missing, all columns will be of String type
+    // NOTE: if "columns.types" is missing, all columns will be of String type 解析属性类型的集合
     String columnTypeProperty = tbl.getProperty(serdeConstants.LIST_COLUMN_TYPES);
 
-    // Parse the configuration parameters
-
+    // Parse the configuration parameters按照逗号拆分拆分属性名称
     if (columnNameProperty != null && columnNameProperty.length() > 0) {
       serdeParams.columnNames = Arrays.asList(columnNameProperty.split(","));
     } else {
       serdeParams.columnNames = new ArrayList<String>();
     }
+    
+    //如果类型为null,则为每一个属性设置默认类型,默认类型都是String
+    //return columnTypeProperty字符串为string:string:string
     if (columnTypeProperty == null) {
       // Default type: all string
       StringBuilder sb = new StringBuilder();
@@ -364,6 +373,7 @@ public final class LazyUtils {
     serdeParams.columnTypes = TypeInfoUtils
         .getTypeInfosFromTypeString(columnTypeProperty);
 
+    //校验属性的个数与属性类型的格式必须相同
     if (serdeParams.columnNames.size() != serdeParams.columnTypes.size()) {
       throw new SerDeException(serdeName + ": columns has "
           + serdeParams.columnNames.size()

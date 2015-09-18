@@ -51,6 +51,7 @@ public class LazyBinaryArray extends
   boolean parsed = false;
   /**
    * The length of the array. Only valid when the data is parsed.
+   * 数组的size
    */
   int arraySize = 0;
 
@@ -75,6 +76,7 @@ public class LazyBinaryArray extends
   /**
    * The elements of the array. Note that we call arrayElements[i].init(bytes,
    * begin, length) only when that element is accessed.
+   * 每一个元素的值
    */
   LazyBinaryObject[] arrayElements;
 
@@ -102,6 +104,7 @@ public class LazyBinaryArray extends
   /**
    * Enlarge the size of arrays storing information for the elements inside the
    * array.
+   * 扩容
    */
   private void adjustArraySize(int newSize) {
     if (elementStart == null || elementStart.length < newSize) {
@@ -113,7 +116,7 @@ public class LazyBinaryArray extends
     }
   }
 
-  VInt vInt = new LazyBinaryUtils.VInt();
+  VInt vInt = new LazyBinaryUtils.VInt();//存储数组的size,以及size所需要的总字节长度
   RecordInfo recordInfo = new LazyBinaryUtils.RecordInfo();
 
   /**
@@ -124,7 +127,7 @@ public class LazyBinaryArray extends
 
     byte[] bytes = this.bytes.getData();
 
-    // get the vlong that represents the map size
+    // get the vlong that represents the map size 解析获取数组的size
     LazyBinaryUtils.readVInt(bytes, start, vInt);
     arraySize = vInt.value;
     if (0 == arraySize) {
@@ -132,10 +135,10 @@ public class LazyBinaryArray extends
       return;
     }
 
-    // adjust arrays
+    // adjust arrays扩容
     adjustArraySize(arraySize);
     // find out the null-bytes
-    int arryByteStart = start + vInt.length;
+    int arryByteStart = start + vInt.length;//开始位置,start+size数组大小所占用的字节长度
     int nullByteCur = arryByteStart;
     int nullByteEnd = arryByteStart + (arraySize + 7) / 8;
     // the begin the real elements
@@ -204,6 +207,7 @@ public class LazyBinaryArray extends
 
   /**
    * Returns the array size.
+   * 数组的大小
    */
   public int getListLength() {
     if (!parsed) {

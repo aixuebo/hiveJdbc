@@ -22,6 +22,7 @@ public interface SerDeStatsStruct {
 
   /**
    * Rerurns the serialized size of the object.
+   * 该数据结构对应的字节数.用于计算数据所占用磁盘大小
    */
   public long getRawDataSerializedSize();
 

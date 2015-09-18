@@ -48,6 +48,7 @@ public class LazyStruct extends LazyNonPrimitive<LazySimpleStructObjectInspector
 
   /**
    * Size of serialized data
+   * 该数据结构对应的字节数
    */
   long serializedSize;
 
@@ -56,15 +57,18 @@ public class LazyStruct extends LazyNonPrimitive<LazySimpleStructObjectInspector
    * Note that startPosition[arrayLength] = begin + length + 1; that makes sure
    * we can use the same formula to compute the length of each element of the
    * array.
+   * 每一个属性的开始字节位置,两个属性之间就是每一个属性所占用的字节长度
    */
   int[] startPosition;
 
   /**
    * The fields of the struct.
+   * 所有的属性对应对象集合
    */
   LazyObject[] fields;
   /**
    * Whether init() has been called on the field or not.
+   * 判断哪些属性已经被初始化了
    */
   boolean[] fieldInited;
 
@@ -87,8 +91,8 @@ public class LazyStruct extends LazyNonPrimitive<LazySimpleStructObjectInspector
     serializedSize = length;
   }
 
-  boolean missingFieldWarned = false;
-  boolean extraFieldWarned = false;
+  boolean missingFieldWarned = false;//true表示有属性缺失,即按照顺序执行时候发现字节数组内容无法满足所有属性赋值,忽略缺失的属性
+  boolean extraFieldWarned = false;//true表示被检测到还有额外的字节
 
   /**
    * Parse the byte[] and fill each field.
@@ -102,9 +106,9 @@ public class LazyStruct extends LazyNonPrimitive<LazySimpleStructObjectInspector
 
     if (fields == null) {
       List<? extends StructField> fieldRefs = ((StructObjectInspector) oi)
-          .getAllStructFieldRefs();
+          .getAllStructFieldRefs();//获取所有的属性集合
       fields = new LazyObject[fieldRefs.size()];
-      for (int i = 0; i < fields.length; i++) {
+      for (int i = 0; i < fields.length; i++) {//为每一个属性创建对应的对象
         fields[i] = LazyFactory.createLazyObject(fieldRefs.get(i)
             .getFieldObjectInspector());
       }
@@ -114,7 +118,7 @@ public class LazyStruct extends LazyNonPrimitive<LazySimpleStructObjectInspector
       startPosition = new int[fields.length + 1];
     }
 
-    int structByteEnd = start + length;
+    int structByteEnd = start + length;//字节数组的结尾最后一个字节位置
     int fieldId = 0;
     int fieldByteBegin = start;
     int fieldByteEnd = start;
@@ -122,20 +126,45 @@ public class LazyStruct extends LazyNonPrimitive<LazySimpleStructObjectInspector
 
     // Go through all bytes in the byte[]
     while (fieldByteEnd <= structByteEnd) {
-      if (fieldByteEnd == structByteEnd || bytes[fieldByteEnd] == separator) {
+      if (fieldByteEnd == structByteEnd || bytes[fieldByteEnd] == separator) {//需要进行拆分了
         // Reached the end of a field?
-        if (lastColumnTakesRest && fieldId == fields.length - 1) {
+    	  /**
+字段意义说明
+CREATE TABLE escape2 (id STRING, name STRING) 
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '"'; 
+
+LOAD DATA LOCAL INPATH '/home/tianzhao/book/escape2.txt' 
+OVERWRITE INTO TABLE escape2; 
+
+escape2.txt 的内容是： 
+Joe"2"3333"44 
+Hank"2"3333"44 
+实际数据比表的字段要多。 
+
+select * from escape2; 
+Joe 2 
+Hank 2 
+ALTER TABLE escape2 SET SERDEPROPERTIES ('serialization.last.column.takes.rest' = 'true'); 
+serialization.last.column.takes.rest 的意思是最后一个字段的内容是否包含那些多余的数据： 
+select * from escape2; 
+Joe 2"3333"44 
+Hank 2"3333"44 
+    	   */
+        if (lastColumnTakesRest && fieldId == fields.length - 1) {//最后一个属性的时候,值将不再进行拆分,直接到最后一个字节
           fieldByteEnd = structByteEnd;
         }
         startPosition[fieldId] = fieldByteBegin;
         fieldId++;
         if (fieldId == fields.length || fieldByteEnd == structByteEnd) {
           // All fields have been parsed, or bytes have been parsed.
+        	//所有的属性都已经解析完了,或者字节已经没有可用的了
           // We need to set the startPosition of fields.length to ensure we
           // can use the same formula to calculate the length of each field.
           // For missing fields, their starting positions will all be the same,
           // which will make their lengths to be -1 and uncheckedGetField will
           // return these fields as NULLs.
+        	//我们需要设置剩余的属性的开始位置,以确保公式可以正常访问,不出bug.
+        	//对于缺失的属性,我们设置开始位置都一样,这样最后uncheckedGetField方法获取属性的值值就是null
           for (int i = fieldId; i <= fields.length; i++) {
             startPosition[i] = fieldByteEnd + 1;
           }
@@ -145,7 +174,7 @@ public class LazyStruct extends LazyNonPrimitive<LazySimpleStructObjectInspector
         fieldByteEnd++;
       } else {
         if (isEscaped && bytes[fieldByteEnd] == escapeChar
-            && fieldByteEnd + 1 < structByteEnd) {
+            && fieldByteEnd + 1 < structByteEnd) {//跳过转义字符后面的字符
           // ignore the char after escape_char
           fieldByteEnd += 2;
         } else {
@@ -154,7 +183,7 @@ public class LazyStruct extends LazyNonPrimitive<LazySimpleStructObjectInspector
       }
     }
 
-    // Extra bytes at the end?
+    // Extra bytes at the end?被检测到还有额外的字节,已经忽略了
     if (!extraFieldWarned && fieldByteEnd < structByteEnd) {
       extraFieldWarned = true;
       LOG.warn("Extra bytes detected at the end of the row! Ignoring similar "
@@ -162,6 +191,7 @@ public class LazyStruct extends LazyNonPrimitive<LazySimpleStructObjectInspector
     }
 
     // Missing fields?
+    //有属性缺失,即按照顺序执行时候发现字节数组内容无法满足所有属性赋值,忽略缺失的属性
     if (!missingFieldWarned && fieldId < fields.length) {
       missingFieldWarned = true;
       LOG.info("Missing fields! Expected " + fields.length + " fields but "
@@ -184,6 +214,7 @@ public class LazyStruct extends LazyNonPrimitive<LazySimpleStructObjectInspector
    * @param fieldID
    *          The field ID
    * @return The field as a LazyObject
+   * 获取第index个属性对应的值
    */
   public Object getField(int fieldID) {
     if (!parsed) {
@@ -201,19 +232,21 @@ public class LazyStruct extends LazyNonPrimitive<LazySimpleStructObjectInspector
    * @param nullSequence
    *          The sequence representing NULL value.
    * @return The value of the field
+   * 获取第index个属性对应的值
    */
   private Object uncheckedGetField(int fieldID) {
     Text nullSequence = oi.getNullSequence();
     // Test the length first so in most cases we avoid doing a byte[]
     // comparison.
     int fieldByteBegin = startPosition[fieldID];
-    int fieldLength = startPosition[fieldID + 1] - startPosition[fieldID] - 1;
+    int fieldLength = startPosition[fieldID + 1] - startPosition[fieldID] - 1;//该属性对应的字节长度
     if ((fieldLength < 0)
         || (fieldLength == nullSequence.getLength() && LazyUtils.compare(bytes
             .getData(), fieldByteBegin, fieldLength, nullSequence.getBytes(),
-            0, nullSequence.getLength()) == 0)) {
+            0, nullSequence.getLength()) == 0)) {//如果该属性对应的值的内容与nullSequence相同,则被设置为null
       return null;
     }
+    //对属性的值进行初始化
     if (!fieldInited[fieldID]) {
       fieldInited[fieldID] = true;
       fields[fieldID].init(bytes, fieldByteBegin, fieldLength);
@@ -227,6 +260,7 @@ public class LazyStruct extends LazyNonPrimitive<LazySimpleStructObjectInspector
    * Get the values of the fields as an ArrayList.
    *
    * @return The values of the fields as an ArrayList.
+   * 获取所有属性对应的值的集合,应该没有被缓存
    */
   public ArrayList<Object> getFieldsAsList() {
     if (!parsed) {
