@@ -704,7 +704,7 @@ tableSource
   }
 
   /**
-   * 是否是join节点
+   * 是否是join节点,遇见JOIN 、INNER JOIN、CROSS JOIN、LEFT [OUTER] JOIN 、RIGHT [OUTER] JOIN 、FULL [OUTER] JOIN 、LEFT SEMI JOIN字符串
    */
   private boolean isJoinToken(ASTNode node) {
     if ((node.getToken().getType() == HiveParser.TOK_JOIN)
@@ -6379,16 +6379,18 @@ tableSource
     }
   }
 
+  //获取hint关键字所有的需要map-side端的join标签集合
   private List<String> getMapSideJoinTables(QB qb) {
     List<String> cols = new ArrayList<String>();
 
 
+    //获取hint标签,并且解析
     ASTNode hints = qb.getParseInfo().getHints();
     for (int pos = 0; pos < hints.getChildCount(); pos++) {
       ASTNode hint = (ASTNode) hints.getChild(pos);
-      if (((ASTNode) hint.getChild(0)).getToken().getType() == HiveParser.TOK_MAPJOIN) {
+      if (((ASTNode) hint.getChild(0)).getToken().getType() == HiveParser.TOK_MAPJOIN) {//仅仅解析mapjoin节点
         // the user has specified to ignore mapjoin hint
-        if (!conf.getBoolVar(HiveConf.ConfVars.HIVEIGNOREMAPJOINHINT)) {
+        if (!conf.getBoolVar(HiveConf.ConfVars.HIVEIGNOREMAPJOINHINT)) {//不忽略hint
           ASTNode hintTblNames = (ASTNode) hint.getChild(1);
           int numCh = hintTblNames.getChildCount();
           for (int tblPos = 0; tblPos < numCh; tblPos++) {
@@ -6399,7 +6401,7 @@ tableSource
             }
           }
         }
-        else {
+        else {//忽略hint
           queryProperties.setMapJoinRemoved(true);
         }
       }
@@ -6515,6 +6517,10 @@ tableSource
     return joinTree;
   }
 
+  /**
+   * JOIN 、INNER JOIN、CROSS JOIN、LEFT [OUTER] JOIN 、RIGHT [OUTER] JOIN 、FULL [OUTER] JOIN 、LEFT SEMI JOIN
+   * 解析表关联操作
+   */
   private QBJoinTree genJoinTree(QB qb, ASTNode joinParseTree,
       Map<String, Operator> aliasToOpInfo)
       throws SemanticException {
@@ -6522,24 +6528,24 @@ tableSource
     JoinCond[] condn = new JoinCond[1];
 
     switch (joinParseTree.getToken().getType()) {
-    case HiveParser.TOK_LEFTOUTERJOIN:
+    case HiveParser.TOK_LEFTOUTERJOIN://LEFT [OUTER] JOIN 
       joinTree.setNoOuterJoin(false);
       condn[0] = new JoinCond(0, 1, JoinType.LEFTOUTER);
       break;
-    case HiveParser.TOK_RIGHTOUTERJOIN:
+    case HiveParser.TOK_RIGHTOUTERJOIN://RIGHT [OUTER] JOIN
       joinTree.setNoOuterJoin(false);
       condn[0] = new JoinCond(0, 1, JoinType.RIGHTOUTER);
       break;
-    case HiveParser.TOK_FULLOUTERJOIN:
+    case HiveParser.TOK_FULLOUTERJOIN://FULL [OUTER] JOIN 
       joinTree.setNoOuterJoin(false);
       condn[0] = new JoinCond(0, 1, JoinType.FULLOUTER);
       break;
-    case HiveParser.TOK_LEFTSEMIJOIN:
+    case HiveParser.TOK_LEFTSEMIJOIN://LEFT SEMI JOIN
       joinTree.setNoSemiJoin(false);
       condn[0] = new JoinCond(0, 1, JoinType.LEFTSEMI);
       break;
     default:
-      condn[0] = new JoinCond(0, 1, JoinType.INNER);
+      condn[0] = new JoinCond(0, 1, JoinType.INNER);//INNER JOIN或者JOIN
       joinTree.setNoOuterJoin(true);
       break;
     }
@@ -6549,14 +6555,14 @@ tableSource
     ASTNode left = (ASTNode) joinParseTree.getChild(0);
     ASTNode right = (ASTNode) joinParseTree.getChild(1);
 
-    if ((left.getToken().getType() == HiveParser.TOK_TABREF)
-        || (left.getToken().getType() == HiveParser.TOK_SUBQUERY)
-        || (left.getToken().getType() == HiveParser.TOK_PTBLFUNCTION)) {
+    if ((left.getToken().getType() == HiveParser.TOK_TABREF)//eg:[dbName.] tableName [(key=value,key=value,key)] [tableSample] [ as Identifier ]
+        || (left.getToken().getType() == HiveParser.TOK_SUBQUERY) //eg: (queryStatementExpression) identifier
+        || (left.getToken().getType() == HiveParser.TOK_PTBLFUNCTION)) {//eg:partition by
       String tableName = getUnescapedUnqualifiedTableName((ASTNode) left.getChild(0))
-          .toLowerCase();
+          .toLowerCase();//第一个位置是表名
       String alias = left.getChildCount() == 1 ? tableName
           : unescapeIdentifier(left.getChild(left.getChildCount() - 1)
-          .getText().toLowerCase());
+          .getText().toLowerCase());//最后一个位置是别名
       // ptf node form is: ^(TOK_PTBLFUNCTION $name $alias? partitionTableFunctionSource partitioningSpec? expression*)
       // guranteed to have an lias here: check done in processJoin
       alias = (left.getToken().getType() == HiveParser.TOK_PTBLFUNCTION) ?
@@ -6572,7 +6578,7 @@ tableSource
       joinTree.setId(qb.getId());
       joinTree.getAliasToOpInfo().put(
           getModifiedAlias(qb, alias), aliasToOpInfo.get(alias));
-    } else if (isJoinToken(left)) {
+    } else if (isJoinToken(left)) {//遇见JOIN 、INNER JOIN、CROSS JOIN、LEFT [OUTER] JOIN 、RIGHT [OUTER] JOIN 、FULL [OUTER] JOIN 、LEFT SEMI JOIN字符串
       QBJoinTree leftTree = genJoinTree(qb, left, aliasToOpInfo);
       joinTree.setJoinSrc(leftTree);
       String[] leftChildAliases = leftTree.getLeftAliases();
@@ -6649,11 +6655,13 @@ tableSource
     // check the hints to see if the user has specified a map-side join. This
     // will be removed later on, once the cost-based
     // infrastructure is in place
+    //检查是否存在hint,即map端的join操作
     if (qb.getParseInfo().getHints() != null) {
+    	//获取hint关键字所有的需要map-side端的join标签集合
       List<String> mapSideTables = getMapSideJoinTables(qb);
       List<String> mapAliases = joinTree.getMapAliases();
 
-      for (String mapTbl : mapSideTables) {
+      for (String mapTbl : mapSideTables) {//循环每一个标签,查看标签是否是left端或者right端表的别名,是的话,则设置map-side的表名字集合
         boolean mapTable = false;
         for (String leftAlias : joinTree.getLeftAliases()) {
           if (mapTbl.equalsIgnoreCase(leftAlias)) {
@@ -6683,6 +6691,7 @@ tableSource
     return joinTree;
   }
 
+  //标示大表是哪些别名的表
   private void parseStreamTables(QBJoinTree joinTree, QB qb) {
     List<String> streamAliases = joinTree.getStreamAliases();
 

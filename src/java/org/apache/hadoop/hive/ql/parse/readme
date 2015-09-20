@@ -150,3 +150,8 @@
         xlateMap.put("BITWISEXOR", "^");
         xlateMap.put("CharSetLiteral", "\\'");
       }
+      
+    6518ÐÐ  
+  private QBJoinTree genJoinTree(QB qb, ASTNode joinParseTree,
+      Map<String, Operator> aliasToOpInfo)
+      

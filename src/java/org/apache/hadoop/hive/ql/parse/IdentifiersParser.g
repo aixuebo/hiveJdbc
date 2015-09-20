@@ -133,6 +133,8 @@ clusterByClause
     ( (COMMA)=>COMMA expression )* -> ^(TOK_CLUSTERBY expression+)
     ;
 
+//方式1:PARTITION by (expression,expression)
+//方式1:PARTITION by expression,expression
 partitionByClause
 @init  { gParent.msgs.push("partition by clause"); }
 @after { gParent.msgs.pop(); }

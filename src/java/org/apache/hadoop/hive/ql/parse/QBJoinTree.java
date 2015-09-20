@@ -30,19 +30,19 @@ import org.apache.hadoop.hive.ql.plan.OperatorDesc;
 
 /**
  * Internal representation of the join tree.
- *
+ * JOIN 、INNER JOIN、CROSS JOIN、LEFT [OUTER] JOIN 、RIGHT [OUTER] JOIN 、FULL [OUTER] JOIN 、LEFT SEMI JOIN
  */
 public class QBJoinTree implements Serializable{
   private static final long serialVersionUID = 1L;
-  private String leftAlias;
-  private String[] rightAliases;
-  private String[] leftAliases;
+  private String leftAlias;//左边的查询表别名
+  private String[] rightAliases;//右边的查询表别名
+  private String[] leftAliases;//左边的查询表别名
   private QBJoinTree joinSrc;
-  private String[] baseSrc;
+  private String[] baseSrc;//第一个是左边表的别名,第二个是右边表的别名
   private int nextTag;
   private JoinCond[] joinCond;
-  private boolean noOuterJoin;
-  private boolean noSemiJoin;
+  private boolean noOuterJoin;//true表示JOIN 、INNER JOIN    false表示LEFT [OUTER] JOIN 、RIGHT [OUTER] JOIN 、FULL [OUTER] JOIN
+  private boolean noSemiJoin;//false表示LEFT SEMI JOIN
   private Map<String, Operator<? extends OperatorDesc>> aliasToOpInfo;
 
   // The subquery identifier from QB.
@@ -69,10 +69,10 @@ public class QBJoinTree implements Serializable{
   private ArrayList<ArrayList<ASTNode>> filtersForPushing;
 
   // user asked for map-side join
-  private boolean mapSideJoin;
-  private List<String> mapAliases;
+  private boolean mapSideJoin;//true表示存在map端的join
+  private List<String> mapAliases;//map端的join操作需要的表的别名
 
-  // big tables that should be streamed
+  // big tables that should be streamed标示大表是哪些别名的表
   private List<String> streamAliases;
 
   /**

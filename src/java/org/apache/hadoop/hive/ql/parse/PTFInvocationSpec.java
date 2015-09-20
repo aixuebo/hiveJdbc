@@ -22,6 +22,9 @@ import java.util.ArrayList;
 
 import org.apache.hadoop.hive.ql.exec.PTFUtils;
 
+/**
+ * PTF±íÊ¾PartitionedTableFunction
+ */
 public class PTFInvocationSpec {
 
   PartitionedTableFunctionSpec function;

@@ -45,7 +45,7 @@ public class QueryProperties {
 
   boolean hasDistributeBy = false;//是否设置了Distribute by
   boolean hasClusterBy = false;//是否设置了Cluster by
-  boolean mapJoinRemoved = false;
+  boolean mapJoinRemoved = false;//true表示忽略map-join的hint
   boolean hasMapGroupBy = false;
 
   public boolean hasJoin() {
