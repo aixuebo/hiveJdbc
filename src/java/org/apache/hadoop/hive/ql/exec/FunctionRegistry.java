@@ -931,6 +931,7 @@ public final class FunctionRegistry {
    * for UDAFRegistry.
    * @throws UDFArgumentException
    * 给定UDF的class以及方法名evaluate,和待执行方法的参数集合argumentClasses,寻找对应的方法返回
+   * 参数exact 表示是否需要精准匹配
    */
   public static <T> Method getMethodInternal(Class<? extends T> udfClass,
       String methodName, boolean exact, List<TypeInfo> argumentClasses)
@@ -1171,7 +1172,7 @@ public final class FunctionRegistry {
     for (Method m : mlist) {
       List<TypeInfo> argumentsAccepted = TypeInfoUtils.getParameterTypeInfos(m,
           argumentsPassed.size());
-      if (argumentsAccepted == null) {
+      if (argumentsAccepted == null) {//说明m方法的参数格式不符合期望的argumentsPassed.size()个数
         // null means the method does not accept number of arguments passed.
         continue;
       }

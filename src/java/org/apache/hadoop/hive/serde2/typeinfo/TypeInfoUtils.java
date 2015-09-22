@@ -175,7 +175,7 @@ public final class TypeInfoUtils {
     List<TypeInfo> typeInfos = null;//返回该方法的参数集合
     if (!isVariableLengthArgument) {//不是可变化参数
       // Normal case, no variable-length arguments
-      if (size != methodParameterTypes.length) {
+      if (size != methodParameterTypes.length) {//说明该方法的参数与给定的size参数是不同的,则返回null
         return null;
       }
       typeInfos = new ArrayList<TypeInfo>(methodParameterTypes.length);

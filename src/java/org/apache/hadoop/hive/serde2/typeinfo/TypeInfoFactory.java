@@ -45,11 +45,14 @@ public final class TypeInfoFactory {
   }
 
   public static TypeInfo getPrimitiveTypeInfo(String typeName) {
+	
+	//根据数据类型的字符串形式,转换成具体的数据类型  
     PrimitiveTypeEntry typeEntry = PrimitiveObjectInspectorUtils
         .getTypeEntryFromTypeName(TypeInfoUtils.getBaseName(typeName));
     if (null == typeEntry) {
       throw new RuntimeException("Cannot getPrimitiveTypeInfo for " + typeName);
     }
+    
     TypeInfo result = cachedPrimitiveTypeInfo.get(typeName);
     if (result == null) {
       TypeInfoUtils.PrimitiveParts parts = TypeInfoUtils.parsePrimitiveParts(typeName);

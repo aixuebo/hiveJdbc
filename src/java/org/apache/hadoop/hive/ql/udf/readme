@@ -1,0 +1,5 @@
+UDF的全称User-Defined-Function 用户自定义函数
+UDF只能实现一进一出的操作，如果需要实现多进一出，则需要实现UDAF
+UDAF的全称（User- Defined Aggregation Funcation） 用户自定义聚合函数
+
+UDTF(User-Defined Table-Generating Functions)  用来解决 输入一行输出多行(On-to-many maping) 的需求。

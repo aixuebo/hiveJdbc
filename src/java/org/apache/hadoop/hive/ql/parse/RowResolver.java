@@ -40,9 +40,20 @@ import org.apache.hadoop.hive.ql.exec.RowSchema;
 public class RowResolver implements Serializable{
   private static final long serialVersionUID = 1L;
   private  RowSchema rowSchema;
+  /**
+   * table-column-ColumnInfo对象三者关联
+   * key是table名字,value是该table对应的属性集合映射关系
+   */
   private  HashMap<String, LinkedHashMap<String, ColumnInfo>> rslvMap;
 
+  /**
+   * table-column-ColumnInfo对象三者关联
+   * 属于rslvMap的反向关联
+   * key是ColumnInfo.getInternalName(),value是table-column数组
+   */
   private  HashMap<String, String[]> invRslvMap;
+  
+  //存储每一个列的节点作为value,key是列value的toString对象
   private  Map<String, ASTNode> expressionMap;
 
   // TODO: Refactor this and do in a more object oriented manner
@@ -88,6 +99,10 @@ public class RowResolver implements Serializable{
     return expressionMap.get(node.toStringTree());
   }
 
+  /**
+   * table-column-ColumnInfo对象三者关联
+   * 设置三者的正反方向关联
+   */
   public void put(String tab_alias, String col_alias, ColumnInfo colInfo) {
     if (tab_alias != null) {
       tab_alias = tab_alias.toLowerCase();
@@ -99,6 +114,7 @@ public class RowResolver implements Serializable{
 
     rowSchema.getSignature().add(colInfo);
 
+    //设置正方向关联
     LinkedHashMap<String, ColumnInfo> f_map = rslvMap.get(tab_alias);
     if (f_map == null) {
       f_map = new LinkedHashMap<String, ColumnInfo>();
@@ -106,6 +122,7 @@ public class RowResolver implements Serializable{
     }
     f_map.put(col_alias, colInfo);
 
+    //设置反方向关联
     String[] qualifiedAlias = new String[2];
     qualifiedAlias[0] = tab_alias;
     qualifiedAlias[1] = col_alias;
@@ -135,6 +152,7 @@ public class RowResolver implements Serializable{
    *          The column name that is being searched for
    * @return ColumnInfo
    * @throws SemanticException
+   * 通过表名和列名找到对应的列对象
    */
   public ColumnInfo get(String tab_alias, String col_alias) throws SemanticException {
     col_alias = col_alias.toLowerCase();
@@ -148,6 +166,7 @@ public class RowResolver implements Serializable{
       }
       ret = f_map.get(col_alias);
     } else {
+    	//不通过表名字查找,而直接通过column查找,那么就要判断是否找到唯一的column,如果column不唯一,要抛异常
       boolean found = false;
       for (LinkedHashMap<String, ColumnInfo> cmap : rslvMap.values()) {
         for (Map.Entry<String, ColumnInfo> cmapEnt : cmap.entrySet()) {
@@ -224,6 +243,7 @@ public class RowResolver implements Serializable{
     return new ArrayList<String>(columnNames);
   }
 
+  //获取该表对应的属性集合
   public HashMap<String, ColumnInfo> getFieldMap(String tabAlias) {
     if (tabAlias == null) {
       return rslvMap.get(null);
@@ -232,6 +252,9 @@ public class RowResolver implements Serializable{
     }
   }
 
+  /**
+   * 获取列属性名在第几个位置
+   */
   public int getPosition(String internalName) {
     int pos = -1;
 
@@ -245,10 +268,12 @@ public class RowResolver implements Serializable{
     return -1;
   }
 
+  //返回所有表名
   public Set<String> getTableNames() {
     return rslvMap.keySet();
   }
 
+  //通过属性名,返回表名-属性别名
   public String[] reverseLookup(String internalName) {
     return invRslvMap.get(internalName);
   }

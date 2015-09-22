@@ -66,6 +66,7 @@ public final class GenericUDFUtils {
    * In many cases like CASE and IF, the GenericUDF is returning a value out of
    * several possibilities. However these possibilities may not always have the
    * same ObjectInspector.
+   * 返回值可能有若干个可能性,然后这些可能性不能总是相同的对象
    * 
    * This class will help detect whether all possibilities have exactly the same
    * ObjectInspector. If not, then we need to convert the Objects to the same
@@ -73,14 +74,24 @@ public final class GenericUDFUtils {
    * 
    * A special case is when some values are constant NULL. In this case we can
    * use the same ObjectInspector.
+   * 
+   * 该类是静态类
    */
   public static class ReturnObjectInspectorResolver {
 
-    boolean allowTypeConversion;
-    ObjectInspector returnObjectInspector;
+    boolean allowTypeConversion;//是否允许类型转换
+    ObjectInspector returnObjectInspector;//计算返回值类型
 
     // We create converters beforehand, so that the converters can reuse the
     // same object for returning conversion results.
+    /**
+new IdentityConverter()
+new StructConverter
+new ListConverter
+new MapConverter
+new PrimitiveObjectInspectorConverter
+key是类型,value是该类型对应的转换器
+     */
     HashMap<ObjectInspector, Converter> converters;
 
     public ReturnObjectInspectorResolver() {
@@ -94,8 +105,9 @@ public final class GenericUDFUtils {
     /**
      * Update returnObjectInspector and valueInspectorsAreTheSame based on the
      * ObjectInspector seen.
-     * 
+     * 更新返回值类型
      * @return false if there is a type mismatch
+     * false表示类型错误匹配
      */
     public boolean update(ObjectInspector oi) throws UDFArgumentTypeException {
       if (oi instanceof VoidObjectInspector) {
@@ -105,12 +117,14 @@ public final class GenericUDFUtils {
       if (returnObjectInspector == null) {
         // The first argument, just set the return to be the standard
         // writable version of this OI.
+    	//计算返回值类型,该值是hadoop的序列化的返回值类型,而不是java的返回类型
         returnObjectInspector = ObjectInspectorUtils
             .getStandardObjectInspector(oi,
             ObjectInspectorCopyOption.WRITABLE);
         return true;
       }
 
+      //传入的数据类型必须与初始化的返回类型相同,如果相同,则返回true
       if (returnObjectInspector == oi) {
         // The new ObjectInspector is the same as the old one, directly return
         // true
@@ -190,10 +204,10 @@ public final class GenericUDFUtils {
    */
   public static class ConversionHelper {
 
-    private final ObjectInspector[] givenParameterOIs;
-    Type[] methodParameterTypes;
-    private final boolean isVariableLengthArgument;
-    Type lastParaElementType;
+    private final ObjectInspector[] givenParameterOIs;//等待匹配的参数集合
+    Type[] methodParameterTypes;//method方法的参数集合
+    private final boolean isVariableLengthArgument;//是否最后一个参数是可变参数
+    Type lastParaElementType;//最后一个参数类型
 
     boolean conversionNeeded;
     Converter[] converters;
@@ -225,23 +239,23 @@ public final class GenericUDFUtils {
       lastParaElementType = TypeInfoUtils
           .getArrayElementType(methodParameterTypes.length == 0 ? null
           : methodParameterTypes[methodParameterTypes.length - 1]);
-      isVariableLengthArgument = (lastParaElementType != null);
+      isVariableLengthArgument = (lastParaElementType != null);//是否最后一个参数是可变参数
 
-      // Create the output OI array
+      // Create the output OI array创建最终的输出参数类型集合
       ObjectInspector[] methodParameterOIs = new ObjectInspector[parameterOIs.length];
 
-      if (isVariableLengthArgument) {
+      if (isVariableLengthArgument) {//是可变参数
 
         // ConversionHelper can be called without method parameter length
         // checkings
         // for terminatePartial() and merge() calls.
-        if (parameterOIs.length < methodParameterTypes.length - 1) {
+        if (parameterOIs.length < methodParameterTypes.length - 1) {//参数提供的少了,因此抛异常
           throw new UDFArgumentLengthException(m.toString()
               + " requires at least " + (methodParameterTypes.length - 1)
               + " arguments but only " + parameterOIs.length
               + " are passed in.");
         }
-        // Copy the first methodParameterTypes.length - 1 entries
+        // Copy the first methodParameterTypes.length - 1 entries 先解析固定位置的参数
         for (int i = 0; i < methodParameterTypes.length - 1; i++) {
           // This method takes Object, so it accepts whatever types that are
           // passed in.
@@ -256,7 +270,7 @@ public final class GenericUDFUtils {
           }
         }
 
-        // Deal with the last entry
+        // Deal with the last entry 解析最后一位置可变参数
         if (lastParaElementType == Object.class) {
           // This method takes Object[], so it accepts whatever types that are
           // passed in.
@@ -276,13 +290,13 @@ public final class GenericUDFUtils {
           }
         }
 
-      } else {
+      } else {//没有可变参数
 
         // Normal case, the last parameter is a normal parameter.
         // ConversionHelper can be called without method parameter length
         // checkings
         // for terminatePartial() and merge() calls.
-        if (methodParameterTypes.length != parameterOIs.length) {
+        if (methodParameterTypes.length != parameterOIs.length) {//参数数量必须匹配成功
           throw new UDFArgumentLengthException(m.toString() + " requires "
               + methodParameterTypes.length + " arguments but "
               + parameterOIs.length + " are passed in.");
@@ -432,6 +446,7 @@ public final class GenericUDFUtils {
    * Finds any occurence of <code>subtext</code> from <code>text</code> in the
    * backing buffer, for avoiding string encoding and decoding. Shamelessly copy
    * from {@link org.apache.hadoop.io.Text#find(String, int)}.
+   * 从Text中第start位置开始查找,找匹配subtext的第一个字符串位置
    */
   public static int findText(Text text, Text subtext, int start) {
     // src.position(start) can't accept negative numbers.

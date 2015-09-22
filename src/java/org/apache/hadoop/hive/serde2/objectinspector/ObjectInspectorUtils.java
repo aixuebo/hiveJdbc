@@ -74,7 +74,7 @@ public final class ObjectInspectorUtils {
    * DEFAULT means choosing the most efficient way between JAVA and WRITABLE.
    * JAVA means converting all primitive objects to java primitive objects.
    * WRITABLE means converting all primitive objects to writable objects.
-   *
+   * 期望返回的是java类型还是WRITABLE类型
    */
   public enum ObjectInspectorCopyOption {
     DEFAULT, JAVA, WRITABLE
@@ -103,6 +103,12 @@ public final class ObjectInspectorUtils {
     return getStandardObjectInspector(oi, ObjectInspectorCopyOption.DEFAULT);
   }
 
+  /**
+   * 
+   * @param oi 原始类型
+   * @param objectInspectorOption 期望返回的是java类型还是WRITABLE类型
+   * @return
+   */
   public static ObjectInspector getStandardObjectInspector(ObjectInspector oi,
       ObjectInspectorCopyOption objectInspectorOption) {
     ObjectInspector result = null;
@@ -234,6 +240,12 @@ public final class ObjectInspectorUtils {
     return copyToStandardObject(o, oi, ObjectInspectorCopyOption.JAVA);
   }
 
+  /**
+   * copy一个对象,即创建新的对象
+   * @param o 目前的对象
+   * @param oi 对象类型
+   * @param objectInspectorOption期望的类型
+   */
   public static Object copyToStandardObject(Object o, ObjectInspector oi,
       ObjectInspectorCopyOption objectInspectorOption) {
     if (o == null) {

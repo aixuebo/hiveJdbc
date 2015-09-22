@@ -1,181 +1,3 @@
-/**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-package org.apache.hadoop.hive.ql.parse;
-
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.regex.Pattern;
-import java.util.regex.PatternSyntaxException;
-
-import org.antlr.runtime.tree.BaseTree;
-import org.antlr.runtime.tree.Tree;
-import org.antlr.runtime.tree.TreeWizard;
-import org.antlr.runtime.tree.TreeWizard.ContextVisitor;
-import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hive.common.FileUtils;
-import org.apache.hadoop.hive.common.JavaUtils;
-import org.apache.hadoop.hive.common.ObjectPair;
-import org.apache.hadoop.hive.conf.HiveConf;
-import org.apache.hadoop.hive.conf.HiveConf.ConfVars;
-import org.apache.hadoop.hive.metastore.TableType;
-import org.apache.hadoop.hive.metastore.Warehouse;
-import org.apache.hadoop.hive.metastore.api.FieldSchema;
-import org.apache.hadoop.hive.metastore.api.MetaException;
-import org.apache.hadoop.hive.metastore.api.Order;
-import org.apache.hadoop.hive.ql.ErrorMsg;
-import org.apache.hadoop.hive.ql.QueryProperties;
-import org.apache.hadoop.hive.ql.exec.AbstractMapJoinOperator;
-import org.apache.hadoop.hive.ql.exec.ArchiveUtils;
-import org.apache.hadoop.hive.ql.exec.ColumnInfo;
-import org.apache.hadoop.hive.ql.exec.FileSinkOperator;
-import org.apache.hadoop.hive.ql.exec.FunctionInfo;
-import org.apache.hadoop.hive.ql.exec.FunctionRegistry;
-import org.apache.hadoop.hive.ql.exec.GroupByOperator;
-import org.apache.hadoop.hive.ql.exec.JoinOperator;
-import org.apache.hadoop.hive.ql.exec.Operator;
-import org.apache.hadoop.hive.ql.exec.OperatorFactory;
-import org.apache.hadoop.hive.ql.exec.RecordReader;
-import org.apache.hadoop.hive.ql.exec.RecordWriter;
-import org.apache.hadoop.hive.ql.exec.ReduceSinkOperator;
-import org.apache.hadoop.hive.ql.exec.RowSchema;
-import org.apache.hadoop.hive.ql.exec.SMBMapJoinOperator;
-import org.apache.hadoop.hive.ql.exec.TableScanOperator;
-import org.apache.hadoop.hive.ql.exec.Task;
-import org.apache.hadoop.hive.ql.exec.TaskFactory;
-import org.apache.hadoop.hive.ql.exec.UnionOperator;
-import org.apache.hadoop.hive.ql.exec.Utilities;
-import org.apache.hadoop.hive.ql.hooks.ReadEntity;
-import org.apache.hadoop.hive.ql.hooks.WriteEntity;
-import org.apache.hadoop.hive.ql.io.CombineHiveInputFormat;
-import org.apache.hadoop.hive.ql.io.HiveOutputFormat;
-import org.apache.hadoop.hive.ql.io.RCFileInputFormat;
-import org.apache.hadoop.hive.ql.lib.DefaultGraphWalker;
-import org.apache.hadoop.hive.ql.lib.Dispatcher;
-import org.apache.hadoop.hive.ql.lib.GraphWalker;
-import org.apache.hadoop.hive.ql.lib.Node;
-import org.apache.hadoop.hive.ql.metadata.DummyPartition;
-import org.apache.hadoop.hive.ql.metadata.Hive;
-import org.apache.hadoop.hive.ql.metadata.HiveException;
-import org.apache.hadoop.hive.ql.metadata.HiveUtils;
-import org.apache.hadoop.hive.ql.metadata.InvalidTableException;
-import org.apache.hadoop.hive.ql.metadata.Partition;
-import org.apache.hadoop.hive.ql.metadata.Table;
-import org.apache.hadoop.hive.ql.metadata.VirtualColumn;
-import org.apache.hadoop.hive.ql.optimizer.Optimizer;
-import org.apache.hadoop.hive.ql.optimizer.unionproc.UnionProcContext;
-import org.apache.hadoop.hive.ql.parse.BaseSemanticAnalyzer.tableSpec.SpecType;
-import org.apache.hadoop.hive.ql.parse.PTFInvocationSpec.OrderExpression;
-import org.apache.hadoop.hive.ql.parse.PTFInvocationSpec.OrderSpec;
-import org.apache.hadoop.hive.ql.parse.PTFInvocationSpec.PTFInputSpec;
-import org.apache.hadoop.hive.ql.parse.PTFInvocationSpec.PTFQueryInputSpec;
-import org.apache.hadoop.hive.ql.parse.PTFInvocationSpec.PTFQueryInputType;
-import org.apache.hadoop.hive.ql.parse.PTFInvocationSpec.PartitionExpression;
-import org.apache.hadoop.hive.ql.parse.PTFInvocationSpec.PartitionSpec;
-import org.apache.hadoop.hive.ql.parse.PTFInvocationSpec.PartitionedTableFunctionSpec;
-import org.apache.hadoop.hive.ql.parse.PTFInvocationSpec.PartitioningSpec;
-import org.apache.hadoop.hive.ql.parse.WindowingSpec.BoundarySpec;
-import org.apache.hadoop.hive.ql.parse.WindowingSpec.CurrentRowSpec;
-import org.apache.hadoop.hive.ql.parse.WindowingSpec.Direction;
-import org.apache.hadoop.hive.ql.parse.WindowingSpec.RangeBoundarySpec;
-import org.apache.hadoop.hive.ql.parse.WindowingSpec.ValueBoundarySpec;
-import org.apache.hadoop.hive.ql.parse.WindowingSpec.WindowExpressionSpec;
-import org.apache.hadoop.hive.ql.parse.WindowingSpec.WindowFrameSpec;
-import org.apache.hadoop.hive.ql.parse.WindowingSpec.WindowFunctionSpec;
-import org.apache.hadoop.hive.ql.parse.WindowingSpec.WindowSpec;
-import org.apache.hadoop.hive.ql.plan.AggregationDesc;
-import org.apache.hadoop.hive.ql.plan.CreateTableDesc;
-import org.apache.hadoop.hive.ql.plan.CreateTableLikeDesc;
-import org.apache.hadoop.hive.ql.plan.CreateViewDesc;
-import org.apache.hadoop.hive.ql.plan.DDLWork;
-import org.apache.hadoop.hive.ql.plan.DynamicPartitionCtx;
-import org.apache.hadoop.hive.ql.plan.ExprNodeColumnDesc;
-import org.apache.hadoop.hive.ql.plan.ExprNodeColumnListDesc;
-import org.apache.hadoop.hive.ql.plan.ExprNodeConstantDesc;
-import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
-import org.apache.hadoop.hive.ql.plan.ExprNodeDescUtils;
-import org.apache.hadoop.hive.ql.plan.ExprNodeGenericFuncDesc;
-import org.apache.hadoop.hive.ql.plan.ExprNodeNullDesc;
-import org.apache.hadoop.hive.ql.plan.ExtractDesc;
-import org.apache.hadoop.hive.ql.plan.FileSinkDesc;
-import org.apache.hadoop.hive.ql.plan.FilterDesc;
-import org.apache.hadoop.hive.ql.plan.FilterDesc.sampleDesc;
-import org.apache.hadoop.hive.ql.plan.ForwardDesc;
-import org.apache.hadoop.hive.ql.plan.GroupByDesc;
-import org.apache.hadoop.hive.ql.plan.HiveOperation;
-import org.apache.hadoop.hive.ql.plan.JoinCondDesc;
-import org.apache.hadoop.hive.ql.plan.JoinDesc;
-import org.apache.hadoop.hive.ql.plan.LateralViewForwardDesc;
-import org.apache.hadoop.hive.ql.plan.LateralViewJoinDesc;
-import org.apache.hadoop.hive.ql.plan.LimitDesc;
-import org.apache.hadoop.hive.ql.plan.ListBucketingCtx;
-import org.apache.hadoop.hive.ql.plan.LoadFileDesc;
-import org.apache.hadoop.hive.ql.plan.LoadTableDesc;
-import org.apache.hadoop.hive.ql.plan.MapJoinDesc;
-import org.apache.hadoop.hive.ql.plan.OperatorDesc;
-import org.apache.hadoop.hive.ql.plan.PTFDesc;
-import org.apache.hadoop.hive.ql.plan.PTFDesc.OrderExpressionDef;
-import org.apache.hadoop.hive.ql.plan.PTFDesc.PTFExpressionDef;
-import org.apache.hadoop.hive.ql.plan.PTFDesc.PartitionedTableFunctionDef;
-import org.apache.hadoop.hive.ql.plan.PlanUtils;
-import org.apache.hadoop.hive.ql.plan.ReduceSinkDesc;
-import org.apache.hadoop.hive.ql.plan.ScriptDesc;
-import org.apache.hadoop.hive.ql.plan.SelectDesc;
-import org.apache.hadoop.hive.ql.plan.TableDesc;
-import org.apache.hadoop.hive.ql.plan.TableScanDesc;
-import org.apache.hadoop.hive.ql.plan.UDTFDesc;
-import org.apache.hadoop.hive.ql.plan.UnionDesc;
-import org.apache.hadoop.hive.ql.session.SessionState;
-import org.apache.hadoop.hive.ql.session.SessionState.ResourceType;
-import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFEvaluator;
-import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFEvaluator.Mode;
-import org.apache.hadoop.hive.ql.udf.generic.GenericUDFHash;
-import org.apache.hadoop.hive.ql.udf.generic.GenericUDFOPOr;
-import org.apache.hadoop.hive.ql.udf.generic.GenericUDTF;
-import org.apache.hadoop.hive.serde.serdeConstants;
-import org.apache.hadoop.hive.serde2.Deserializer;
-import org.apache.hadoop.hive.serde2.MetadataTypedColumnsetSerDe;
-import org.apache.hadoop.hive.serde2.SerDeException;
-import org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe;
-import org.apache.hadoop.hive.serde2.objectinspector.ConstantObjectInspector;
-import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
-import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector.Category;
-import org.apache.hadoop.hive.serde2.objectinspector.StructField;
-import org.apache.hadoop.hive.serde2.objectinspector.StructObjectInspector;
-import org.apache.hadoop.hive.serde2.typeinfo.PrimitiveTypeInfo;
-import org.apache.hadoop.hive.serde2.typeinfo.TypeInfo;
-import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoFactory;
-import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoUtils;
-import org.apache.hadoop.mapred.InputFormat;
-
-/**
- * Implementation of the semantic analyzer.
- */
 
 public class SemanticAnalyzer extends BaseSemanticAnalyzer {
   private HashMap<TableScanOperator, ExprNodeDesc> opToPartPruner;
@@ -237,57 +59,6 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     int nextNum;
   }
 
-  public SemanticAnalyzer(HiveConf conf) throws SemanticException {
-
-    super(conf);
-    opToPartPruner = new HashMap<TableScanOperator, ExprNodeDesc>();
-    opToPartList = new HashMap<TableScanOperator, PrunedPartitionList>();
-    opToSamplePruner = new HashMap<TableScanOperator, sampleDesc>();
-    nameToSplitSample = new HashMap<String, SplitSample>();
-    topOps = new HashMap<String, Operator<? extends OperatorDesc>>();
-    topSelOps = new HashMap<String, Operator<? extends OperatorDesc>>();
-    loadTableWork = new ArrayList<LoadTableDesc>();
-    loadFileWork = new ArrayList<LoadFileDesc>();
-    opParseCtx = new LinkedHashMap<Operator<? extends OperatorDesc>, OpParseContext>();
-    joinContext = new HashMap<JoinOperator, QBJoinTree>();
-    smbMapJoinContext = new HashMap<SMBMapJoinOperator, QBJoinTree>();
-    topToTable = new HashMap<TableScanOperator, Table>();
-    fsopToTable = new HashMap<FileSinkOperator, Table>();
-    reduceSinkOperatorsAddedByEnforceBucketingSorting = new ArrayList<ReduceSinkOperator>();
-    topToTableProps = new HashMap<TableScanOperator, Map<String, String>>();
-    destTableId = 1;
-    uCtx = null;
-    listMapJoinOpsNoReducer = new ArrayList<AbstractMapJoinOperator<? extends MapJoinDesc>>();
-    groupOpToInputTables = new HashMap<GroupByOperator, Set<String>>();
-    prunedPartitions = new HashMap<String, PrunedPartitionList>();
-    unparseTranslator = new UnparseTranslator();
-    autogenColAliasPrfxLbl = HiveConf.getVar(conf,
-        HiveConf.ConfVars.HIVE_AUTOGEN_COLUMNALIAS_PREFIX_LABEL);
-    autogenColAliasPrfxIncludeFuncName = HiveConf.getBoolVar(conf,
-        HiveConf.ConfVars.HIVE_AUTOGEN_COLUMNALIAS_PREFIX_INCLUDEFUNCNAME);
-    queryProperties = new QueryProperties();
-    opToPartToSkewedPruner = new HashMap<TableScanOperator, Map<String, ExprNodeDesc>>();
-  }
-
-  @Override
-  protected void reset() {
-    super.reset();
-    loadTableWork.clear();
-    loadFileWork.clear();
-    topOps.clear();
-    topSelOps.clear();
-    destTableId = 1;
-    idToTableNameMap.clear();
-    qb = null;
-    ast = null;
-    uCtx = null;
-    joinContext.clear();
-    smbMapJoinContext.clear();
-    opParseCtx.clear();
-    groupOpToInputTables.clear();
-    prunedPartitions.clear();
-  }
-
   public void initParseCtx(ParseContext pctx) {
     opToPartPruner = pctx.getOpToPartPruner();
     opToPartList = pctx.getOpToPartList();
@@ -323,173 +94,6 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         queryProperties);
   }
 
-  /**
-   * from子句中的子查询操作
-   */
-  @SuppressWarnings("nls")
-  public void doPhase1QBExpr(ASTNode ast, QBExpr qbexpr, String id, String alias)
-      throws SemanticException {
-
-    assert (ast.getToken() != null);
-    switch (ast.getToken().getType()) {
-    case HiveParser.TOK_QUERY: {
-      QB qb = new QB(id, alias, true);
-      Phase1Ctx ctx_1 = initPhase1Ctx();
-      doPhase1(ast, qb, ctx_1);
-
-      qbexpr.setOpcode(QBExpr.Opcode.NULLOP);
-      qbexpr.setQB(qb);
-    }
-      break;
-    case HiveParser.TOK_UNION: {
-      qbexpr.setOpcode(QBExpr.Opcode.UNION);
-      // query 1
-      assert (ast.getChild(0) != null);
-      QBExpr qbexpr1 = new QBExpr(alias + "-subquery1");
-      doPhase1QBExpr((ASTNode) ast.getChild(0), qbexpr1, id + "-subquery1",
-          alias + "-subquery1");
-      qbexpr.setQBExpr1(qbexpr1);
-
-      // query 2
-      assert (ast.getChild(0) != null);
-      QBExpr qbexpr2 = new QBExpr(alias + "-subquery2");
-      doPhase1QBExpr((ASTNode) ast.getChild(1), qbexpr2, id + "-subquery2",
-          alias + "-subquery2");
-      qbexpr.setQBExpr2(qbexpr2);
-    }
-      break;
-    }
-  }
-
-  /**
-   * 从select语句中获取聚合函数
-   * 该方法是递归的,因为存在函数到嵌套函数的,比如min(string())
-   * @param selExpr select语句对应的语法树
-   * @param qb
-   * @param dest
-   */
-  private LinkedHashMap<String, ASTNode> doPhase1GetAggregationsFromSelect(
-      ASTNode selExpr, QB qb, String dest) throws SemanticException {
-
-    // Iterate over the selects search for aggregation Trees.
-    // Use String as keys to eliminate duplicate trees.
-    LinkedHashMap<String, ASTNode> aggregationTrees = new LinkedHashMap<String, ASTNode>();
-    List<ASTNode> wdwFns = new ArrayList<ASTNode>();
-    for (int i = 0; i < selExpr.getChildCount(); ++i) {
-      ASTNode function = (ASTNode) selExpr.getChild(i).getChild(0);
-      //真正去递归寻找函数,该方法是递归的,因为存在函数到嵌套函数的,比如min(string())
-      doPhase1GetAllAggregations((ASTNode) function, aggregationTrees, wdwFns);
-    }
-
-    // window based aggregations are handled differently
-    for (ASTNode wdwFn : wdwFns) {
-      WindowingSpec spec = qb.getWindowingSpec(dest);
-      if(spec == null) {
-        queryProperties.setHasWindowing(true);
-        spec = new WindowingSpec();
-        qb.addDestToWindowingSpec(dest, spec);
-      }
-      HashMap<String, ASTNode> wExprsInDest = qb.getParseInfo().getWindowingExprsForClause(dest);
-      int wColIdx = spec.getWindowExpressions() == null ? 0 : spec.getWindowExpressions().size();
-      WindowFunctionSpec wFnSpec = processWindowFunction(wdwFn,
-        (ASTNode)wdwFn.getChild(wdwFn.getChildCount()-1));
-      // If this is a duplicate invocation of a function; don't add to WindowingSpec.
-      if ( wExprsInDest != null &&
-          wExprsInDest.containsKey(wFnSpec.getExpression().toStringTree())) {
-        continue;
-      }
-      wFnSpec.setAlias("_wcol" + wColIdx++);
-      spec.addWindowFunction(wFnSpec);
-      qb.getParseInfo().addWindowingExprToClause(dest, wFnSpec.getExpression());
-    }
-
-    return aggregationTrees;
-  }
-
-  /**
-   * 为select中每一个属性设置别名
-   */
-  private void doPhase1GetColumnAliasesFromSelect(
-      ASTNode selectExpr, QBParseInfo qbp) {
-    for (int i = 0; i < selectExpr.getChildCount(); ++i) {//循环每一个属性
-      ASTNode selExpr = (ASTNode) selectExpr.getChild(i);
-      if ((selExpr.getToken().getType() == HiveParser.TOK_SELEXPR)
-          && (selExpr.getChildCount() == 2)) {//存在别名
-        String columnAlias = unescapeIdentifier(selExpr.getChild(1).getText());//获取别名
-        qbp.setExprToColumnAlias((ASTNode) selExpr.getChild(0), columnAlias);
-      }
-    }
-  }
-
-  /**
-   * DFS-scan the expressionTree to find all aggregation subtrees and put them
-   * in aggregations.
-   *
-   * @param expressionTree
-   * @param aggregations 找到的聚合函数集合
-   *          the key to the HashTable is the toStringTree() representation of
-   *          the aggregation subtree.
-   * @throws SemanticException
-   * 递归寻找聚合函数
-   * 真正去递归寻找函数,该方法是递归的,因为存在函数到嵌套函数的,比如min(string())
-   * 会将聚合函数添加到aggregations参数中,窗口函数中添加到wdwFns集合中
-   */
-  private void doPhase1GetAllAggregations(ASTNode expressionTree,
-      HashMap<String, ASTNode> aggregations, List<ASTNode> wdwFns) throws SemanticException {
-    int exprTokenType = expressionTree.getToken().getType();
-    if (exprTokenType == HiveParser.TOK_FUNCTION
-        || exprTokenType == HiveParser.TOK_FUNCTIONDI
-        || exprTokenType == HiveParser.TOK_FUNCTIONSTAR) {
-      assert (expressionTree.getChildCount() != 0);
-      if (expressionTree.getChild(expressionTree.getChildCount()-1).getType()
-          == HiveParser.TOK_WINDOWSPEC) {
-        wdwFns.add(expressionTree);
-        return;
-      }
-      if (expressionTree.getChild(0).getType() == HiveParser.Identifier) {
-        String functionName = unescapeIdentifier(expressionTree.getChild(0)
-            .getText());//函数名
-        if(FunctionRegistry.impliesOrder(functionName)) {
-          throw new SemanticException(ErrorMsg.MISSING_OVER_CLAUSE.getMsg(functionName));
-        }
-        if (FunctionRegistry.getGenericUDAFResolver(functionName) != null) {
-          if(containsLeadLagUDF(expressionTree)) {
-            throw new SemanticException(ErrorMsg.MISSING_OVER_CLAUSE.getMsg(functionName));
-          }
-          aggregations.put(expressionTree.toStringTree(), expressionTree);
-          FunctionInfo fi = FunctionRegistry.getFunctionInfo(functionName);
-          if (!fi.isNative()) {
-            unparseTranslator.addIdentifierTranslation((ASTNode) expressionTree
-                .getChild(0));
-          }
-          return;
-        }
-      }
-    }
-    
-    //递归寻找聚合函数
-    for (int i = 0; i < expressionTree.getChildCount(); i++) {
-      doPhase1GetAllAggregations((ASTNode) expressionTree.getChild(i),
-          aggregations, wdwFns);
-    }
-  }
-
-  /**
-   * 过滤,只要distinct函数集合
-   */
-  private List<ASTNode> doPhase1GetDistinctFuncExprs(
-      HashMap<String, ASTNode> aggregationTrees) throws SemanticException {
-    List<ASTNode> exprs = new ArrayList<ASTNode>();
-    for (Map.Entry<String, ASTNode> entry : aggregationTrees.entrySet()) {
-      ASTNode value = entry.getValue();
-      assert (value != null);
-      if (value.getToken().getType() == HiveParser.TOK_FUNCTIONDI) {
-        exprs.add(value);
-      }
-    }
-    return exprs;
-  }
-
   public static String generateErrorMessage(ASTNode ast, String message) {
     StringBuilder sb = new StringBuilder();
     sb.append(ast.getLine());
@@ -501,223 +105,6 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     sb.append(ErrorMsg.getText(ast));
     sb.append("'");
     return sb.toString();
-  }
-
-  /**
-   * Goes though the tabref tree and finds the alias for the table. Once found,
-   * it records the table name-> alias association in aliasToTabs. It also makes
-   * an association from the alias to the table AST in parse info.
-   *
-   * @return the alias of the table
-//[dbName.] tableName [(key=value,key=value,key)] [tableSample] [ as Identifier ]
-//注意:
-//1.(此时认为解析成key=null,即不需要value属性值)
-//tableSample函数解析如下
-//1.TABLESAMPLE(数字    PERCENT)
-//2.TABLESAMPLE(数字    ROWS)
-//3.TABLESAMPLE(ByteLengthLiteral)
-//4.TABLESAMPLE(BUCKET 数字    OUT OF 数字  [ ON expression,expression ] )
-tableSource
-@init { gParent.msgs.push("table source"); }
-@after { gParent.msgs.pop(); }
-    : tabname=tableName (props=tableProperties)? (ts=tableSample)? (KW_AS? alias=Identifier)?
-    -> ^(TOK_TABREF $tabname $props? $ts? $alias?)
-    ;
-    
-参数tabref是from子句,返回别名字符串
-   */
-  private String processTable(QB qb, ASTNode tabref) throws SemanticException {
-    // For each table reference get the table name
-    // and the alias (if alias is not present, the table name
-    // is used as an alias)
-    int aliasIndex = 0;//第几个节点是别名节点
-    int propsIndex = -1;//第几个节点是属性节点
-    int tsampleIndex = -1;//第几个节点是按桶抽样节点
-    int ssampleIndex = -1;//第几个节点是按表抽样节点
-    for (int index = 1; index < tabref.getChildCount(); index++) {
-      ASTNode ct = (ASTNode) tabref.getChild(index);
-      if (ct.getToken().getType() == HiveParser.TOK_TABLEBUCKETSAMPLE) {
-        tsampleIndex = index;
-      } else if (ct.getToken().getType() == HiveParser.TOK_TABLESPLITSAMPLE) {
-        ssampleIndex = index;
-      } else if (ct.getToken().getType() == HiveParser.TOK_TABLEPROPERTIES) {
-        propsIndex = index;
-      } else {
-        aliasIndex = index;
-      }
-    }
-
-    ASTNode tableTree = (ASTNode) (tabref.getChild(0));
-
-    String tabIdName = getUnescapedName(tableTree);
-
-    String alias;//别名要么自己设置了,要么是数据库表的名字
-    if (aliasIndex != 0) {
-      alias = unescapeIdentifier(tabref.getChild(aliasIndex).getText());
-    }
-    else {
-      alias = getUnescapedUnqualifiedTableName(tableTree);
-    }
-
-    if (propsIndex >= 0) {
-      Tree propsAST = tabref.getChild(propsIndex);
-      Map<String, String> props = DDLSemanticAnalyzer.getProps((ASTNode) propsAST.getChild(0));
-      qb.setTabProps(alias, props);
-    }
-
-    // If the alias is already there then we have a conflict
-    if (qb.exists(alias)) {//别名不允许冲突
-      throw new SemanticException(ErrorMsg.AMBIGUOUS_TABLE_ALIAS.getMsg(tabref
-          .getChild(aliasIndex)));
-    }
-    
-    
-    if (tsampleIndex >= 0) {//TABLESAMPLE(BUCKET 数字    OUT OF 数字  [ ON expression,expression ] )
-      ASTNode sampleClause = (ASTNode) tabref.getChild(tsampleIndex);
-      ArrayList<ASTNode> sampleCols = new ArrayList<ASTNode>();//存储on后面的表达式集合
-      if (sampleClause.getChildCount() > 2) {//解析on后面的表达式集合
-        for (int i = 2; i < sampleClause.getChildCount(); i++) {
-          sampleCols.add((ASTNode) sampleClause.getChild(i));
-        }
-      }
-      // TODO: For now only support sampling on up to two columns
-      // Need to change it to list of columns
-      if (sampleCols.size() > 2) {
-        throw new SemanticException(generateErrorMessage(
-            (ASTNode) tabref.getChild(0),
-            ErrorMsg.SAMPLE_RESTRICTION.getMsg()));
-      }
-      qb.getParseInfo().setTabSample(
-          alias,
-          new TableSample(
-              unescapeIdentifier(sampleClause.getChild(0).getText()),
-              unescapeIdentifier(sampleClause.getChild(1).getText()),
-              sampleCols));
-      if (unparseTranslator.isEnabled()) {
-        for (ASTNode sampleCol : sampleCols) {
-          unparseTranslator.addIdentifierTranslation((ASTNode) sampleCol
-              .getChild(0));
-        }
-      }
-    } else if (ssampleIndex >= 0) {
-    	//1.TABLESAMPLE(数字    PERCENT)
-    	//2.TABLESAMPLE(数字    ROWS)
-    	//3.TABLESAMPLE(ByteLengthLiteral)
-      ASTNode sampleClause = (ASTNode) tabref.getChild(ssampleIndex);
-
-      Tree type = sampleClause.getChild(0);//类型PERCENT、ROWS、ByteLengthLiteral
-      Tree numerator = sampleClause.getChild(1);
-      String value = unescapeIdentifier(numerator.getText());//数字或者字符串
-
-
-      SplitSample sample;
-      if (type.getType() == HiveParser.TOK_PERCENT) {
-    	//校验输入格式.必须是CombineHiveInputFormat格式
-        assertCombineInputFormat(numerator, "Percentage");
-        Double percent = Double.valueOf(value).doubleValue();//校验百分比
-        if (percent < 0  || percent > 100) {
-          throw new SemanticException(generateErrorMessage((ASTNode) numerator,
-              "Sampling percentage should be between 0 and 100"));
-        }
-        int seedNum = conf.getIntVar(ConfVars.HIVESAMPLERANDOMNUM);
-        sample = new SplitSample(percent, seedNum);
-      } else if (type.getType() == HiveParser.TOK_ROWCOUNT) {
-        sample = new SplitSample(Integer.valueOf(value));
-      } else {
-        assert type.getType() == HiveParser.TOK_LENGTH;
-        //校验输入格式.必须是CombineHiveInputFormat格式
-        assertCombineInputFormat(numerator, "Total Length");
-        long length = Integer.valueOf(value.substring(0, value.length() - 1));
-        char last = value.charAt(value.length() - 1);
-        if (last == 'k' || last == 'K') {
-          length <<= 10;
-        } else if (last == 'm' || last == 'M') {
-          length <<= 20;
-        } else if (last == 'g' || last == 'G') {
-          length <<= 30;
-        }
-        int seedNum = conf.getIntVar(ConfVars.HIVESAMPLERANDOMNUM);
-        //获取多少字节数
-        sample = new SplitSample(length, seedNum);
-      }
-      String alias_id = getAliasId(alias, qb);
-      nameToSplitSample.put(alias_id, sample);
-    }
-    // Insert this map into the stats 设置别名的映射关系
-    qb.setTabAlias(alias, tabIdName);
-    qb.addAlias(alias);
-
-    qb.getParseInfo().setSrcForAlias(alias, tableTree);
-
-    unparseTranslator.addTableNameTranslation(tableTree, SessionState.get().getCurrentDatabase());
-    if (aliasIndex != 0) {
-      unparseTranslator.addIdentifierTranslation((ASTNode) tabref
-          .getChild(aliasIndex));
-    }
-
-    return alias;
-  }
-
-  //校验输入格式.必须是CombineHiveInputFormat格式
-  private void assertCombineInputFormat(Tree numerator, String message) throws SemanticException {
-    String inputFormat = HiveConf.getVar(conf, HiveConf.ConfVars.HIVEINPUTFORMAT);
-    if (!inputFormat.equals(CombineHiveInputFormat.class.getName())) {
-      throw new SemanticException(generateErrorMessage((ASTNode) numerator,
-          message + " sampling is not supported in " + inputFormat));
-    }
-  }
-
-  /**
-   * from子句,用于子查询,必须有别名
-   * @param qb
-   * @param subq
-   * @return
-   * @throws SemanticException
-   */
-  private String processSubQuery(QB qb, ASTNode subq) throws SemanticException {
-
-    // This is a subquery and must have an alias必须有别名
-    if (subq.getChildCount() != 2) {
-      throw new SemanticException(ErrorMsg.NO_SUBQUERY_ALIAS.getMsg(subq));
-    }
-    ASTNode subqref = (ASTNode) subq.getChild(0);//子查询节点
-    String alias = unescapeIdentifier(subq.getChild(1).getText());//别名
-
-    // Recursively do the first phase of semantic analysis for the subquery
-    QBExpr qbexpr = new QBExpr(alias);
-
-    //设置查询语句之间的关系
-    doPhase1QBExpr(subqref, qbexpr, qb.getId(), alias);
-
-    // If the alias is already there then we have a conflict
-    if (qb.exists(alias)) {
-      throw new SemanticException(ErrorMsg.AMBIGUOUS_TABLE_ALIAS.getMsg(subq
-          .getChild(1)));
-    }
-    // Insert this map into the stats
-    qb.setSubqAlias(alias, qbexpr);
-    qb.addAlias(alias);
-
-    unparseTranslator.addIdentifierTranslation((ASTNode) subq.getChild(1));
-
-    return alias;
-  }
-
-  /**
-   * 是否是join节点,遇见JOIN 、INNER JOIN、CROSS JOIN、LEFT [OUTER] JOIN 、RIGHT [OUTER] JOIN 、FULL [OUTER] JOIN 、LEFT SEMI JOIN字符串
-   */
-  private boolean isJoinToken(ASTNode node) {
-    if ((node.getToken().getType() == HiveParser.TOK_JOIN)
-        || (node.getToken().getType() == HiveParser.TOK_CROSSJOIN)
-        || (node.getToken().getType() == HiveParser.TOK_LEFTOUTERJOIN)
-        || (node.getToken().getType() == HiveParser.TOK_RIGHTOUTERJOIN)
-        || (node.getToken().getType() == HiveParser.TOK_FULLOUTERJOIN)
-        || (node.getToken().getType() == HiveParser.TOK_LEFTSEMIJOIN)
-        || (node.getToken().getType() == HiveParser.TOK_UNIQUEJOIN)) {
-      return true;
-    }
-
-    return false;
   }
 
   /**
@@ -825,325 +212,6 @@ tableSource
     return alias;
   }
 
-  /**
-   * Phase 1: (including, but not limited to):
-   *
-   * 1. Gets all the aliases for all the tables / subqueries and makes the
-   * appropriate mapping in aliasToTabs, aliasToSubq 2. Gets the location of the
-   * destination and names the clase "inclause" + i 3. Creates a map from a
-   * string representation of an aggregation tree to the actual aggregation AST
-   * 4. Creates a mapping from the clause name to the select expression AST in
-   * destToSelExpr 5. Creates a mapping from a table alias to the lateral view
-   * AST's in aliasToLateralViews
-   *
-   * @param ast
-   * @param qb
-   * @param ctx_1
-   * @throws SemanticException
-   */
-  @SuppressWarnings({"fallthrough", "nls"})
-  public boolean doPhase1(ASTNode ast, QB qb, Phase1Ctx ctx_1)
-      throws SemanticException {
-
-    boolean phase1Result = true;
-    QBParseInfo qbp = qb.getParseInfo();
-    boolean skipRecursion = false;
-
-    if (ast.getToken() != null) {
-      skipRecursion = true;
-      switch (ast.getToken().getType()) {
-      case HiveParser.TOK_SELECTDI://select distinct
-        qb.countSelDi();
-        // fall through
-      case HiveParser.TOK_SELECT:
-        qb.countSel();
-        qbp.setSelExprForClause(ctx_1.dest, ast);
-
-        if (((ASTNode) ast.getChild(0)).getToken().getType() == HiveParser.TOK_HINTLIST) {//设置select中的hints节点
-          qbp.setHints((ASTNode) ast.getChild(0));
-        }
-
-        //返回聚合函数集合,方法是递归的,因为存在函数到嵌套函数的,比如min(string()),因此value是一个节点信息,通过该信息可以获取嵌套关系
-        LinkedHashMap<String, ASTNode> aggregations = doPhase1GetAggregationsFromSelect(ast,
-            qb, ctx_1.dest);
-        //为select中每一个属性设置别名
-        doPhase1GetColumnAliasesFromSelect(ast, qbp);
-        //设置集合函数映射关系,用于group by等后续操作使用select的聚合参数地方
-        qbp.setAggregationExprsForClause(ctx_1.dest, aggregations);
-        //过滤,只要distinct函数集合
-        qbp.setDistinctFuncExprsForClause(ctx_1.dest,doPhase1GetDistinctFuncExprs(aggregations));
-        break;
-
-      case HiveParser.TOK_WHERE:
-        qbp.setWhrExprForClause(ctx_1.dest, ast);
-        break;
-
-      case HiveParser.TOK_INSERT_INTO://仅仅针对INSERT INTO语句
-        String currentDatabase = SessionState.get().getCurrentDatabase();
-        String tab_name = getUnescapedName((ASTNode) ast.getChild(0).getChild(0), currentDatabase);
-        qbp.addInsertIntoTable(tab_name);
-
-        /**
-selectStatement
-   :
-   selectClause
-   fromClause
-   whereClause?
-   groupByClause?
-   havingClause?
-   orderByClause?
-   clusterByClause?
-   distributeByClause?
-   sortByClause?
-   window_clause?
-   limitClause? -> ^(TOK_QUERY fromClause ^(TOK_INSERT ^(TOK_DESTINATION ^(TOK_DIR TOK_TMP_FILE))
-                     selectClause whereClause? groupByClause? havingClause? orderByClause? clusterByClause?
-                     distributeByClause? sortByClause? window_clause? limitClause?))
-         */
-      case HiveParser.TOK_DESTINATION://目标
-        ctx_1.dest = "insclause-" + ctx_1.nextNum;
-        ctx_1.nextNum++;
-
-        // is there a insert in the subquery
-        if (qbp.getIsSubQ()) {
-          ASTNode ch = (ASTNode) ast.getChild(0);
-          if ((ch.getToken().getType() != HiveParser.TOK_DIR)
-              || (((ASTNode) ch.getChild(0)).getToken().getType() != HiveParser.TOK_TMP_FILE)) {
-            throw new SemanticException(ErrorMsg.NO_INSERT_INSUBQUERY
-                .getMsg(ast));
-          }
-        }
-        qbp.setDestForClause(ctx_1.dest, (ASTNode) ast.getChild(0));
-        break;
-
-      case HiveParser.TOK_FROM:
-        int child_count = ast.getChildCount();
-        if (child_count != 1) {
-          throw new SemanticException(generateErrorMessage(ast,
-              "Multiple Children " + child_count));
-        }
-
-        // Check if this is a subquery / lateral view
-        ASTNode frm = (ASTNode) ast.getChild(0);
-        /**
-//[dbName.] tableName [(key=value,key=value,key)] [tableSample] [ as Identifier ]
-//注意:
-//1.(此时认为解析成key=null,即不需要value属性值)
-//tableSample函数解析如下
-//1.TABLESAMPLE(数字    PERCENT)
-//2.TABLESAMPLE(数字    ROWS)
-//3.TABLESAMPLE(ByteLengthLiteral)
-//4.TABLESAMPLE(BUCKET 数字    OUT OF 数字  [ ON expression,expression ] )
-tableSource
-@init { gParent.msgs.push("table source"); }
-@after { gParent.msgs.pop(); }
-    : tabname=tableName (props=tableProperties)? (ts=tableSample)? (KW_AS? alias=Identifier)?
-    -> ^(TOK_TABREF $tabname $props? $ts? $alias?)
-    ;
-         */
-        if (frm.getToken().getType() == HiveParser.TOK_TABREF) {
-          processTable(qb, frm);
-        } else if (frm.getToken().getType() == HiveParser.TOK_SUBQUERY) {//from子句,用于子查询,必须有别名
-          processSubQuery(qb, frm);
-        } else if (frm.getToken().getType() == HiveParser.TOK_LATERAL_VIEW ||
-            frm.getToken().getType() == HiveParser.TOK_LATERAL_VIEW_OUTER) {
-          processLateralView(qb, frm);
-        } else if (isJoinToken(frm)) {//incorrect
-          queryProperties.setHasJoin(true);
-          processJoin(qb, frm);
-          qbp.setJoinExpr(frm);
-        }else if(frm.getToken().getType() == HiveParser.TOK_PTBLFUNCTION){
-          queryProperties.setHasPTF(true);
-          processPTF(qb, frm);
-        }
-        break;
-
-      case HiveParser.TOK_CLUSTERBY:
-        // Get the clusterby aliases - these are aliased to the entries in the
-        // select list
-        queryProperties.setHasClusterBy(true);
-        qbp.setClusterByExprForClause(ctx_1.dest, ast);
-        break;
-
-      case HiveParser.TOK_DISTRIBUTEBY:
-        // Get the distribute by aliases - these are aliased to the entries in
-        // the
-        // select list
-        queryProperties.setHasDistributeBy(true);
-        qbp.setDistributeByExprForClause(ctx_1.dest, ast);
-        if (qbp.getClusterByForClause(ctx_1.dest) != null) {
-          throw new SemanticException(generateErrorMessage(ast,
-              ErrorMsg.CLUSTERBY_DISTRIBUTEBY_CONFLICT.getMsg()));
-        } else if (qbp.getOrderByForClause(ctx_1.dest) != null) {
-          throw new SemanticException(generateErrorMessage(ast,
-              ErrorMsg.ORDERBY_DISTRIBUTEBY_CONFLICT.getMsg()));
-        }
-        break;
-
-      case HiveParser.TOK_SORTBY:
-     // Get the sort by aliases - these are aliased to the entries in the
-        // select list
-        queryProperties.setHasSortBy(true);
-        qbp.setSortByExprForClause(ctx_1.dest, ast);
-        if (qbp.getClusterByForClause(ctx_1.dest) != null) {
-          throw new SemanticException(generateErrorMessage(ast,
-              ErrorMsg.CLUSTERBY_SORTBY_CONFLICT.getMsg()));
-        } else if (qbp.getOrderByForClause(ctx_1.dest) != null) {
-          throw new SemanticException(generateErrorMessage(ast,
-              ErrorMsg.ORDERBY_SORTBY_CONFLICT.getMsg()));
-        }
-
-        break;
-      case HiveParser.TOK_ORDERBY:
-        // Get the order by aliases - these are aliased to the entries in the
-        // select list
-        queryProperties.setHasOrderBy(true);
-        qbp.setOrderByExprForClause(ctx_1.dest, ast);
-        if (qbp.getClusterByForClause(ctx_1.dest) != null) {
-          throw new SemanticException(generateErrorMessage(ast,
-              ErrorMsg.CLUSTERBY_ORDERBY_CONFLICT.getMsg()));
-        }
-        break;
-
-      case HiveParser.TOK_GROUPBY:
-      case HiveParser.TOK_ROLLUP_GROUPBY:
-      case HiveParser.TOK_CUBE_GROUPBY:
-      case HiveParser.TOK_GROUPING_SETS:
-        // Get the groupby aliases - these are aliased to the entries in the
-        // select list
-        queryProperties.setHasGroupBy(true);
-        if (qbp.getJoinExpr() != null) {//是否在有join表链接的情况下,依然设置了group by语句
-          queryProperties.setHasJoinFollowedByGroupBy(true);
-        }
-        if (qbp.getSelForClause(ctx_1.dest).getToken().getType() == HiveParser.TOK_SELECTDI) {
-          throw new SemanticException(generateErrorMessage(ast,
-              ErrorMsg.SELECT_DISTINCT_WITH_GROUPBY.getMsg()));
-        }
-        qbp.setGroupByExprForClause(ctx_1.dest, ast);
-        skipRecursion = true;
-
-        // Rollup and Cubes are syntactic sugar on top of grouping sets
-        if (ast.getToken().getType() == HiveParser.TOK_ROLLUP_GROUPBY) {
-          qbp.getDestRollups().add(ctx_1.dest);
-        } else if (ast.getToken().getType() == HiveParser.TOK_CUBE_GROUPBY) {
-          qbp.getDestCubes().add(ctx_1.dest);
-        } else if (ast.getToken().getType() == HiveParser.TOK_GROUPING_SETS) {
-          qbp.getDestGroupingSets().add(ctx_1.dest);
-        }
-        break;
-
-      case HiveParser.TOK_HAVING:
-        qbp.setHavingExprForClause(ctx_1.dest, ast);
-        qbp.addAggregationExprsForClause(ctx_1.dest,
-            doPhase1GetAggregationsFromSelect(ast, qb, ctx_1.dest));
-        break;
-
-      case HiveParser.KW_WINDOW:
-        if (!qb.hasWindowingSpec(ctx_1.dest) ) {
-          throw new SemanticException(generateErrorMessage(ast,
-              "Query has no Cluster/Distribute By; but has a Window definition"));
-        }
-        handleQueryWindowClauses(qb, ctx_1, ast);
-        break;
-
-      case HiveParser.TOK_LIMIT:
-        qbp.setDestLimit(ctx_1.dest, new Integer(ast.getChild(0).getText()));
-        break;
-
-      case HiveParser.TOK_ANALYZE:
-        // Case of analyze command
-
-        String table_name = getUnescapedName((ASTNode) ast.getChild(0).getChild(0));
-
-
-        qb.setTabAlias(table_name, table_name);
-        qb.addAlias(table_name);
-        qb.getParseInfo().setIsAnalyzeCommand(true);
-        qb.getParseInfo().setNoScanAnalyzeCommand(this.noscan);
-        qb.getParseInfo().setPartialScanAnalyzeCommand(this.partialscan);
-        // Allow analyze the whole table and dynamic partitions
-        HiveConf.setVar(conf, HiveConf.ConfVars.DYNAMICPARTITIONINGMODE, "nonstrict");
-        HiveConf.setVar(conf, HiveConf.ConfVars.HIVEMAPREDMODE, "nonstrict");
-
-        break;
-
-      case HiveParser.TOK_UNION:
-        // currently, we dont support subq1 union subq2 - the user has to
-        // explicitly say:
-        // 明确的说是不支持如下方式:select * from (subq1 union subq2) subqalias
-    	  //支持的是SELECT column_name(s) FROM table_name1 UNION SELECT column_name(s) FROM table_name2
-        if (!qbp.getIsSubQ()) {
-          throw new SemanticException(generateErrorMessage(ast,
-              ErrorMsg.UNION_NOTIN_SUBQ.getMsg()));
-        }
-
-      case HiveParser.TOK_INSERT:
-        ASTNode destination = (ASTNode) ast.getChild(0);
-        Tree tab = destination.getChild(0);
-
-        // Proceed if AST contains partition & If Not Exists
-        if (destination.getChildCount() == 2 &&
-            tab.getChildCount() == 2 &&
-            destination.getChild(1).getType() == HiveParser.TOK_IFNOTEXISTS) {
-          String tableName = tab.getChild(0).getChild(0).getText();
-
-          Tree partitions = tab.getChild(1);
-          int childCount = partitions.getChildCount();
-          HashMap<String, String> partition = new HashMap<String, String>();
-          for (int i = 0; i < childCount; i++) {
-            String partitionName = partitions.getChild(i).getChild(0).getText();
-            Tree pvalue = partitions.getChild(i).getChild(1);
-            if (pvalue == null) {
-              break;
-            }
-            String partitionVal = stripQuotes(pvalue.getText());
-            partition.put(partitionName, partitionVal);
-          }
-          // if it is a dynamic partition throw the exception
-          if (childCount == partition.size()) {
-            try {
-              Table table = db.getTable(tableName);
-              Partition parMetaData = db.getPartition(table, partition, false);
-              // Check partition exists if it exists skip the overwrite
-              if (parMetaData != null) {
-                phase1Result = false;
-                skipRecursion = true;
-                LOG.info("Partition already exists so insert into overwrite " +
-                    "skipped for partition : " + parMetaData.toString());
-                break;
-              }
-            } catch (HiveException e) {
-              LOG.info("Error while getting metadata : ", e);
-            }
-          } else {
-            throw new SemanticException(ErrorMsg.INSERT_INTO_DYNAMICPARTITION_IFNOTEXISTS
-                .getMsg(partition.toString()));
-          }
-        }
-        skipRecursion = false;
-        break;
-      case HiveParser.TOK_LATERAL_VIEW:
-      case HiveParser.TOK_LATERAL_VIEW_OUTER:
-        // todo: nested LV
-        assert ast.getChildCount() == 1;
-        qb.getParseInfo().getDestToLateralView().put(ctx_1.dest, ast);
-        break;
-      default:
-        skipRecursion = false;
-        break;
-      }
-    }
-
-    if (!skipRecursion) {
-      // Iterate over the rest of the children
-      int child_count = ast.getChildCount();
-      for (int child_pos = 0; child_pos < child_count && phase1Result; ++child_pos) {
-        // Recurse
-        phase1Result = phase1Result && doPhase1((ASTNode) ast.getChild(child_pos), qb, ctx_1);
-      }
-    }
-    return phase1Result;
-  }
 
   private void getMetaData(QBExpr qbexpr) throws SemanticException {
     getMetaData(qbexpr, null);
@@ -1479,40 +547,17 @@ tableSource
     qb.rewriteViewToSubq(alias, tab_name, qbexpr);
   }
 
-  //校验list中是否存在elem,true表示存在
-  private boolean isPresent(String[] list, String elem) {
-    for (String s : list) {
-      if (s.toLowerCase().equals(elem)) {
-        return true;
-      }
-    }
 
-    return false;
-  }
-
-  /**
-   * 解析join后面的on表达式需要的数据库节点属于左边树还是右边树的 
-   * @param joinTree
-   * @param condn
-   * @param leftAliases 左边树则添加到该集合
-   * @param rightAliases 右边树则添加到该集合
-   * @param fields
-   * @throws SemanticException
-   */
   @SuppressWarnings("nls")
   private void parseJoinCondPopulateAlias(QBJoinTree joinTree, ASTNode condn,
       ArrayList<String> leftAliases, ArrayList<String> rightAliases,
       ArrayList<String> fields) throws SemanticException {
     // String[] allAliases = joinTree.getAllAliases();
     switch (condn.getToken().getType()) {
-    //TOK_TABLE_OR_COL(biao1))(id))(.(TOK_TABLE_OR_COL(biao))(id)))(=(.(TOK_TABLE_OR_COL(biao))(name))('xxx')
-    //原式=select * from biao left join biao1 on biao1.id = biao.id and biao.name = 'xxx'中的biao1.id = biao.id and biao.name = 'xxx'部分
     case HiveParser.TOK_TABLE_OR_COL:
       String tableOrCol = unescapeIdentifier(condn.getChild(0).getText()
           .toLowerCase());
       unparseTranslator.addIdentifierTranslation((ASTNode) condn.getChild(0));
-      
-      //查看tableOrCol别名是左边还是右边树里面的别名
       if (isPresent(joinTree.getLeftAliases(), tableOrCol)) {
         if (!leftAliases.contains(tableOrCol)) {
           leftAliases.add(tableOrCol);
@@ -1521,7 +566,7 @@ tableSource
         if (!rightAliases.contains(tableOrCol)) {
           rightAliases.add(tableOrCol);
         }
-      } else {//说明找不到该别名
+      } else {
         // We don't support columns without table prefix in JOIN condition right
         // now.
         // We need to pass Metadata here to know which table the column belongs
@@ -1671,17 +716,17 @@ tableSource
     }
 
     switch (joinCond.getToken().getType()) {
-    case HiveParser.KW_OR://OR
+    case HiveParser.KW_OR:
       throw new SemanticException(ErrorMsg.INVALID_JOIN_CONDITION_3
           .getMsg(joinCond));
 
-    case HiveParser.KW_AND://AND
+    case HiveParser.KW_AND:
       parseJoinCondition(joinTree, (ASTNode) joinCond.getChild(0), leftSrc, type);
       parseJoinCondition(joinTree, (ASTNode) joinCond.getChild(1), leftSrc, type);
       break;
 
-    case HiveParser.EQUAL_NS://<=>
-    case HiveParser.EQUAL://'=' | '=='
+    case HiveParser.EQUAL_NS:
+    case HiveParser.EQUAL:
       ASTNode leftCondn = (ASTNode) joinCond.getChild(0);
       ArrayList<String> leftCondAl1 = new ArrayList<String>();
       ArrayList<String> leftCondAl2 = new ArrayList<String>();
@@ -1924,7 +969,7 @@ tableSource
       RowResolver input, Integer pos, RowResolver output, List<String> aliases, boolean subQuery)
       throws SemanticException {
 
-    // The table alias should exist必须存在该table别名,并且真实存在
+    // The table alias should exist
     if (tabAlias != null && !input.hasTableAlias(tabAlias)) {
       throw new SemanticException(ErrorMsg.INVALID_TABLE_ALIAS.getMsg(sel));
     }
@@ -1939,7 +984,7 @@ tableSource
     }
 
     StringBuilder replacementText = new StringBuilder();
-    int matched = 0;//column名字匹配正则表达式的个数
+    int matched = 0;
     // add empty string to the list of aliases. Some operators (ex. GroupBy) add
     // ColumnInfos for table alias "".
     if (!aliases.contains("")) {
@@ -1948,8 +993,6 @@ tableSource
     // For expr "*", aliases should be iterated in the order they are specified
     // in the query.
     for (String alias : aliases) {
-    	
-      //循环别名, 	fMap不是null,说明该别名是table别名,返回的fMap是属性-属性对象信息
       HashMap<String, ColumnInfo> fMap = input.getFieldMap(alias);
       if (fMap == null) {
         continue;
@@ -1959,7 +1002,7 @@ tableSource
       for (Map.Entry<String, ColumnInfo> entry : fMap.entrySet()) {
         ColumnInfo colInfo = entry.getValue();
         String name = colInfo.getInternalName();
-        String[] tmp = input.reverseLookup(name);//table-colnmn别名数组
+        String[] tmp = input.reverseLookup(name);
 
         // Skip the colinfos which are not for this particular alias
         if (tabAlias != null && !tmp[0].equalsIgnoreCase(tabAlias)) {
@@ -1970,7 +1013,7 @@ tableSource
           continue;
         }
 
-        // Not matching the regex?正则表达式必须匹配该columnName
+        // Not matching the regex?
         if (!regex.matcher(tmp[1]).matches()) {
           continue;
         }
@@ -1998,7 +1041,6 @@ tableSource
         }
       }
     }
-    
     if (matched == 0) {
       throw new SemanticException(ErrorMsg.INVALID_COLUMN.getMsg(sel));
     }
@@ -2542,23 +1584,6 @@ tableSource
     colRef[1] = colAlias;
     return colRef;
   }
-
-  /**
-   * Returns whether the pattern is a regex expression (instead of a normal
-   * string). Normal string is a string with all alphabets/digits and "_".
-   * 只允许是数字、字符、_
-   * true表示参数是数字、字符、_组成的
-   */
-  private static boolean isRegex(String pattern) {
-    for (int i = 0; i < pattern.length(); i++) {
-      if (!Character.isLetterOrDigit(pattern.charAt(i))
-          && pattern.charAt(i) != '_') {
-        return true;
-      }
-    }
-    return false;
-  }
-
 
   private Operator<?> genSelectPlan(String dest, QB qb, Operator<?> input)
       throws SemanticException {
@@ -6399,37 +5424,6 @@ tableSource
     }
   }
 
-  //获取hint关键字所有的需要map-side端的join标签集合
-  private List<String> getMapSideJoinTables(QB qb) {
-    List<String> cols = new ArrayList<String>();
-
-
-    //获取hint标签,并且解析
-    ASTNode hints = qb.getParseInfo().getHints();
-    for (int pos = 0; pos < hints.getChildCount(); pos++) {
-      ASTNode hint = (ASTNode) hints.getChild(pos);
-      if (((ASTNode) hint.getChild(0)).getToken().getType() == HiveParser.TOK_MAPJOIN) {//仅仅解析mapjoin节点
-        // the user has specified to ignore mapjoin hint
-        if (!conf.getBoolVar(HiveConf.ConfVars.HIVEIGNOREMAPJOINHINT)) {//不忽略hint
-          ASTNode hintTblNames = (ASTNode) hint.getChild(1);
-          int numCh = hintTblNames.getChildCount();
-          for (int tblPos = 0; tblPos < numCh; tblPos++) {
-            String tblName = ((ASTNode) hintTblNames.getChild(tblPos)).getText()
-                .toLowerCase();
-            if (!cols.contains(tblName)) {
-              cols.add(tblName);
-            }
-          }
-        }
-        else {//忽略hint
-          queryProperties.setMapJoinRemoved(true);
-        }
-      }
-    }
-
-    return cols;
-  }
-
   // The join alias is modified before being inserted for consumption by sort-merge
   // join queries. If the join is part of a sub-query the alias is modified to include
   // the sub-query alias.
@@ -6537,198 +5531,6 @@ tableSource
     return joinTree;
   }
 
-  /**
-   * JOIN 、INNER JOIN、CROSS JOIN、LEFT [OUTER] JOIN 、RIGHT [OUTER] JOIN 、FULL [OUTER] JOIN 、LEFT SEMI JOIN
-   * 解析表关联操作
-   */
-  private QBJoinTree genJoinTree(QB qb, ASTNode joinParseTree,
-      Map<String, Operator> aliasToOpInfo)
-      throws SemanticException {
-    QBJoinTree joinTree = new QBJoinTree();
-    JoinCond[] condn = new JoinCond[1];
-
-    switch (joinParseTree.getToken().getType()) {
-    case HiveParser.TOK_LEFTOUTERJOIN://LEFT [OUTER] JOIN 
-      joinTree.setNoOuterJoin(false);
-      condn[0] = new JoinCond(0, 1, JoinType.LEFTOUTER);
-      break;
-    case HiveParser.TOK_RIGHTOUTERJOIN://RIGHT [OUTER] JOIN
-      joinTree.setNoOuterJoin(false);
-      condn[0] = new JoinCond(0, 1, JoinType.RIGHTOUTER);
-      break;
-    case HiveParser.TOK_FULLOUTERJOIN://FULL [OUTER] JOIN 
-      joinTree.setNoOuterJoin(false);
-      condn[0] = new JoinCond(0, 1, JoinType.FULLOUTER);
-      break;
-    case HiveParser.TOK_LEFTSEMIJOIN://LEFT SEMI JOIN
-      joinTree.setNoSemiJoin(false);
-      condn[0] = new JoinCond(0, 1, JoinType.LEFTSEMI);
-      break;
-    default:
-      condn[0] = new JoinCond(0, 1, JoinType.INNER);//INNER JOIN或者JOIN
-      joinTree.setNoOuterJoin(true);
-      break;
-    }
-
-    joinTree.setJoinCond(condn);
-
-    ASTNode left = (ASTNode) joinParseTree.getChild(0);
-    ASTNode right = (ASTNode) joinParseTree.getChild(1);
-
-    if ((left.getToken().getType() == HiveParser.TOK_TABREF)//eg:[dbName.] tableName [(key=value,key=value,key)] [tableSample] [ as Identifier ]
-        || (left.getToken().getType() == HiveParser.TOK_SUBQUERY) //eg: (queryStatementExpression) identifier
-        || (left.getToken().getType() == HiveParser.TOK_PTBLFUNCTION)) {//eg:partition by
-      String tableName = getUnescapedUnqualifiedTableName((ASTNode) left.getChild(0))
-          .toLowerCase();//第一个位置是表名
-      String alias = left.getChildCount() == 1 ? tableName
-          : unescapeIdentifier(left.getChild(left.getChildCount() - 1)
-          .getText().toLowerCase());//最后一个位置是别名
-      // ptf node form is: ^(TOK_PTBLFUNCTION $name $alias? partitionTableFunctionSource partitioningSpec? expression*)
-      // guranteed to have an lias here: check done in processJoin
-      alias = (left.getToken().getType() == HiveParser.TOK_PTBLFUNCTION) ?
-          unescapeIdentifier(left.getChild(1).getText().toLowerCase()) :
-            alias;
-      joinTree.setLeftAlias(alias);
-      String[] leftAliases = new String[1];
-      leftAliases[0] = alias;
-      joinTree.setLeftAliases(leftAliases);
-      String[] children = new String[2];
-      children[0] = alias;
-      joinTree.setBaseSrc(children);
-      joinTree.setId(qb.getId());
-      joinTree.getAliasToOpInfo().put(
-          getModifiedAlias(qb, alias), aliasToOpInfo.get(alias));
-    } else if (isJoinToken(left)) {//遇见JOIN 、INNER JOIN、CROSS JOIN、LEFT [OUTER] JOIN 、RIGHT [OUTER] JOIN 、FULL [OUTER] JOIN 、LEFT SEMI JOIN字符串
-      QBJoinTree leftTree = genJoinTree(qb, left, aliasToOpInfo);
-      joinTree.setJoinSrc(leftTree);
-      String[] leftChildAliases = leftTree.getLeftAliases();
-      String leftAliases[] = new String[leftChildAliases.length + 1];
-      for (int i = 0; i < leftChildAliases.length; i++) {
-        leftAliases[i] = leftChildAliases[i];
-      }
-      leftAliases[leftChildAliases.length] = leftTree.getRightAliases()[0];
-      joinTree.setLeftAliases(leftAliases);
-    } else {
-      assert (false);
-    }
-
-    if ((right.getToken().getType() == HiveParser.TOK_TABREF)
-        || (right.getToken().getType() == HiveParser.TOK_SUBQUERY)
-        || (right.getToken().getType() == HiveParser.TOK_PTBLFUNCTION)) {
-      String tableName = getUnescapedUnqualifiedTableName((ASTNode) right.getChild(0))
-          .toLowerCase();
-      String alias = right.getChildCount() == 1 ? tableName
-          : unescapeIdentifier(right.getChild(right.getChildCount() - 1)
-          .getText().toLowerCase());
-      // ptf node form is: ^(TOK_PTBLFUNCTION $name $alias? partitionTableFunctionSource partitioningSpec? expression*)
-      // guranteed to have an lias here: check done in processJoin
-      alias = (right.getToken().getType() == HiveParser.TOK_PTBLFUNCTION) ?
-          unescapeIdentifier(right.getChild(1).getText().toLowerCase()) :
-            alias;
-      String[] rightAliases = new String[1];
-      rightAliases[0] = alias;
-      joinTree.setRightAliases(rightAliases);
-      String[] children = joinTree.getBaseSrc();
-      if (children == null) {
-        children = new String[2];
-      }
-      children[1] = alias;
-      joinTree.setBaseSrc(children);
-      joinTree.setId(qb.getId());
-      joinTree.getAliasToOpInfo().put(
-          getModifiedAlias(qb, alias), aliasToOpInfo.get(alias));
-      // remember rhs table for semijoin
-      if (joinTree.getNoSemiJoin() == false) {
-        joinTree.addRHSSemijoin(alias);
-      }
-    } else {
-      assert false;
-    }
-
-    ArrayList<ArrayList<ASTNode>> expressions = new ArrayList<ArrayList<ASTNode>>();
-    expressions.add(new ArrayList<ASTNode>());
-    expressions.add(new ArrayList<ASTNode>());
-    joinTree.setExpressions(expressions);
-
-    ArrayList<Boolean> nullsafes = new ArrayList<Boolean>();
-    joinTree.setNullSafes(nullsafes);
-
-    ArrayList<ArrayList<ASTNode>> filters = new ArrayList<ArrayList<ASTNode>>();
-    filters.add(new ArrayList<ASTNode>());
-    filters.add(new ArrayList<ASTNode>());
-    joinTree.setFilters(filters);
-    joinTree.setFilterMap(new int[2][]);
-
-    ArrayList<ArrayList<ASTNode>> filtersForPushing =
-        new ArrayList<ArrayList<ASTNode>>();
-    filtersForPushing.add(new ArrayList<ASTNode>());
-    filtersForPushing.add(new ArrayList<ASTNode>());
-    joinTree.setFiltersForPushing(filtersForPushing);
-
-    ASTNode joinCond = (ASTNode) joinParseTree.getChild(2);
-    ArrayList<String> leftSrc = new ArrayList<String>();
-    parseJoinCondition(joinTree, joinCond, leftSrc);
-    if (leftSrc.size() == 1) {
-      joinTree.setLeftAlias(leftSrc.get(0));
-    }
-
-    // check the hints to see if the user has specified a map-side join. This
-    // will be removed later on, once the cost-based
-    // infrastructure is in place
-    //检查是否存在hint,即map端的join操作
-    if (qb.getParseInfo().getHints() != null) {
-    	//获取hint关键字所有的需要map-side端的join标签集合
-      List<String> mapSideTables = getMapSideJoinTables(qb);
-      List<String> mapAliases = joinTree.getMapAliases();
-
-      for (String mapTbl : mapSideTables) {//循环每一个标签,查看标签是否是left端或者right端表的别名,是的话,则设置map-side的表名字集合
-        boolean mapTable = false;
-        for (String leftAlias : joinTree.getLeftAliases()) {
-          if (mapTbl.equalsIgnoreCase(leftAlias)) {
-            mapTable = true;
-          }
-        }
-        for (String rightAlias : joinTree.getRightAliases()) {
-          if (mapTbl.equalsIgnoreCase(rightAlias)) {
-            mapTable = true;
-          }
-        }
-
-        if (mapTable) {
-          if (mapAliases == null) {
-            mapAliases = new ArrayList<String>();
-          }
-          mapAliases.add(mapTbl);
-          joinTree.setMapSideJoin(true);
-        }
-      }
-
-      joinTree.setMapAliases(mapAliases);
-
-      parseStreamTables(joinTree, qb);
-    }
-
-    return joinTree;
-  }
-
-  //标示大表是哪些别名的表
-  private void parseStreamTables(QBJoinTree joinTree, QB qb) {
-    List<String> streamAliases = joinTree.getStreamAliases();
-
-    for (Node hintNode : qb.getParseInfo().getHints().getChildren()) {
-      ASTNode hint = (ASTNode) hintNode;
-      if (hint.getChild(0).getType() == HiveParser.TOK_STREAMTABLE) {
-        for (int i = 0; i < hint.getChild(1).getChildCount(); i++) {
-          if (streamAliases == null) {
-            streamAliases = new ArrayList<String>();
-          }
-          streamAliases.add(hint.getChild(1).getChild(i).getText());
-        }
-      }
-    }
-
-    joinTree.setStreamAliases(streamAliases);
-  }
 
   /**
    * Merges node to target
@@ -9372,99 +8174,6 @@ KW_CREATE (orReplace)? KW_VIEW (ifNotExists)? name=tableName
     } catch (HiveException e) {
       throw new SemanticException(e.getMessage());
     }
-  }
-
-  //可以除了name之外,可以设置位置编号,前提是必须是true,因此将编号设置为select中的名字
-  // Process the position alias in GROUPBY and ORDERBY
-  //select aa alias1,bb,cc asa alias2 group by alias1 order by alias2 好像可以写成group by 0 order by 2 因此需要设置具体的值为alias1和alias2
-  private void processPositionAlias(ASTNode ast) throws SemanticException {
-    if (HiveConf.getBoolVar(conf,
-          HiveConf.ConfVars.HIVE_GROUPBY_ORDERBY_POSITION_ALIAS) == false) {
-      return;
-    }
-
-    if (ast.getChildCount()  == 0) {
-      return;
-    }
-
-    boolean isAllCol;
-    ASTNode selectNode = null;
-    ASTNode groupbyNode = null;
-    ASTNode orderbyNode = null;
-
-    // get node type
-    int child_count = ast.getChildCount();
-    for (int child_pos = 0; child_pos < child_count; ++child_pos) {
-      ASTNode node = (ASTNode) ast.getChild(child_pos);
-      int type = node.getToken().getType();
-      if (type == HiveParser.TOK_SELECT) {
-        selectNode = node;
-      } else if (type == HiveParser.TOK_GROUPBY) {
-        groupbyNode = node;
-      } else if (type == HiveParser.TOK_ORDERBY) {
-        orderbyNode = node;
-      }
-    }
-
-    if (selectNode != null) {
-      int selectExpCnt = selectNode.getChildCount();
-
-      // replace each of the position alias in GROUPBY with the actual column name
-      if (groupbyNode != null) {
-        for (int child_pos = 0; child_pos < groupbyNode.getChildCount(); ++child_pos) {
-          ASTNode node = (ASTNode) groupbyNode.getChild(child_pos);
-          if (node.getToken().getType() == HiveParser.Number) {//如果是数字,则将group的Node设置在select中的名字
-            int pos = Integer.parseInt(node.getText());
-            if (pos > 0 && pos <= selectExpCnt) {
-              groupbyNode.setChild(child_pos,
-                (BaseTree) selectNode.getChild(pos - 1).getChild(0));
-            } else {
-              throw new SemanticException(
-                ErrorMsg.INVALID_POSITION_ALIAS_IN_GROUPBY.getMsg(
-                "Position alias: " + pos + " does not exist\n" +
-                "The Select List is indexed from 1 to " + selectExpCnt));
-            }
-          }
-        }
-      }
-
-      // replace each of the position alias in ORDERBY with the actual column name
-      if (orderbyNode != null) {
-        isAllCol = false;//是否select对应的是*查询,true表示是*查询
-        for (int child_pos = 0; child_pos < selectNode.getChildCount(); ++child_pos) {
-          ASTNode node = (ASTNode) selectNode.getChild(child_pos).getChild(0);
-          if (node.getToken().getType() == HiveParser.TOK_ALLCOLREF) {
-            isAllCol = true;
-          }
-        }
-        for (int child_pos = 0; child_pos < orderbyNode.getChildCount(); ++child_pos) {
-          ASTNode colNode = (ASTNode) orderbyNode.getChild(child_pos);
-          ASTNode node = (ASTNode) colNode.getChild(0);
-          if (node.getToken().getType() == HiveParser.Number) {//如果是数字,则将order的Node设置在select中的名字
-            if (!isAllCol) {//必须不是*查询,否则没办法对应关系匹配
-              int pos = Integer.parseInt(node.getText());
-              if (pos > 0 && pos <= selectExpCnt) {
-                colNode.setChild(0, (BaseTree) selectNode.getChild(pos - 1).getChild(0));
-              } else {
-                throw new SemanticException(
-                  ErrorMsg.INVALID_POSITION_ALIAS_IN_ORDERBY.getMsg(
-                  "Position alias: " + pos + " does not exist\n" +
-                  "The Select List is indexed from 1 to " + selectExpCnt));
-              }
-            } else {
-              throw new SemanticException(
-                ErrorMsg.NO_SUPPORTED_ORDERBY_ALLCOLREF_POS.getMsg());
-            }
-          }
-        }
-      }
-    }
-
-    // Recursively process through the children ASTNodes
-    for (int child_pos = 0; child_pos < child_count; ++child_pos) {
-      processPositionAlias((ASTNode) ast.getChild(child_pos));
-    }
-    return;
   }
 
   /**

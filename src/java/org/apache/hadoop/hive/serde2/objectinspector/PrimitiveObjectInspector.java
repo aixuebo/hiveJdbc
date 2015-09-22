@@ -82,6 +82,7 @@ public interface PrimitiveObjectInspector extends ObjectInspector, PrimitiveType
    * instead of a Primitive Java Object. This can be useful for determining the
    * most efficient way to getting data out of the Object.
    * true表示该原始对象可以支持hadoop的序列化,从而不需要进行java序列化
+   * 字面含义表示更喜欢序列化表示形式
    */
   boolean preferWritable();
 

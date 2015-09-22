@@ -155,3 +155,7 @@
   private QBJoinTree genJoinTree(QB qb, ASTNode joinParseTree,
       Map<String, Operator> aliasToOpInfo)
       
+      1614
+      private void parseJoinCondition(QBJoinTree joinTree, ASTNode joinCond, List<String> leftSrc)
+      
+  private Operator genScriptPlan(ASTNode trfm, QB qb, Operator input)
