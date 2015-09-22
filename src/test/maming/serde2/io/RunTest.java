@@ -37,7 +37,6 @@ public class RunTest {
 	    
 	    System.out.println(d.unscaledValue());
 	    
-	    
 	    BigDecimal dx = new BigDecimal(new BigInteger(d.unscaledValue().toByteArray()), d.scale());
 	    System.out.println(dx);
 	    System.out.println(dx.toPlainString());

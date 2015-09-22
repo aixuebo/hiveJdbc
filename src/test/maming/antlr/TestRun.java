@@ -4,9 +4,11 @@ import java.io.IOException;
 import java.util.Enumeration;
 
 
+import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.parse.ASTNode;
 import org.apache.hadoop.hive.ql.parse.ParseDriver;
 import org.apache.hadoop.hive.ql.parse.ParseException;
+import org.apache.hadoop.hive.ql.parse.SemanticAnalyzer;
 import org.junit.Test;
 
 public class TestRun {
@@ -64,6 +66,20 @@ public class TestRun {
 			System.out.println(node.dump());
 			System.out.println(node);
 		} catch (ParseException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	@Test
+	public void test5(){
+		String command = "select * from biao left join biao1 on biao1.id = biao.id and name = 'xxx'";
+		try {
+			ASTNode node = new ParseDriver().parse(command);
+			System.out.println(node.dump());
+			System.out.println(node);
+			HiveConf conf = new HiveConf();
+			new SemanticAnalyzer(conf).analyzeInternal(node);
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
