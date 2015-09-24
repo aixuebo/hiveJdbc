@@ -1,0 +1,336 @@
+第四讲
+一、for循环的进阶
+for(i <- 1 to 2; j <- 1 to 2) print((100*i + j) + "  ")
+for(i <- 1 to 2; j <- 1 to 2 if i != j) print((100*i + j) + "  ")
+
+注意:
+i和j没有设置类型,他会根据1 to 2的类型自动推导i和j的类型
+
+二、函数
+def  addA(x : Int) = x +100
+println("The result from a function is : " + addA(2))
+
+1.函数是有值的,因此函数一般都会有等号。并且会推断出返回值,因此很多时候都不用声明函数的返回值。
+  例外:递归函数一定要有返回值,否则编译器不知道每次函数调用的时候返回值。
+2.因此函数可以当做参数去传递。
+3.因此经常我们都不会给函数命名,直接赋值给一个变量,即匿名函数
+  例如:
+  val  add = (x : Int) => x +200
+  println("The result from a val is : " + add(2))
+4.递归运算
+  def fac(n:Int):Int = if (n <= 0) 1 else n * fac(n - 1)
+  println("The result from a fac is : " + fac(10))
+5.函数的参数的默认值
+  def combine(content:String, left: String = "[", right: String = "]") = left + content +right
+  println("The result from a combine is : " + combine("I love Spark"))//[I love Spark]
+  println("The result from a combine is : " + combine("I love Spark", "<<"))//<<I love Spark]
+combine有三个参数,后两个参数有默认值。
+
+6.函数的参数个数的可变性
+  def connected(args: Int*) = {
+    var result =0
+    for(arg <- args) result += arg
+    result
+  }
+  println("The result from a connected is : " + connected(1,2,3,4,5,6))
+The result from a connected is : 21
+可以传递N个int类型参数
+返回值是int,因为返回值是result。
+
+7.Lazy
+    lazy val file = Source.fromFile("D:\\log4j2-config.xml") 
+    println("Scala")
+    for (line <- file.getLines) println(line)
+只有真的用到file的时候才会使用,即使找不到文件,如果没有for循环的话,也不会抛异常,因为file目前还没有被使用。
+---------------------------------------------------------------------------------------------------------------------
+第五讲 scala数组操作实战
+一、固定数组个数和数组类型的方式
+    val nums = new Array[Int](10) //int数组
+    val a = new Array[String](10) //String数组
+二、
+---------------------------------------------------------------------------------------------------------------------
+第六讲 map、tuple、zip
+一、Map 
+1.固定的map,不可更改的map
+  val map = Map("book"->10,"gun"->18,"ipad"->1000)  该map类型是(字符串,int)
+  for((k,v) <- map) yield (k,v * 0.9) 该map类型是(字符串,double)
+2.可变的map  
+  val scores = scala.collection.mutable.Map("Scala" -> 7, "Hadoop" -> 8, "Spark" -> 10 )
+3.获取map的key的值,如果key不存在则返回第二个参数
+  val hadoopScore = scores.getOrElse("Hadoop", 0)
+4.为map添加一个元素和删除一个key
+  scores += ("R" -> 9)
+  scores -= "Hadoop"
+5.按照key排序的map
+  val sortedScore = scala.collection.immutable.SortedMap("Scala" -> 7, "Hadoop" -> 8, "Spark" -> 10 )
+
+  二、元组
+1.定义元组,元组中的元素类型可以不同
+val tuple =(1,2,3.14,"Rocky","Spark","Flink")
+2.获取元组中元素,元组从1开始计数
+val third = tuple._3
+或者如下写法,但是空格不是很好识别,因此写成上面的写法比较常见
+val third = tuple _3
+3.将元组中每一个元素映射到变量中
+  val (first,second,thirda,fourth,fifth,sixth) = tuple
+  因此first就是1
+4.如果只用两个元素,则使用占位符即可
+  val (f, s, _, _, _,_) = tuple
+
+  
+
+  三、元组拆分
+  "Rocky Spark".partition(_.isUpper)
+  输出 (String, String) = (RS,ocky park)
+  我们可以看到返回值是元组,按照大写字母做拆分，大写字母在一起，其他在一起
+  四、zip属于拉链,会一对一的组装成tuple()
+  val symbols = Array("[", "-", "]")
+  val counts = Array(2,5,2)
+  val pairs = symbols.zip(counts)
+  输出pairs  : Array[(String, Int)] = Array(([,2), (-,5), (],2)) 我们可以看到返回值是Array,每一个元素是一个元组
+  for ((x,y) <- pairs) print(x*y)
+输出[[-----]] 因为x和y是字符串,因此x*y表示[出现2次  -出现5次的意思
+
+---------------------------------------------------------------------------------------------------------------------
+第七讲 scala类的属性和私有字段实战
+一、class Persion{ } 定义类,与java一样
+1.属性
+  private var age = 0;
+  注意:
+  1.与java不同,age必须是有值的,因为这样才能推断出该对象的类型。
+2.方法
+  def increment(){age += 1}
+  def current = age
+注意:
+a.current方法没有参数,因此不需要有()
+
+3.方法调用
+    val person = new Person()
+    person.increment()
+    person.increment()
+    println(person.current)
+输出2
+
+二、默认情况下class都是public级别的，java是包级别的。
+  因此class Persion{ }  其实是public class Persion{ } 
+1.set/get方法的省略
+ var privateAge1 = 0 ,这行代码，其实是声明了一个private的int属性。同时有set/get方法。
+ get方法就是privateAge1,set方法是privateAge1_
+ 而privateAge1 是private[this] var privateAge1: Int
+2.举例
+a.
+    val student = new Student
+    println(student.privateAge1)
+    鼠标移动到println上面则显示def privateAge1: Int,我们可以看到是一个def函数,表示get
+b.student.privateAge1 = 25
+鼠标移动上去,则显示def privateAge1_=(x$1: Int): Unit,说明是一个无返回值的方法,与get不同的是多了一个下划线。
+c.当然我们也可以自己定义属性的get方法,例如
+  private var privateAge = 0,显示private[this] var privateAge: Int
+  def age = privateAge  ,显示def age: Int
+三、定义只读属性,用val,表示不可变
+    val name = "Scala"
+    student.name = "ss"//报错,不能设置值,如果把val改成val,则可以设置值,显示def name_=(x$1: String): Unit
+
+四、  private var privateAge = 25 与var privateAge = 25的区别
+var privateAge = 25 是会自动变成private的,然后生成public的set/get方法
+private var privateAge = 25 是不能被外界调用get和set方法的,只能在所属类中被设置和获取
+只能通过定义  def age = privateAge 来让外界访问
+例如:
+
+  private var privateAge = 25
+  def age = privateAge  
+
+  def go(sum:Integer) : Integer = {
+   privateAge += sum 
+   privateAge 
+  }
+
+调用
+    val student = new Student
+        println(student.age)
+	student.go(8)
+	println(student.age)
+
+	输出25和33
+
+
+
+五、private 和private[this] 区别
+例如:private[this] var privateAge = 0
+  def isYounger(other: Student) = privateAge < other.privateAge
+  这样是报错的,privateAge < other.privateAge中privateAge不会报错,因为privateAge是当前对象中的属性,是可以被访问的,但是other.privateAge会报错，因为不能访问other中的privateAge属性。
+private var privateAge = 0
+def isYounger(other: Student) = privateAge < other.privateAge
+这种方式是可以被访问的
+
+---------------------------------------------------------------------------------------------------------------------
+第八讲 scala主构造器、私有构造器、构造器重载实战
+一、类的构造函数
+1.与java不同的是,class对象可以给类传入参数,并且class的实例化的时候,参数会被直接成为类的字段的
+
+二、与java相似的默认构造
+class Teacher {
+  var name : String = _
+  private var age = 27
+  private[this] val gender = "male"
+  
+  def this(name:String){
+    this
+    this.name = name
+  }
+    
+  def sayHello(){
+    println(this.name + ":" + this.age + " : " + this.gender)
+  }
+}
+
+注意事项
+1.var name : String = _ 表示name是String类型的,默认值必须要有,但是不知道设置什么,则写入一个占位符。
+2.this方法必须不能省略this,因为一定要调用主构造器
+
+调用
+	  val p = new Teacher
+	  p.name = "Spark"
+	  p.sayHello
+输出Spark:27 : male
+
+    val p = new Teacher("Spark1")
+    p.sayHello
+输出Spark1:27 : male
+
+三、有构造函数的类
+class Teacher (val name : String, val age : Int){
+  println("This is the primary constructor!!!")
+  var gender : String = _
+  println(gender)
+  println(name+":"+":"+gender+":"+age)
+  
+  //附属构造器,或者重载构造器
+  def this(name : String, age : Int, gender : String){
+    this(name, age)
+    println("This is the second constructor!!!")    
+    println(name+":"+":"+gender+":"+age)
+    this.gender = gender
+  }
+}
+
+注意:
+1.构造函数不需要有默认值,但是一定要有类型
+2.new的时候,除了方法之外,都会被执行。
+例如val p = new Teacher("Spark", 5)
+输出
+This is the primary constructor!!!
+null
+Spark::null:5
+可以看出所有方法之外的代码都被调用了,gender是占位符没有值,因此是null
+并且其他属性被赋值了
+
+3.附属构造器一定要调用主构造器,因此首先调用了this(name, age)
+例子:
+val p = new Teacher("Spark", 5 , "male")
+输出
+This is the primary constructor!!!
+null
+Spark::null:5
+This is the second constructor!!!
+Spark::male:5
+可以看出先调用了主构造器，然后调用了附属构造器
+并且值也都被赋值了
+
+4.主构造器属性自动被设置
+    val p = new Teacher("Spark", 5 , "male")
+    println(" : " + p.age)
+    是可以打印age属性的,因为age属性虽然没有显示被设置,但是通过构造器已经被设置了
+
+  注意:只能自动设置主构造器的属性,不能在不声明属性名,但是声明附属类属性了,是不允许的。
+例如以下不允许
+val p = new Teacher("Spark", 5 , "male"),并且把类中关于gender的代码都取消
+    println(" : " + p.gender)编译失败
+5.如果不想让外界使用主构造器,则将主构造器设置为private即可
+可以如下设置
+class Teacher private (val name : String, val age : Int){
+例如以下是不允许的
+	  val p = new Teacher("Spark", 5)
+	  println(" : " + p.age)
+
+---------------------------------------------------------------------------------------------------------------------
+第九讲 内部类实战
+一、与java的内部类有很大的不同
+scala更符合实际显示逻辑
+
+class Outer(val name: String) { 
+            outer =>
+  def aa() = {
+    println("ss");
+  }
+            class Inner(val name: String){
+              def foo(b:Inner) = {
+                
+              println("Outer: " + outer.name + 
+                  " Inner: " + b.name)
+                  outer.aa()
+              }
+            }
+        }
+
+1.内部类使用了外部类信息,因此outer =>代码的意义是让内部类使用外部类的时候,使用该名字即可。
+  内部类也可以通过outer =>调用外部类方法
+2.例子:
+创建内部类和外部类,内部类必须从外部类实例才能创建,即内部隶属于外部类实现的,而不是内部类单独使用。
+    val outer1 = new Outer("Spark")
+    val outer2 = new Outer("Hadoop")
+    val inner1 = new outer1.Inner("Scala")
+    val inner2 = new outer2.Inner("Java")
+    inner1.foo(inner1);
+    inner2.foo(inner2);
+    输出
+Outer: Spark Inner: Scala
+Outer: Hadoop Inner: Java
+
+3.inner2.foo(inner1);是抛异常的,说类型不匹配
+ 即foo方法参数虽然是Inner对象,但是该Inner对象一定是隶属于outer的inner,而不是随意一个Inner类实例。
+ 这个在java中是可以的,但是现实逻辑不合理,scala符合现实逻辑。
+
+
+---------------------------------------------------------------------------------------------------------------------
+第十讲 单例对象、伴生对象实战
+一、scala是没有java的静态对象、静态方法,全局属性区,但是scala提供了一个object对象
+  这个object就是我们类似java的静态方法、静态对象、全局属性区
+  例如:
+object University{
+  private var studentNo = 0
+  def newStudenNo = {
+    studentNo += 1
+    studentNo
+  }
+}
+调用
+    println(University.newStudenNo) 打印1
+    println(University.newStudenNo) 打印2
+注意:
+1.如果object想让外界访问,必须不能是private的,否则是没办法被外界调用的
+2.虽然object是静态的,但是不像java一样，java加载进来就执行,但是scala不是,只有第一次被调用的某个方法,该方法才会被执行。
+
+二、伴生对象
+
+class University{
+  val id = University.newStudenNo//可以访问伴生对象的方法或者是静态方法
+  private var number =0
+  def aClass(number:Int){this.number += number}
+}
+
+我们发现类和object名字相同。
+因此object是类的伴生对象。
+同样类是object的伴生类
+
+性质:
+1.类可以访问他的伴生对象的所有成员属性和方法,甚至包括访问object这个伴生对象的private方法和属性
+2.伴生对象常用于类的静态属性初始化等操作。
+3.object和类不在同一个作用域,而是独自的作用域。
+4.var array = Array(1,2,3,4)
+  我们创建Array实例,但是没有用new,原因就是源代码中Array类是有一个Array的object的伴生对象的,里面有apply方法,那么就可以不用new了。这个会在apply方法课程中讲解。
+
+
+---------------------------------------------------------------------------------------------------------------------
+第十一讲 Apply实战
+
