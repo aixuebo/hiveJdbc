@@ -1211,7 +1211,7 @@ tableSource
         }
 
         if (tab.isView()) {//如果该table是一个视图
-          if (qb.getParseInfo().isAnalyzeCommand()) {
+          if (qb.getParseInfo().isAnalyzeCommand()) {//视图是不支持分析的
             throw new SemanticException(ErrorMsg.ANALYZE_VIEW.getMsg());
           }
           String fullViewName = tab.getDbName() + "." + tab.getTableName();
@@ -1239,7 +1239,7 @@ tableSource
 
         qb.getMetaData().setSrcForAlias(alias, tab);
 
-        if (qb.getParseInfo().isAnalyzeCommand()) {
+        if (qb.getParseInfo().isAnalyzeCommand()) {//需要分析表
           // allow partial partition specification for nonscan since noscan is fast.
           tableSpec ts = new tableSpec(db, conf, (ASTNode) ast.getChild(0), true, this.noscan);
           if (ts.specType == SpecType.DYNAMIC_PARTITION) { // dynamic partitions
@@ -1338,8 +1338,8 @@ tableSource
           break;
         }
 
-        case HiveParser.TOK_LOCAL_DIR:
-        case HiveParser.TOK_DIR: {
+        case HiveParser.TOK_LOCAL_DIR://设置存储在本地的哪个路径下
+        case HiveParser.TOK_DIR: {//设置存储在hdfs的哪个路径下
           // This is a dfs file
           String fname = stripQuotes(ast.getChild(0).getText());
           if ((!qb.getParseInfo().getIsSubQ())

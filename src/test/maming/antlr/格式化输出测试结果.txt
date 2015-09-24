@@ -1,3 +1,4 @@
+Ò»¡¢select aa as (a,b c) from biao
 (nil(
 TOK_QUERY(
 		TOK_FROM(
@@ -25,5 +26,74 @@ TOK_QUERY(
 )
 
 
-
-select aa as (a,b c) from biao
+¶þ¡¢select * from biao left join biao1 on biao1.id = biao.id and name = 'xxx'
+	(
+		nil(
+			TOK_QUERY(
+				TOK_FROM(
+					TOK_LEFTOUTERJOIN(
+						TOK_TABREF(
+							TOK_TABNAME(biao)
+						)
+					)
+					(
+						TOK_TABREF(
+							TOK_TABNAME(biao1)
+						)
+					)
+					(
+						and(
+							=(
+								.(TOK_TABLE_OR_COL(biao1))(id)
+							  )
+							(
+							.(TOK_TABLE_OR_COL(biao))(id))
+							)
+							(
+								=
+								(TOK_TABLE_OR_COL(name))
+								('xxx')
+							)
+						)
+					)
+				)
+				(
+				TOK_INSERT(
+					TOK_DESTINATION(
+						TOK_DIR(TOK_TMP_FILE)
+					)
+				)
+				(
+					TOK_SELECT(
+						TOK_SELEXPR(
+							TOK_ALLCOLREF
+						)
+					)
+				)
+			)
+		)
+		(<EOF>)
+	)
+Èý¡¢select * from biao TABLESAMPLE(BUCKET 1 OUT OF 2 ON coohua_id) biao right join biao1 on biao1.id = biao.id and name = 'xxx'
+(
+	nil(
+	TOK_QUERY(
+	TOK_FROM(
+		TOK_RIGHTOUTERJOIN(
+			TOK_TABREF(
+				TOK_TABNAME(biao)
+			)
+			(
+			TOK_TABLEBUCKETSAMPLE(1)(2)(TOK_TABLE_OR_COL(coohua_id))
+			)(biao)
+		)
+		(
+			TOK_TABREF(
+				TOK_TABNAME(biao1)
+			)
+		)
+	(and(=(.(TOK_TABLE_OR_COL(biao1))(id))(.(TOK_TABLE_OR_COL(biao))(id)))(=(TOK_TABLE_OR_COL(name))('xxx')))))
+	(TOK_INSERT(TOK_DESTINATION(TOK_DIR(TOK_TMP_FILE)))
+	(TOK_SELECT(TOK_SELEXPR(TOK_ALLCOLREF)))))
+	(<EOF>)
+)

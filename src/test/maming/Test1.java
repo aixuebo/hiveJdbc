@@ -20,4 +20,10 @@ public class Test1 {
 				break;	
 		}
 	}
+	
+	private boolean done;
+	@Test
+	public void test2(){
+		System.out.println(done);
+	}
 }

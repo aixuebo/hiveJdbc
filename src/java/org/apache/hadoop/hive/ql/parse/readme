@@ -159,3 +159,5 @@
       private void parseJoinCondition(QBJoinTree joinTree, ASTNode joinCond, List<String> leftSrc)
       
   private Operator genScriptPlan(ASTNode trfm, QB qb, Operator input)
+  
+  public void getMetaData(QB qb, ReadEntity parentInput) throws SemanticException {

@@ -72,13 +72,11 @@ public class TestRun {
 	
 	@Test
 	public void test5(){
-		String command = "select * from biao left join biao1 on biao1.id = biao.id and name = 'xxx'";
+		String command = "select * from biao TABLESAMPLE(BUCKET 1 OUT OF 2 ON coohua_id) biao right join biao1 on biao1.id = biao.id and name = 'xxx'";
 		try {
 			ASTNode node = new ParseDriver().parse(command);
 			System.out.println(node.dump());
 			System.out.println(node);
-			HiveConf conf = new HiveConf();
-			new SemanticAnalyzer(conf).analyzeInternal(node);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

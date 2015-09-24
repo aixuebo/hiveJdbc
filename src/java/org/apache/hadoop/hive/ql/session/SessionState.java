@@ -273,7 +273,7 @@ public class SessionState {
         throw new RuntimeException(e);
       }
     }
-
+/*
     try {
       startSs.authenticator = HiveUtils.getAuthenticator(
           startSs.getConf(),HiveConf.ConfVars.HIVE_AUTHENTICATOR_MANAGER);
@@ -284,7 +284,7 @@ public class SessionState {
           .getConf());
     } catch (HiveException e) {
       throw new RuntimeException(e);
-    }
+    }*/
 
     return startSs;
   }

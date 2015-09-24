@@ -68,9 +68,6 @@ import org.apache.hadoop.hive.shims.ShimLoader;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.thrift.TException;
 
-import sun.misc.Signal;
-import sun.misc.SignalHandler;
-
 
 /**
  * CliDriver.
@@ -368,41 +365,6 @@ public class CliDriver {
    * @return 0 if ok
    */
   public int processLine(String line, boolean allowInterupting) {
-    SignalHandler oldSignal = null;
-    Signal interupSignal = null;
-
-    if (allowInterupting) {//设置ctrl+c终止程序线程
-      // Remember all threads that were running at the time we started line processing.
-      // Hook up the custom Ctrl+C handler while processing this line
-      interupSignal = new Signal("INT");
-      oldSignal = Signal.handle(interupSignal, new SignalHandler() {
-        private final Thread cliThread = Thread.currentThread();
-        private boolean interruptRequested;
-
-        @Override
-        public void handle(Signal signal) {
-          boolean initialRequest = !interruptRequested;
-          interruptRequested = true;
-
-          // Kill the VM on second ctrl+c
-          if (!initialRequest) {
-            console.printInfo("Exiting the JVM");
-            System.exit(127);
-          }
-
-          // Interrupt the CLI thread to stop the current statement and return
-          // to prompt
-          console.printInfo("Interrupting... Be patient, this might take some time.");
-          console.printInfo("Press Ctrl+C again to kill JVM");
-
-          // First, kill any running MR jobs
-          HadoopJobExecHelper.killRunningJobs();
-          HiveInterruptUtils.interrupt();
-          this.cliThread.interrupt();
-        }
-      });
-    }
-
     //执行line命令行,按照;拆分,分别执行每一个命令
     try {
       int lastRet = 0, ret = 0;
@@ -436,9 +398,6 @@ public class CliDriver {
       return lastRet;
     } finally {
       // Once we are done processing the line, restore the old handler
-      if (oldSignal != null && interupSignal != null) {
-        Signal.handle(interupSignal, oldSignal);
-      }
     }
   }
 
