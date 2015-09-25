@@ -333,4 +333,212 @@ class University{
 
 ---------------------------------------------------------------------------------------------------------------------
 第十一讲 Apply实战
+一、伴生类和伴生对象都可以有apply方法
+  但是经常使用的是伴生对象object。
+二、例子
+class ApplyTest{
+  def apply() = println("I am into Spark so much!!!")
+   
+  def haveATry{
+    println("Have a try on apply!")
+  }
+}
+object ApplyTest{
+  def apply() = {
+    println("I am into Scala so much!!!")
+    new ApplyTest
+  }
+}
+object ApplyOperation {
+  def main(args: Array[String]) {
+    val a = ApplyTest()
+    a.haveATry  
+  }
+ 
+}
+
+输出结果:
+I am into Scala so much!!!
+Have a try on apply!
+
+解析说明
+1.main函数中创建ApplyTest没有使用new依然可以,是因为调用了object ApplyTest的静态方法apply
+2.object ApplyTest的静态方法apply创建了一个没有参数的ApplyTest类。
+  但是该类的apply方法没有被调用。
+
+
+三、类中的apply调用
+	  val a = new ApplyTest
+	  a.haveATry
+	  println(a)
+	  println(a())
+
+输出
+Have a try on apply!
+com.maming.lesson04.ApplyTest@acf892
+I am into Spark so much!!!
+()
+
+解析说明:
+new一个对象，然后调用haveATry方法,输出Have a try on apply!
+如果单独调用a,则输出地址
+如果调用a(),则调用的是类的apply方法,并且多了一对括号。
+
+四、apply的意义
+就是object伴生对象 对class的生成，例如有时候class是抽象类,所以可以从object伴生对象中创建对应的class对象。
+
+---------------------------------------------------------------------------------------------------------------------
+第十二讲 scala的继承：超类构造,重写字段属性、重写方法实战
+一、
+
+class Person1(val name : String, var age : Int){
+  println("The primary constructor of Person")
+  
+  val school = "BJU"
+  
+  def sleep = "8 hours"
+    
+  override def toString = "I am a Person1!"
+}
+
+class Worker(name : String, age : Int, val salary : Long) extends Person1(name, age){
+  println("This is the subClass of Person, Primary constructor of Worker")
+  override val school = "Spark"
+    
+  override def toString = "I am a Worker!" + super.sleep
+   
+    
+}
+
+object OverrideOperations{
+  def main(args: Array[String]) {
+  
+    val w = new Worker("Spark", 5, 100000) //先打印父类,后打印子类
+    println("School :" + w.school)//被重写了
+    println("Salary :" + w.salary)
+    println(w.toString())//被重写了,并且调用了父类的方法
+    
+  }
+  
+}
+
+输出
+The primary constructor of Person
+This is the subClass of Person, Primary constructor of Worker
+School :Spark
+Salary :100000
+I am a Worker!8 hours
+
+---------------------------------------------------------------------------------------------------------------------
+第十三讲 抽象类、抽象字段、抽象方法实战
+一、例如spark中的RDD就是抽象类,有各种实现，比如数据库的RDD，文件的RDD实现等。
+二、抽象类中抽象方法的表达,不需要再方法前面加入abstract,只需要不写方法实现体即可。字段抽象只需要不给出具体值即可。
+  例如teach方法没有方法体。
+  字段没有具体值
+  abstract class SuperTeacher(val name : String){
+  var id : Int
+  var age : Int
+  def teach
+}
+三、例子
+class TeacherForMaths(name : String) extends SuperTeacher(name){
+  
+  override var id = name.hashCode()
+  override var age = 29
+  override def teach{
+    println("Teaching!!!")
+  }
+}
+
+
+object AbstractClassOps{
+  def main(args: Array[String]) {
+	  val teacher = new TeacherForMaths("Spark")
+	  teacher.teach
+	  
+	  println("teacher.id" + ":" + teacher.id)
+	  println(teacher.name + ":" + teacher.age)
+    
+  }
+}
+
+输出
+Teaching!!!
+teacher.id:80085693
+Spark:29
+
+
+---------------------------------------------------------------------------------------------------------------------
+第十四讲 scala中接口的trait和在对象中混入trait代码的实战
+一、trait比java的接口要高级很多,可以在trait中定义接口,也可以定义实现类
+二、如果一个类实现了多个trait,则第一个trait写在extends后面,剩下的要写在with后面
+例如
+trait Logger{
+  def log (msg : String)
+  def log (msg : String,str:String){}
+}
+
+class ConcreteLogger extends Logger with Cloneable{
+  
+  override def log(msg : String) = println("Log: " + msg)
+  
+  def concreteLog{
+    log("It's me !!!")
+  }
+}
+
+1.可以看出接口Logger中有空实现类
+2.多个trait中要用with
+
+三、打印输出
+  val logger = new ConcreteLogger
+  logger.concreteLog
+
+输出
+Log: It's me !!!
+
+四、根据具体实现提供不同的实例
+trait Logger{
+  def log (msg : String){}
+}
+
+class ConcreteLogger extends Logger with Cloneable{
+  
+  override def log(msg : String) = println("Log: " + msg)
+  
+  def concreteLog{
+    log("It's me !!!")
+  }
+}
+
+trait TraitLogger extends Logger{
+  override def log (msg : String){
+    println(" TraitLogger Log content is : " + msg)
+  }
+}
+
+trait TraitLogger2 extends Logger{
+  override def log (msg : String){
+    println(" TraitLogger2 Log content is : " + msg)
+  }
+}
+
+main
+  val logger = new ConcreteLogger with TraitLogger2 with TraitLogger
+  logger.concreteLog
+输出
+ TraitLogger Log content is : It's me !!!
+可以看出,当多个trait被实现的时候,以最后一个trait的输出为准
+
+因此trait多个实现类可以当做工具类,让类有多种多样的实现可能。按照顺序找到最符合的一个实现工具进行处理
+
+---------------------------------------------------------------------------------------------------------------------
+第十五讲 实战
+
+
+---问题------------------------------------------------------------------------------------------------------------------
+第十一讲
+ println(a()) 为什么打印结果会有()
+
+
 
