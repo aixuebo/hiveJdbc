@@ -1,5 +1,318 @@
 ---------------------------------------------------------------------------------------------------------------------
-第十五讲 实战
+第十五讲 scala多重继承,多重继承构造器执行顺序、AOP实现实战
+一、多重继承,以及多重继承构造器的执行顺序
+例子:
+class Human{
+  println("Human")
+}
+trait TTeacher extends Human {  
+  println("TTeacher")
+  def teach 
+}  
+trait PianoPlayer extends Human {  
+  println("PianoPlayer")
+  def playPiano = {println("I'm playing piano. ")} 
+}  
+class PianoTeacher extends Human with TTeacher with PianoPlayer {  
+	override def teach = {println("I'm training students. ")} 
+}
+
+main:
+   val t1 = new PianoTeacher 
+   t1.playPiano  
+   t1.teach  
+输出
+Human
+TTeacher
+PianoPlayer
+I'm playing piano. 
+I'm training students. 
+解释:
+1.上述问题构造器顺序是从左到右顺序执行
+ 因为TTeacher继承自Human,因此当要构造TTeacher对象的时候,也要执行一次Human的构造器,那样就会导致Human构造器被执行两次,因此在scala中从左到右的顺序执行,一旦一个Human被执行了,
+ 第二个TTeacher虽然也要执行Human,但是他不会真得再去加载一次了。
+二、匿名类实现
+   val t2 = new Human with TTeacher with PianoPlayer {  
+      def teach = {println("I'm teaching students.")} } 
+   t2.playPiano
+   t2 teach 
+
+输出
+Human
+TTeacher
+PianoPlayer
+I'm playing piano. 
+I'm teaching students.
+
+可以看出来匿名类和一讲述的都是一个意思。
+
+三、例子3
+   val t3 = new TTeacher with PianoPlayer {  
+      def teach = {println("I'm teaching t3 students.")} } 
+   t3.playPiano
+   t3.teach
+输出
+Human
+TTeacher
+PianoPlayer
+I'm playing piano. 
+I'm teaching students.
+说明:
+可以看出来虽然没有继承Human,但是当执行TTeacher的时候依然会先执行Human。
+
+四、例子4
+   val t3 = new TTeacher with Human with PianoPlayer {  
+     def teach = {println("I'm teaching t3 students.")} } 
+输出编译异常
+
+Multiple markers at this line:
+
+class Human is inherited twice
+class Human is inherited twice
+
+提示说Human被实例化两次是不允许的,因为TTeacher也要实例化Human。
+
+五、AOP编程实现
+1.接口
+trait Action {  
+	def doAction  
+}
+
+2.错误的AOP代码
+trait TBeforeAfter extends Action {  
+	 override def doAction {  
+		println("Initialization") 
+		super.doAction 
+		println("Destroyed") 
+	}  
+}
+错误提示:通过super关键字访问在Acton接口中的doAction方法,Action接口没有被实现,因此必须有关键字abstract and override
+method doAction in trait Action is accessed from super. It may not be abstract unless it is overridden by a member declared abstract' and override'
+
+自己分析:
+虽然TBeforeAfter类实现类doAction方法,但是在实现中调用了super的doAction方法,而super是一个接口,因此等于该方法没有被完全实现,因此要加上abstract和override关键字才可以被编译通过。
+
+
+3.正确的AOP代码
+trait TBeforeAfter extends Action {  
+	abstract override def doAction {  
+		println("Initialization") 
+		super.doAction 
+		println("Destroyed") 
+	}  
+}
+
+编译通过
+
+4.具体的实现类
+class Work extends Action{
+ override def doAction = println("Working...")
+}
+
+5.调用main方法:
+   val work = new Work with TBeforeAfter
+   work.doAction
+
+输出
+Initialization
+Working...
+Destroyed
+
+解释说明:
+1.val work = new Work 这行代码说明了Action的具体实现。
+2.with TBeforeAfter 说明又插入了一个实现Action的类。
+因此在调用work.doAction时候是从后面最后一个实现Action的类被执行的,因此会被执行AOP方式。
+
+
+---------------------------------------------------------------------------------------------------------------------
+第十六讲 scala中包的定义、包对象、包的引用、包的隐式引用实战
+一、包的连式和嵌套式结构
+
+package com.maming.lesson13
+
+package spark.navigation {
+  abstract class Navigator{
+    def act
+  }
+  package tests {
+    
+    // 在spark.navigation.tests包里面的类
+    class NavigatorSuite
+  }
+  
+  package impls {
+    
+    //在spark.navigation.impls包里面的类
+    class Action extends Navigator{
+      def act = println("Action")
+    }
+  }
+}
+
+说明
+1.spark.navigation包是链式组织的包名
+2.spark.navigation包下有一个抽象类Navigator
+3.spark.navigation包下面有两个子包.分别用于单元测试包和实现类包,说明包是具有嵌套式的命名。
+4.我们把鼠标放在class Action extends Navigator,的Action上,会出现该Action的包全路径,为com.maming.lesson13.spark.navigation.impls.Action,
+说明包全路径很长,并且已经链式和嵌套式结合的很好。
+
+二、包的作用域引用
+package hadoop {
+  package navigation {
+    class Navigator
+  }
+  
+  package launch {
+    class Booster {
+      val nav = new navigation.Navigator
+      
+    }
+  }  
+}
+
+我们可以看到在launch包中的Booster对象创建navigation包中的Navigator对象,因为他们都在hadoop包中,因此不需要引用hadoop的全路径,相对路径即可。
+
+三、包对象
+在包中定义一个包对象,那么再该包中所有的类都可以访问包对象中定义的成员和方法啊。
+例如:
+package com.scala.spark
+package object people {  
+  val defaultName = "Scala"  
+}  
+
+package people {  
+  class people {  
+    var name = defaultName 
+  }  
+} 
+
+1.package object people 定义一个包对象people
+在package people 包中都可以访问people object对象的属性,因此我们看到访问了defaultName属性。
+2.经过我的测试,包对象不允许子包使用。
+
+
+四、包的隐式引用
+默认scala会引入以下三个包,因此这三个包下的类是可以被scala任意地方使用,而不需要主动import的
+import scala._
+import java.lang._
+import Predef._
+
+注意:_类似java的*,表示以下所有的包都被引用。
+
+五、如果不想引用所有的包
+import java.awt.Font  //导入具体到一个类
+import java.awt.{Color,Font}  //则使用{},花括号里面包含的类名就是要引用的类名,多个类用逗号分隔
+import java.util.{HashMap=>JavaHashMap}//如果有名字冲突的话.则需要改名字,即把java的java.util.HashMap改名为JavaHashMap
+import scala.{StringBuilder => _} //_占位符表示不能引用scala.StringBuilder类,只能使用java中的StringBuilder
+
+---------------------------------------------------------------------------------------------------------------------
+第十七讲 scala中包、类、对象、成员、伴生类、伴生对象访问权限实战
+一、scala中包、类、对象、成员访问权限实战
+代码
+package spark{
+  package navigation{
+    private[spark] class Navigator{//说明该类只能在spark包下才能被使用
+      protected[navigation] def useStarChart() {}//因为是protected修饰符,表示navigation包下的所有代码都可以访问该方法
+      class LegOfJourney {
+        private[Navigator] val distance =100//表示Navigator类中所有的成员都可以访问distance属性
+      }
+      private[this] var speed = 200//说明只能被Navigator对象使用,不能被其他对象操作speed,该访问修饰符非常严格
+    }
+  }
+  
+  package launch{
+    import navigation._
+    object Vehicle {
+      //他是spark包下的,因此可以访问Navigator对象,
+      //同时因为是object对象里面的一个属性,因此是静态属性,可以被任意类调用,但是他设置为private[launch],表示只允许launch包下的类才能使用
+      private[launch] val guide = new Navigator
+      
+    }
+  }
+}
+
+二、scala中伴生类、伴生对象访问权限实战
+代码
+class PackageOps_Advanced{//伴生类
+  import PackageOps_Advanced.power//导入伴生对象的私有方法
+  
+  private def canMakeItTrue = power >10001
+  
+}
+
+object PackageOps_Advanced{//伴生对象
+  private def power = 10000//伴生对象的私有方法
+  
+  def makeItTrue(p : PackageOps_Advanced): Boolean = {
+     val result = p.canMakeItTrue 
+     result
+  }
+}
+
+伴生类可以随意访问伴生对象
+伴生对象可以随意访问伴生类
+
+---------------------------------------------------------------------------------------------------------------------
+第十八讲 scala中文件读取、写入、控制台输入操作实战
+一、读取本地文件
+	    val file = Source.fromFile("E:\\WangJialin.txt") 
+		for (line <- file.getLines){ println(line)}
+		file.close
+二、读取网络文件,并用新的for循环读取
+		val webFile = Source.fromURL("http://spark.apache.org/")
+		webFile.foreach(print)//print全称为print(_)
+		webFile.close
+三、写入文件
+	val writer = new PrintWriter(new File("scalaFile.txt" ))
+        for (i <- 1 to 100) writer.println(i)
+        writer.close()
+四、从控制台输入
+        print("Please enter your input : " )
+        val line = readLine
+        println("Thanks, you just typed: " + line)
+
+---------------------------------------------------------------------------------------------------------------------
+第十九讲 scala中正则表达式、与模式匹配结合的Reg实战
+一、正则表达式
+    val regex="""([0-9]+) ([a-z]+)""".r//三个引号包裹表示原生的正则表达式,即包裹的内容就是正则表达式,特殊字符不需要转义,比如\
+    val numPattern = "[0-9]+".r//双引号就是正则表达式,转义字符需要自行在双引号内写上转义字符
+    val numberPattern = """\s+[0-9]+\s+""".r
+    
+    // findAllIn方法返回变量所有匹配项的迭代器
+    for (matchString <- numPattern.findAllIn("99345 Scala, 22298 Spark")) println(matchString)
+ 输出:
+99345
+22298
+    println("-----------")
+    // 找到首个匹配项
+    println(numberPattern.findFirstIn("99ss java, 222 hadoop"))
+    输出Some( 222 )
+    println("-----------")
+
+1.字符串""的r方法返回正则表达式对象
+2.三个引号包裹表示原生的正则表达式,即包裹的内容就是正则表达式,特殊字符不需要转义,比如\
+3.双引号就是正则表达式,转义字符需要自行在双引号内写上转义字符
+
+
+二、模式匹配
+    val numitemPattern="""([0-9]+) ([a-z]+)""".r   //数字 字母,模式匹配是通过()进行拆分的
+
+    val numitemPattern(num, item) = "99 hadoop" //模式匹配字符串,将匹配的第一部分给num赋值,第二部分给item赋值
+    println(num) //输出99
+    println(item) //输出hadoop
+
+    val numitemPattern(num, item) = "99s hadoop" //正则表达式匹配异常,抛异常(RegExpressOps.scala:20)
+
+
+    val line = "93459 spark"
+    line match{
+      case numitemPattern(num, blog) => println(num + "\t" + blog)
+      case _ => println("Oops...")
+    }
+  表示对line进行模式匹配,如果匹配成功,则打印num和blog,如果不匹配成功,eg抛异常,则走_,打印Oops...
+
+---------------------------------------------------------------------------------------------------------------------
+第二十讲 scala中本地函数与作为语言一等公民的函数详解实战
 
 
 ---问题------------------------------------------------------------------------------------------------------------------
