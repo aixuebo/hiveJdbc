@@ -764,7 +764,7 @@ tableSource
         processPTF(qb, child);
         PTFInvocationSpec ptfInvocationSpec = qb.getPTFInvocationSpec(child);
         String inputAlias = ptfInvocationSpec == null ? null :
-          ((PartitionedTableFunctionSpec)ptfInvocationSpec.getFunction()).getAlias();;
+          ((PartitionedTableFunctionSpec)ptfInvocationSpec.getFunction()).getAlias();
         if ( inputAlias == null ) {
           throw new SemanticException(generateErrorMessage(child,
               "PTF invocation in a Join must have an alias"));
@@ -2122,6 +2122,9 @@ tableSource
     return null;
   }
 
+  /**
+   * name不允许在集合nameSet中存在
+   */
   private void failIfColAliasExists(Set<String> nameSet, String name)
       throws SemanticException {
     if (nameSet.contains(name)) {

@@ -97,3 +97,198 @@ TOK_QUERY(
 	(TOK_SELECT(TOK_SELEXPR(TOK_ALLCOLREF)))))
 	(<EOF>)
 )
+
+四、两个join,表示biao和bian1先进行right链接,然后结果集再与biao2进行left链接
+		command.append("select * from biao ")
+		       .append(" TABLESAMPLE(BUCKET 1 OUT OF 2 ON coohua_id) biao right join biao1 on biao1.id = biao.id ")
+		       .append(" left join biao2 on biao2.id = biao1.id ")
+		       .append(" and name = 'xxx'");
+
+(
+	nil(
+		TOK_QUERY(
+			TOK_FROM(
+				TOK_LEFTOUTERJOIN(
+					TOK_RIGHTOUTERJOIN(
+						TOK_TABREF(TOK_TABNAME(biao))
+						(
+							TOK_TABLEBUCKETSAMPLE(1)(2)(TOK_TABLE_OR_COL(coohua_id))
+						)(biao)
+					)
+					(
+						TOK_TABREF(TOK_TABNAME(biao1))
+					)
+					(=
+						(.
+							(
+								TOK_TABLE_OR_COL(biao1))(id)
+							)
+							(.
+								(TOK_TABLE_OR_COL(biao)
+							)(id)
+						)
+					)
+				)
+				(
+					TOK_TABREF(TOK_TABNAME(biao2))
+				)
+				(
+				and(=
+					(.
+						(
+						TOK_TABLE_OR_COL(biao2)
+						)(id)
+					)
+					(.
+						(
+						TOK_TABLE_OR_COL(biao1)
+						)(id)
+					)
+				)
+				(
+					=(
+					TOK_TABLE_OR_COL(name)
+					)('xxx')
+				)
+			)
+		)
+	)
+(TOK_INSERT(TOK_DESTINATION(TOK_DIR(TOK_TMP_FILE)))(TOK_SELECT(TOK_SELEXPR(TOK_ALLCOLREF)))))
+(<EOF>)
+)
+
+五、TOK_SUBQUERY子查询
+		command.append("select biao11.* from  ")
+		       .append(" (select * from biao1 ) biao11")
+		       .append(" where biao11.id = 100 ");
+
+(
+	nil(
+		TOK_QUERY(
+			TOK_FROM(
+				TOK_SUBQUERY(
+					TOK_QUERY(
+						TOK_FROM(
+							TOK_TABREF(TOK_TABNAME(biao1))
+						)
+					)
+					(
+						TOK_INSERT(
+							TOK_DESTINATION(
+								TOK_DIR(TOK_TMP_FILE)
+							)
+						)
+						(
+							TOK_SELECT(
+								TOK_SELEXPR(TOK_ALLCOLREF)
+							)
+						)
+					)
+				)(biao11)
+			)
+		)
+		(
+			TOK_INSERT(
+				TOK_DESTINATION(
+					TOK_DIR(TOK_TMP_FILE)
+				)
+			)
+			(
+				TOK_SELECT(
+					TOK_SELEXPR(
+						TOK_ALLCOLREF(
+							TOK_TABNAME(biao11)
+						)
+					)
+				)
+			)
+			(
+				TOK_WHERE(=
+					(.
+						(
+							TOK_TABLE_OR_COL(biao11)
+						)(id)
+					)(100)
+				)
+			)
+		)
+	)
+	(<EOF>)
+)
+
+六、测试from子句是LATERAL VIEW方式的情况
+语法
+LATERAL VIEW udtf(expression) tableAlias AS columnAlias (',' columnAlias)*
+1.LATERAL VIEW OUTER function tableAlias [ as xxx | as xxx,xxx,xxx]
+2.LATERAL VIEW function tableAlias [ as xxx | as xxx,xxx,xxx]
+eg:
+SELECT pageid, adid FROM pageAds LATERAL VIEW explode(adid_list) adTable AS adid;
+
+(
+nil
+	(
+	TOK_QUERY(
+		TOK_FROM(
+			TOK_LATERAL_VIEW(
+				TOK_SELECT(
+					TOK_SELEXPR(
+						TOK_FUNCTION(explode)(
+							TOK_TABLE_OR_COL(adid_list)
+						)
+					)(adid)
+					(
+						TOK_TABALIAS(adTable)
+					)
+				)
+			)
+			(
+				TOK_TABREF(
+					TOK_TABNAME(pageAds
+				)
+			)
+		)
+	)
+)
+(TOK_INSERT(TOK_DESTINATION(TOK_DIR(TOK_TMP_FILE)))(TOK_SELECT(TOK_SELEXPR(TOK_TABLE_OR_COL(pageid)))(TOK_SELEXPR(TOK_TABLE_OR_COL(adid))))))
+(<EOF>)
+)
+
+七、多个LATERAL view
+		command.append("SELECT * FROM exampleTable ")
+			   .append(" LATERAL VIEW explode(col1) myTable1 AS myCol1 ")
+		       .append(" LATERAL VIEW explode(myCol1) myTable2 AS myCol2 ");
+
+(
+	nil(
+		TOK_QUERY(
+			TOK_FROM(
+				TOK_LATERAL_VIEW(
+					TOK_SELECT(
+						TOK_SELEXPR(
+							TOK_FUNCTION(explode)(
+								TOK_TABLE_OR_COL(myCol1)
+							)
+						)(myCol2) (TOK_TABALIAS(myTable2))
+					)
+				)
+				(
+					TOK_LATERAL_VIEW(
+						TOK_SELECT(
+							TOK_SELEXPR(
+								TOK_FUNCTION(explode) (TOK_TABLE_OR_COL(col1)) 
+							)(myCol1)(TOK_TABALIAS(myTable1))
+						)
+					)
+				(
+					TOK_TABREF(
+						TOK_TABNAME(exampleTable)
+					)
+				)
+			)
+		)
+	)
+(TOK_INSERT(TOK_DESTINATION(TOK_DIR(TOK_TMP_FILE)))(TOK_SELECT(TOK_SELEXPR(TOK_ALLCOLREF)))))
+(<EOF>)
+)
+
+八、

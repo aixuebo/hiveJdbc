@@ -72,9 +72,12 @@ public class TestRun {
 	
 	@Test
 	public void test5(){
-		String command = "select * from biao TABLESAMPLE(BUCKET 1 OUT OF 2 ON coohua_id) biao right join biao1 on biao1.id = biao.id and name = 'xxx'";
+		StringBuffer command = new StringBuffer();
+		command.append("SELECT * FROM exampleTable ")
+			   .append(" LATERAL VIEW explode(col1) myTable1 AS myCol1 ")
+		       .append(" LATERAL VIEW explode(myCol1) myTable2 AS myCol2 ");
 		try {
-			ASTNode node = new ParseDriver().parse(command);
+			ASTNode node = new ParseDriver().parse(command.toString());
 			System.out.println(node.dump());
 			System.out.println(node);
 		} catch (Exception e) {
