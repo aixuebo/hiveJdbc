@@ -226,6 +226,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
   // Max characters when auto generating the column name with func name
   private static final int AUTOGEN_COLALIAS_PRFX_MAXLENGTH = 20;
 
+  //KW_ANALYZE KW_TABLE (parttype=tableOrPartition) KW_COMPUTE KW_STATISTICS ((noscan=KW_NOSCAN) | (partialscan=KW_PARTIALSCAN) | (KW_FOR KW_COLUMNS statsColumnName=columnNameList))? -> ^(TOK_ANALYZE $parttype $noscan? $partialscan? $statsColumnName?)
   // flag for no scan during analyze ... compute statistics
   protected boolean noscan = false;
 
@@ -367,6 +368,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
    * @param selExpr select语句对应的语法树
    * @param qb
    * @param dest
+   * 参数表示为QB对象的目标desc添加聚类函数,例如用于having子句解析
    */
   private LinkedHashMap<String, ASTNode> doPhase1GetAggregationsFromSelect(
       ASTNode selExpr, QB qb, String dest) throws SemanticException {
@@ -840,6 +842,11 @@ tableSource
    * @param qb
    * @param ctx_1
    * @throws SemanticException
+   * 处理select distinct、select、TOK_WHERE、TOK_INSERT_INTO、TOK_INSERT
+   * TOK_DESTINATION、TOK_FROM、TOK_CLUSTERBY、TOK_DISTRIBUTEBY、TOK_SORTBY、TOK_ORDERBY、TOK_GROUPBY、
+   * TOK_ROLLUP_GROUPBY、TOK_CUBE_GROUPBY、TOK_GROUPING_SETS、TOK_HAVING、KW_WINDOW、
+   * TOK_LIMIT、TOK_ANALYZE、TOK_UNION、TOK_LATERAL_VIEW、TOK_LATERAL_VIEW_OUTER 关键字解析
+   * 该方法是解析的第一步,一般情况下QB都是全新的
    */
   @SuppressWarnings({"fallthrough", "nls"})
   public boolean doPhase1(ASTNode ast, QB qb, Phase1Ctx ctx_1)
@@ -915,7 +922,7 @@ selectStatement
         }
         qbp.setDestForClause(ctx_1.dest, (ASTNode) ast.getChild(0));
         break;
-
+        
       case HiveParser.TOK_FROM:
         int child_count = ast.getChildCount();
         if (child_count != 1) {
@@ -957,20 +964,24 @@ tableSource
           processPTF(qb, frm);
         }
         break;
-
+        
       case HiveParser.TOK_CLUSTERBY:
         // Get the clusterby aliases - these are aliased to the entries in the
         // select list
         queryProperties.setHasClusterBy(true);
         qbp.setClusterByExprForClause(ctx_1.dest, ast);
         break;
-
+        
       case HiveParser.TOK_DISTRIBUTEBY:
         // Get the distribute by aliases - these are aliased to the entries in
         // the
         // select list
         queryProperties.setHasDistributeBy(true);
         qbp.setDistributeByExprForClause(ctx_1.dest, ast);
+        /**
+   ClusterBy代表sortBy和按照哪个key进行reduce分组的distributeBy,因此一旦有ClusterBy,则不允许有DISTRIBUTE by
+       同理如果有order by,也不允许有sort by
+         */
         if (qbp.getClusterByForClause(ctx_1.dest) != null) {
           throw new SemanticException(generateErrorMessage(ast,
               ErrorMsg.CLUSTERBY_DISTRIBUTEBY_CONFLICT.getMsg()));
@@ -979,11 +990,15 @@ tableSource
               ErrorMsg.ORDERBY_DISTRIBUTEBY_CONFLICT.getMsg()));
         }
         break;
-
+        
       case HiveParser.TOK_SORTBY:
      // Get the sort by aliases - these are aliased to the entries in the
         // select list
         queryProperties.setHasSortBy(true);
+        /**
+   ClusterBy代表sortBy和按照哪个key进行reduce分组的distributeBy,因此一旦有ClusterBy,则不允许有sort by
+   同理如果有order by,也不允许有sort by
+         */
         qbp.setSortByExprForClause(ctx_1.dest, ast);
         if (qbp.getClusterByForClause(ctx_1.dest) != null) {
           throw new SemanticException(generateErrorMessage(ast,
@@ -992,13 +1007,16 @@ tableSource
           throw new SemanticException(generateErrorMessage(ast,
               ErrorMsg.ORDERBY_SORTBY_CONFLICT.getMsg()));
         }
-
+        
         break;
       case HiveParser.TOK_ORDERBY:
         // Get the order by aliases - these are aliased to the entries in the
         // select list
         queryProperties.setHasOrderBy(true);
         qbp.setOrderByExprForClause(ctx_1.dest, ast);
+        /**
+   ClusterBy代表sortBy和按照哪个key进行reduce分组的distributeBy,因此一旦有ClusterBy,则不允许有order by
+         */
         if (qbp.getClusterByForClause(ctx_1.dest) != null) {
           throw new SemanticException(generateErrorMessage(ast,
               ErrorMsg.CLUSTERBY_ORDERBY_CONFLICT.getMsg()));
@@ -1031,9 +1049,10 @@ tableSource
           qbp.getDestGroupingSets().add(ctx_1.dest);
         }
         break;
-
+        
       case HiveParser.TOK_HAVING:
         qbp.setHavingExprForClause(ctx_1.dest, ast);
+        //参数表示为QB对象的目标desc添加聚类函数
         qbp.addAggregationExprsForClause(ctx_1.dest,
             doPhase1GetAggregationsFromSelect(ast, qb, ctx_1.dest));
         break;
@@ -1045,14 +1064,14 @@ tableSource
         }
         handleQueryWindowClauses(qb, ctx_1, ast);
         break;
-
+        
       case HiveParser.TOK_LIMIT:
         qbp.setDestLimit(ctx_1.dest, new Integer(ast.getChild(0).getText()));
         break;
 
       case HiveParser.TOK_ANALYZE:
         // Case of analyze command
-
+//KW_ANALYZE KW_TABLE (parttype=tableOrPartition) KW_COMPUTE KW_STATISTICS ((noscan=KW_NOSCAN) | (partialscan=KW_PARTIALSCAN) | (KW_FOR KW_COLUMNS statsColumnName=columnNameList))? -> ^(TOK_ANALYZE $parttype $noscan? $partialscan? $statsColumnName?)
         String table_name = getUnescapedName((ASTNode) ast.getChild(0).getChild(0));
 
 
@@ -1066,7 +1085,7 @@ tableSource
         HiveConf.setVar(conf, HiveConf.ConfVars.HIVEMAPREDMODE, "nonstrict");
 
         break;
-
+        
       case HiveParser.TOK_UNION:
         // currently, we dont support subq1 union subq2 - the user has to
         // explicitly say:
@@ -1082,6 +1101,8 @@ tableSource
         Tree tab = destination.getChild(0);
 
         // Proceed if AST contains partition & If Not Exists
+        //eg INSERT OVERWRITE TABLE tableName [PARTITION (task = 'share', date = '20150831')] [IF NOT EXISTS ] 返回的结果顺序是TOK_DESTINATION destination ifNotExists?
+        //该if主要用于校验,校验如果存在If Not Exists时候,要进行校验不能是动态partition,以及partion不能存在
         if (destination.getChildCount() == 2 &&
             tab.getChildCount() == 2 &&
             destination.getChild(1).getType() == HiveParser.TOK_IFNOTEXISTS) {
@@ -1089,8 +1110,9 @@ tableSource
 
           Tree partitions = tab.getChild(1);
           int childCount = partitions.getChildCount();
+          //每组partition对应的key-value集合
           HashMap<String, String> partition = new HashMap<String, String>();
-          for (int i = 0; i < childCount; i++) {
+          for (int i = 0; i < childCount; i++) {//解析partition的key-value集合
             String partitionName = partitions.getChild(i).getChild(0).getText();
             Tree pvalue = partitions.getChild(i).getChild(1);
             if (pvalue == null) {
@@ -1101,7 +1123,7 @@ tableSource
           }
           // if it is a dynamic partition throw the exception
           if (childCount == partition.size()) {
-            try {
+            try {//校验table中是否存在了这些partition
               Table table = db.getTable(tableName);
               Partition parMetaData = db.getPartition(table, partition, false);
               // Check partition exists if it exists skip the overwrite
@@ -1122,6 +1144,7 @@ tableSource
         }
         skipRecursion = false;
         break;
+        
       case HiveParser.TOK_LATERAL_VIEW:
       case HiveParser.TOK_LATERAL_VIEW_OUTER:
         // todo: nested LV
@@ -1180,7 +1203,7 @@ tableSource
       // This is needed for tracking the dependencies for inputs, along with their parents.
       Map<String, ObjectPair<String, ReadEntity>> aliasToViewInfo =
           new HashMap<String, ObjectPair<String, ReadEntity>>();
-      //循环所有数据库别名
+      //循环所有数据库别名,进行校验每一个数据库信息
       for (String alias : tabAliases) {
         String tab_name = qb.getTabNameForAlias(alias);//通过别名找到具体的数据库名字
         Table tab = null;
@@ -1191,7 +1214,7 @@ tableSource
               .getParseInfo().getSrcForAlias(alias)));
         }
 
-        // Disallow INSERT INTO on bucketized tables 如果一个数据库是分桶的,是不允许向该数据库进行insert插入数据的
+        // Disallow INSERT INTO on bucketized tables 如果一个数据库是分桶的,是不允许向该数据库进行insert into 插入数据的,可以说是暂时不支持
         if (qb.getParseInfo().isInsertIntoTable(tab.getDbName(), tab.getTableName()) &&
             tab.getNumBuckets() > 0) {
           throw new SemanticException(ErrorMsg.INSERT_INTO_BUCKETIZED_TABLE.
@@ -1204,6 +1227,7 @@ tableSource
         // check the table's offline status.
         // TODO: Modify the code to remove the checking here and consolidate
         // it in validate()
+        //数据库已经关闭了也要抛异常
         //
         if (tab.isOffline()) {
           throw new SemanticException(ErrorMsg.OFFLINE_TABLE_OR_PARTITION.
@@ -1231,6 +1255,7 @@ tableSource
           continue;
         }
 
+        //校验table表的读取格式一定是InputFormat的子类,因为table就是HDFS上的一个文件,要对其进行读取,过滤信息,因此一定要InputFormat的子类才能进行读取数据操作
         if (!InputFormat.class.isAssignableFrom(tab.getInputFormatClass())) {
           throw new SemanticException(generateErrorMessage(
               qb.getParseInfo().getSrcForAlias(alias),
@@ -1300,6 +1325,8 @@ tableSource
       // metadata
       QBParseInfo qbp = qb.getParseInfo();
 
+      //遍历每一个根节点
+      //包含TOK_TAB、TOK_LOCAL_DIR、TOK_DIR
       for (String name : qbp.getClauseNamesForDest()) {
         ASTNode ast = qbp.getDestForClause(name);
         switch (ast.getToken().getType()) {
@@ -1337,7 +1364,7 @@ tableSource
           }
           break;
         }
-
+        
         case HiveParser.TOK_LOCAL_DIR://设置存储在本地的哪个路径下
         case HiveParser.TOK_DIR: {//设置存储在hdfs的哪个路径下
           // This is a dfs file

@@ -39,8 +39,8 @@ public class QB {
 
   private final int numJoins = 0;
   private final int numGbys = 0;
-  private int numSels = 0;
-  private int numSelDi = 0;
+  private int numSels = 0;//有多少个select字段
+  private int numSelDi = 0;//有多少个select distinct字段
   private HashMap<String, String> aliasToTabs;//设置别名key,和数据库表名value的映射关系
   private HashMap<String, QBExpr> aliasToSubq;//设置别名key,和子查询表名value的映射关系
   private HashMap<String, Map<String, String>> aliasToProps;//为table设置对应的全局属性,key是数据库的表别名,value是该数据库对应的信息,这些信息都是查询sql中存储的
@@ -49,7 +49,7 @@ public class QB {
   private QBMetaData qbm;
   private QBJoinTree qbjoin;
   private String id;
-  private boolean isQuery;
+  private boolean isQuery;//true表示该query是子查询中的query
   private boolean isAnalyzeRewrite;
   private CreateTableDesc tblDesc = null; // table descriptor of the final
   private CreateTableDesc localDirectoryDesc = null ;

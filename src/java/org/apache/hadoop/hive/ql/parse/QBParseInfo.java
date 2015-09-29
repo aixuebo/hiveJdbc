@@ -45,8 +45,8 @@ public class QBParseInfo {
   private final HashMap<String, ASTNode> nameToDest;//key是目标,value是该目标对应的根节点
   private final HashMap<String, TableSample> nameToSample;//from的抽样子句,key是table的别名
   private final Map<ASTNode, String> exprToColumnAlias;//映射select中每一个属性和对应的别名,key是属性节点,value是别名
-  private final Map<String, ASTNode> destToSelExpr;
-  private final HashMap<String, ASTNode> destToWhereExpr;//where语句的语法对象为value,key是目标,即可能包含嵌套的子查询
+  private final Map<String, ASTNode> destToSelExpr;//目标对象的select节点
+  private final HashMap<String, ASTNode> destToWhereExpr;//where语句的语法对象为value,key是目标,即谁的where条件
   private final HashMap<String, ASTNode> destToGroupby;//group by语句的语法对象为value,key是目标,即可能包含嵌套的子查询
   private final Set<String> destRollups;//存储有roll by的key目标
   private final Set<String> destCubes;//存储有cube by的key目标
@@ -54,13 +54,14 @@ public class QBParseInfo {
   private final Map<String, ASTNode> destToHaving;//having语句的语法对象为value,key是目标,即可能包含嵌套的子查询
   private final HashSet<String> insertIntoTables;//涉及到的insert into 到哪个表集合,该集合内容格式是db.tableName,注意:仅仅针对INSERT INTO语句,如果一个数据库是分桶的,是不允许向该数据库进行insert插入数据的
 
+  //KW_ANALYZE KW_TABLE (parttype=tableOrPartition) KW_COMPUTE KW_STATISTICS ((noscan=KW_NOSCAN) | (partialscan=KW_PARTIALSCAN) | (KW_FOR KW_COLUMNS statsColumnName=columnNameList))? -> ^(TOK_ANALYZE $parttype $noscan? $partialscan? $statsColumnName?)
   private boolean isAnalyzeCommand; // used for the analyze command (statistics)是否使用了分析命令,视图是不允许使用分析命令的
   private boolean isInsertToTable;  // used for insert overwrite command (statistics)
   private boolean isNoScanAnalyzeCommand; // used for the analyze command (statistics) (noscan)
   private boolean isPartialScanAnalyzeCommand; // used for the analyze command (statistics)
                                                // (partialscan)
 
-  private final HashMap<String, tableSpec> tableSpecs; // used for statistics
+  private final HashMap<String, tableSpec> tableSpecs; // used for statisticskey为别名,value为分区的table对象
 
   private String tableName;   // used for column statistics
   private List<String> colName;     // used for column statistics
@@ -90,7 +91,7 @@ public class QBParseInfo {
    */
   private final HashMap<String, ArrayList<ASTNode>> aliasToLateralViews;
 
-  private final HashMap<String, ASTNode> destToLateralView;
+  private final HashMap<String, ASTNode> destToLateralView;//key是目标对象dest,value是TOK_LATERAL_VIEW_OUTER或者TOK_LATERAL_VIEW节点对象
 
   /* Order by clause */
   private final HashMap<String, ASTNode> destToOrderby;//order by 对应的数字为value,key是目标,即可能包含嵌套的子查询
@@ -98,7 +99,7 @@ public class QBParseInfo {
   private int outerQueryLimit;
 
   // used by GroupBy 该存储每一个select中存储的聚合函数,因为存在函数到嵌套函数的,比如min(string()),因此value是一个节点信息,通过该信息可以获取嵌套关系
-  //key是目标,即可能包含嵌套的子查询
+  //key是目标,即可能包含嵌套的子查询,例如可能是group by,可能是having by等
   //value中key是集合函数的名称,value是聚合函数对应对应的节点,通过该信息可以获取嵌套关系
   private final LinkedHashMap<String, LinkedHashMap<String, ASTNode>> destToAggregationExprs;
   //过滤,只要distinct函数集合,value就是该集合,key是目标,即可能包含嵌套的子查询

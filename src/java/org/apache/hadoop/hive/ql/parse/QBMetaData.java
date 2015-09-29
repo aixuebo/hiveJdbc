@@ -29,9 +29,8 @@ import org.apache.hadoop.hive.ql.plan.DynamicPartitionCtx;
 
 /**
  * Implementation of the metadata information related to a query block.
- *
+ * 查询对应的元数据信息
  **/
-
 public class QBMetaData {
 
   public static final int DEST_INVALID = 0;
@@ -41,7 +40,7 @@ public class QBMetaData {
   public static final int DEST_REDUCE = 4;
   public static final int DEST_LOCAL_FILE = 5;
 
-  private final HashMap<String, Table> aliasToTable;
+  private final HashMap<String, Table> aliasToTable;//记录校验好的数据库table对象的别名作为key,value是对应的table对象
   private final HashMap<String, Table> nameToDestTable;
   private final HashMap<String, Partition> nameToDestPartition;
   private final HashMap<String, String> nameToDestFile;

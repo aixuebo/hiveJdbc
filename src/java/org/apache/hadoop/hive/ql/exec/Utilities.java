@@ -2160,11 +2160,14 @@ public final class Utilities {
   public static void validatePartSpec(Table tbl, Map<String, String> partSpec)
       throws SemanticException {
 
+	  //获取该table的所有分区信息集合
     List<FieldSchema> parts = tbl.getPartitionKeys();
     Set<String> partCols = new HashSet<String>(parts.size());
     for (FieldSchema col : parts) {
       partCols.add(col.getName());
     }
+    
+    //遍历等待校验的分区,最终使每一个等待校验的分区都要在table的分区集合中存在
     for (String col : partSpec.keySet()) {
       if (!partCols.contains(col)) {
         throw new SemanticException(ErrorMsg.NONEXISTPARTCOL.getMsg(col));

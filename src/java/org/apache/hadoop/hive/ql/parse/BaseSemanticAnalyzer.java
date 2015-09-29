@@ -754,11 +754,10 @@ public abstract class BaseSemanticAnalyzer {
 
   /**
    * tableSpec.
-   *
    */
   public static class tableSpec {
-    public String tableName;
-    public Table tableHandle;
+    public String tableName;//table表名字
+    public Table tableHandle;//table对象
     public Map<String, String> partSpec; // has to use LinkedHashMap to enforce order按照设置分区的顺序,进行排序分区,key是属性,value是分区值
     public Partition partHandle;
     public int numDynParts; // number of dynamic partition columns多少个动态分区属性
@@ -815,7 +814,7 @@ public abstract class BaseSemanticAnalyzer {
           String val = null;
           String colName = unescapeIdentifier(partspec_val.getChild(0).getText().toLowerCase());
           if (partspec_val.getChildCount() < 2) { // DP in the form of T partition (ds, hr) 仅仅设置了属性name,而没有设置值,因此是属于动态分区
-            if (allowDynamicPartitionsSpec) {
+            if (allowDynamicPartitionsSpec) {//必须允许动态分区存在
               ++numDynParts;
             } else {
               throw new SemanticException(ErrorMsg.INVALID_PARTITION
@@ -829,6 +828,7 @@ public abstract class BaseSemanticAnalyzer {
         }
 
         // check if the columns specified in the partition() clause are actually partition columns
+        //校验该table对象的分区信息是否有问题
         validatePartSpec(tableHandle, partSpec, ast, conf);
 
         // check if the partition spec is valid
@@ -890,7 +890,7 @@ public abstract class BaseSemanticAnalyzer {
           }
           specType = SpecType.STATIC_PARTITION;
         }
-      } else {//说明存在分区
+      } else {//说明不存在分区,仅仅是创建表分析
         specType = SpecType.TABLE_ONLY;
       }
     }
@@ -1243,6 +1243,14 @@ public abstract class BaseSemanticAnalyzer {
     }
   }
 
+  /**
+   * 校验该table的分区情况
+   * @param tbl
+   * @param partSpec 分区的key-value集合
+   * @param astNode
+   * @param conf
+   * @throws SemanticException
+   */
   public static void validatePartSpec(Table tbl,
       Map<String, String> partSpec, ASTNode astNode, HiveConf conf) throws SemanticException {
 

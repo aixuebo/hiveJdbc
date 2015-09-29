@@ -35,18 +35,23 @@ public class CliDriverTest {
 	  
 	  @Test
 	  public void test2(){
-		  String message = "abc";
-		  System.out.println(spacesForString(message));
+/*		  String message = "abc";
+		  System.out.println(spacesForString(message));*/
+		  
+		  System.out.println(Integer.MAX_VALUE);
 	  }
 	  
 	  @Test
 	  public void test3(){
 		  HiveConf conf = new HiveConf();
 		  SessionState.start(conf);
-		  String command = "select * from aa";
+		  StringBuffer command = new StringBuffer();
+			command.append("select distinct biao11.id,biao11.name,biao11.age,biao11.sex from  ")
+		       .append(" (select * from biao1) biao11")
+		       .append(" where biao11.id = 100 ");
 		  Driver driver = new Driver(conf);
 		  try {
-			driver.run(command);
+			driver.run(command.toString());
 		} catch (CommandNeedRetryException e) {
 			e.printStackTrace();
 		}
