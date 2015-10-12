@@ -1,0 +1,153 @@
+Maven实战  --- manven3 in action徐晓斌著
+第一章、maven简介
+1.构建artiface:
+  编译、运行单元测试、生成文档、生成测试报告、打包、部署成为构建，我们使用maven后仅仅需要mvn clean install就可以完成这些流程，很方便。
+2.maven不仅仅是构建工具，还可以是依赖管理工具和项目信息管理工具。利用中央仓库。
+3.maven构建与IDE、make、ant的区别
+maven相当于买了一个品牌电脑，只要配置一下就可以完全设置完成。
+而make和ant是相当于自己组装电脑的过程，需要自己为每一个项目写一个脚本，该脚本比较麻烦
+而IDE虽然可以编译等等，但是动作不能连贯起来，需要手动鼠标一个一个操作。也很麻烦。
+
+第二章、maven的安装和配置
+一、设置HTTP代理
+1.使用前先检查代理服务器是否通
+telnet 192.168.10.203 7072 查看能否通即可。
+如果是win7系统，默认telnet是关闭的，得需要在控制面板--卸载程序--打开telnet客户端即可使用
+
+2.配置
+  <proxies>
+    <proxy>
+      <id>optional</id>
+      <active>true</active>
+      <protocol>http</protocol>
+      <username>proxyuser</username>
+      <password>proxypass</password>
+      <host>proxy.host.net</host>
+      <port>80</port>
+      <nonProxyHosts>local.net|some.host.com|*.google.com</nonProxyHosts>
+    </proxy>
+  </proxies>
+  说明:
+  active 设置true表示使用该proxy
+  protocol 表示使用http协议
+  host和port设置代理服务器host和端口
+  username和password可以省略,除非代理服务器需要每次都校验用户名和密码
+  nonProxyHosts 可以省略,设置哪些通配符的网站是不需要代理的,通配符用*代替
+
+二、设置环境变量MAVEN_OPTS
+因为mvn命令其实调用的是java命令，而java是可以设置参数的,就在环境变量MAVEN_OPTS中设置参数就可以控制maven编译了
+因为有些大项目需要内存较大，导致maven提供的默认内存不足,无法编译，则需要配置MAVEN_OPTS
+
+demo:
+MAVEN_OPTS 设置成 -Xms256m -Xmx512m
+
+三、不要使用IDE提供的内嵌maven
+由于IDE也会安装一个内嵌的Maven,因此即使不安装maven，按照IDE也是可以使用maven的
+但是这就产生了一个问题,使用本地的maven和IDE内嵌的maven有时候会有冲突，或者内嵌的maven版本太新，不稳定也不好，因此需要最好用本地的maven
+
+eclipse设置
+windows--preferences--maven--installations--默认是选择embedded内嵌的,只需要add添加一个本地的maven的目录即可,即添加M2_HOME对应的目录，使用该目录即可。
+
+第三章、Maven的使用入门
+一、默认规则
+1.主代码和测试代码分开放,maven默认会保证主代码打包到jar里面，而测试代码仅仅测试,不进行打包
+2.主代码存放在src/main/java目录下
+3.测试代码放在src/test/java目录下
+4.主代码的package以pom文件的groupId和artifactId开头
+ demo
+      <groupId>com.coohua</groupId>
+      <artifactId>dataPlatform</artifactId>
+ package为com.coohua.dataPlatform
+ 二、编译过程
+ 执行mvn clean compile
+ 1.clean:clean任务,删除target目录
+ 2.resource:resource任务,加载资源,比如加载依赖的jar包
+ 3.compile:compile任务,将主代码编译到target/class文件夹下
+ 注意这三个任务其实都对应了三个插件
+
+三、测试代码
+1.junit的scope为test,默认是compile的
+test表示只有在测试代码中才可以import到junit,而在主代码包中是不能import的,会提示编译错误。而compile依赖范围是主、测试包都允许的。
+2.mvn clean test
+执行测试命令后,会打印测试报告，运行多少个测试类、多少个失败了、多少个错误、跳过多少个。
+3.surefire:test任务,负责执行测试插件,并输出测试报告
+4.需要配置maven编译java的虚拟机版本,使用JVM1.7,否则默认是JVM1.3版本不支持注解功能
+          <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-compiler-plugin</artifactId>
+              <version>3.1</version>
+              <configuration>
+                  <source>1.7</source>
+                  <target>1.7</target>
+              </configuration>
+          </plugin>
+
+四、打包和运行
+1.mvn clean package 进行打包,默认是打jar包
+jar:jar任务插件就负责打包,将jar包输出到target目录下,他输出的规则是根据artifact-version.jar来执行的,因此可以通过参数控制该任务过程。
+例如可以通过finalName来自定义文件名称
+
+2.mvn clean install 安装,将jar包上传到本地仓库中
+install:install 任务插件执行
+
+3.如何把main类打包到jar包中,并且在META-INF/MANIFEST.MF文件中
+需要借助maven-shade-plugin
+配置如下:
+ <plugin>  
+        <groupId>org.apache.maven.plugins</groupId>  
+        <artifactId>maven-shade-plugin</artifactId>  
+        <version>2.0</version>
+
+        <executions>  
+          <execution>  
+            <phase>package</phase>  
+            <goals>  
+              <goal>shade</goal>  
+            </goals>  
+	    <configuration>  
+		 <transformers>  
+			<transformer implementation = "org.apache.maven.plugins.shade.resource.MainifestResourceTransformer">  
+				<mainClass>com.xun.pf.sayHello.HelloWorld</mainClass>  
+			</transformer>  
+		</transformers>  
+	    </configuration>  
+          </execution>  
+        </executions>  
+ </plugin>
+
+五、使用Archetype生成项目骨架
+我们上面定义的规则,比如pom在项目根目录下、src/test/java、src/main/java等严格约束,因此不需要每次都创建这些很麻烦的步骤，有插件自动生成该框架。
+1.maven3版本执行
+  mvn archetype:generate
+ maven2版本执行
+  mvn org.apache.maven.plugins:maven-archetype-plugin:2.0-alpha-5:generate
+2.版本2和3执行命令区别原因
+  a.maven2版本会将Archetype最新的jar版本更新下来执行,但是不是最稳定的版本,有时会导致运行失败,而maven3是寻找最新版本的稳定版本,因此可以不用写入需要的版本号等信息
+  b.maven2的命令是按照:拆分groupId:artifactId:version:goal
+3.执行后会有很多Archetype选择,包括著名的Appfuse项目的Archetype,我们按编号输入即可。
+  不过我们不输入编号,执行输入回车,则选择默认的maven-archetype-quickstart
+4.输入groupId、artifactId、version即可
+
+5.使用IDE创建Archetype项目框架
+eclipse
+file-new--other--maven--maven project(不要选择create a simple project,不选择就可以使用Archetype框架了)--next--选择maven-archetype-quickstart--输入groupId、artifactId、version即可
+
+
+第四章、背景案例
+
+--------------------------------------------------------------------------------
+格式:
+  <build>
+    <finalName>dataPlatform</finalName>
+      <filters></filters>
+      <resources></resources>
+      <plugins></plugins>
+  </build>
+
+--------------------------------------------------------------------------------
+1.
+            <phase>package</phase>  
+            <goals>  
+              <goal>shade</goal>  
+            </goals>  
+	    含义
