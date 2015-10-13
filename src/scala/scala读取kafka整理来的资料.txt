@@ -1,0 +1,3 @@
+一、Map[Short, (String, (ByteBuffer) => RequestOrResponse)]
+表示map的key是short,value是元组,由name和RequestOrResponse组成,其中RequestOrResponse是由一个输入ByteBuffer参数的方法生成的
+
