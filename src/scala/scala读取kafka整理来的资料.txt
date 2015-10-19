@@ -1,3 +1,23 @@
 一、Map[Short, (String, (ByteBuffer) => RequestOrResponse)]
 表示map的key是short,value是元组,由name和RequestOrResponse组成,其中RequestOrResponse是由一个输入ByteBuffer参数的方法生成的
 
+二、var capital = Map("US" -> "Washington", "France" -> "Paris") 
+表示向map中添加两个元组
+
+三、Map的分组功能
+  /**
+   * Map of log dir to logs by topic and partitions in that dir
+   * 返回Map<String, Map[TopicAndPartition, Log]>
+   *  key是文件的path,value是该path下面对应的topic-partition-log文件集合映射关系
+   */
+  private def logsByDir = {
+    this.logsByTopicPartition.groupBy {
+      case (_, log) => log.dir.getParent
+    }
+  }
+
+  详细说明
+1.logsByTopicPartition的格式Map[TopicAndPartition, Log],其中TopicAndPartition表示kafka的topic-partition映射关系,该关系对应一个LOG对象,该LOG对象有path属性,属于该LOG对象存在磁盘哪里
+2.this.logsByTopicPartition.groupBy 表示按照LOG对象的path属性进行分组,分组后还是Map对象
+  只是value还是原来的logsByTopicPartition,即原来的Map基础上封装了一层。
+  封装的一层Key就是log的dir进行分组
