@@ -1,0 +1,88 @@
+---------------------------------------------------------------------------------------------------------------------
+第42讲 scala中泛型类、泛型函数、泛型在spark中的广泛应用
+一、泛型类
+1.定义
+class List[+A]
+class Triple[F,S,T](val first:F,val second:S,val third:T)
+
+其中+表示允许子类
+比如Integer是any的子类,因此泛型List[Integer]是泛型List[Any]的子类
+
+2.实例
+var triple = new Triple("spark",2,3.14) 
+该实例会自动填充泛型为字符串、整数、double,scala使用类型推断的方式自动赋值泛型类型
+var bigdata = new Triple[String,String,Char]("spark","hadoop",'R')
+这种方式定义,是限制了该bigdata类型,不需要自动类型推断。
+
+3.class Triple[F:ClassTag,S,T](val first:F,val second:S,val third:T)
+ClassTag添加与否暂时看不出来什么,但是其实他表示运行时的时候会添加一些更多的上下文属性信息的意思,后续再讲解该关键字
+
+二、泛型函数
+1.定义一个函数getData,泛型是T,参数是list,一个泛型是T的list
+    def getData[T](list : List[T]) = list(list.length / 2)
+    println(getData(List("Spark", "Hadoop", 'R'))) //hadoop
+
+    解释:函数的含义是获取list的长度/2,我们可以得到3/2=1,然后获取list(1)的值,就是hadoop
+
+    val f = getData[Int] _  //表示函数的返回值是一个整数,因为函数是返回List的一个元素,而List已经固定好是整数了,因此返回值一定是整数
+    println(f(List(1,2,3,4,5,6)))//输出4
+    我们可以把这个函数定义成int的类型,那么就是说该f函数就是处理List[Integer]类型的函数,因此该函数输出是4
+2.
+def foo[A,B](f:A => List[A], b:A) = f(b)
+说明一个函数有两个类型A和B
+参数有两个,第一个是一个函数f,并且f的输入类型是A，函数f的输出是一个List[A],即A的List集合,
+第二个参数是A类型的元素,因为f(b),而f的参数是A类型的,因此参数b一定是A类型的,否则编译器是不允许通过的,说明scala是有上下文的
+
+3.因此我们鼠标移动到val f = getData[Int] _ 上,可以看到f的定义是var f:List[Int]=>Int,就是f的参数是Int的List,输出是Int,其实原理是一样的。
+
+
+---------------------------------------------------------------------------------------------------------------------
+第43讲 scala中类型变量界定Bounds代码实战,以及在spark源码中的应用
+一、类型变量的上界和下界
+1.含义:就是泛型的基础上还要有一些规定的固定方法,即相当于泛型的是某个接口一样
+
+定义上界
+class Pair[T <: Comparable[T]](val first : T,val second : T){
+  def bigger = if(first.compareTo(second) > 0)first else second  
+}
+即表示泛型是T,并且泛型中有compareTo方法可以被使用。
+
+T <: Comparable[T] 表示T必须是Comparable的子类
+<:含义就是限定
+
+2.例子
+  def main(args: Array[String]){
+    val pair = new Pair("Spark", "Hadoop")
+    println(pair.bigger)
+  }
+  输出Spark,该值比hadoop大
+
+3.定义下界R >: T 表示R是T的父类
+class Pair_Lower_Bound[T](val first:T,val second:T){
+  def replaceFirst[R >: T](newFirst:R)= new Pair_Lower_Bound[R](newFirst,second)
+}
+定义replaceFirst方法,参数是一个R,产生一个新的Pair_Lower_Bound被输出,该结果将第一个参数first替换成newFirst了,将T类型替换成R类型了
+
+>: 表示参数是泛型的父类
+<: 表示参数是泛型的子类
+
+---------------------------------------------------------------------------------------------------------------------
+第44讲 scala中view bounds代码实战以及在spark源码中的应用
+一、视图界定含义
+1.上一节中我们定义的是子类必须实现Comparable接口,但是如果我们传入的是两个int类型的整数,会发现报错,说int没有实现Comparable接口异常。
+而我们将<:改成<%,还是调用参数为int时,就不会报异常.
+class Pair_NotPerfect[T <% Comparable[T]](val first : T,val second : T){
+	def bigger = if(first.compareTo(second) > 0)first else second  
+}
+<%表示:如果Comparable[T]不是T的父类的话,我们可以把传入的T类型的实例,转化成Comparable[T]类型
+ 即会有隐士转换的,将Int转换成RichInt,而RichInt实现了Comparable[T]接口
+
+2.我们看到compareTo方法不容易读,因此scala有一个类使用< >数学运算符进行比较,而String又没有实现Ordered类,因此也需要隐式转换,将String转换成RichString
+class Pair_Better[T <% Ordered[T]](val first : T,val second : T){
+	def bigger = if(first > second)first else second  
+}
+    val pair_Better_String = new Pair_Better("Java", "Scala") //String -> RichString
+    println(pair_Better_String.bigger)
+
+---------------------------------------------------------------------------------------------------------------------
+第45讲 scala中以及在spark源码中的应用
