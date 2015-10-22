@@ -12,6 +12,5 @@ public class ClassPathResouce {
 		Assert.assertEquals(ClassPathResouce.class.getResource(classpath).toString(),"jar:file:/D:/workspaceHive/hiveJdbc/lib/commons-cli-1.2.jar!/org/apache/commons/cli/BasicParser.class");
 		classpath = "/maming/ReadFile.class";
 		Assert.assertEquals(ClassPathResouce.class.getResource(classpath).toString(),"file:/D:/workspaceHive/hiveJdbc/bin/maming/ReadFile.class");
-		
 	}
 }
