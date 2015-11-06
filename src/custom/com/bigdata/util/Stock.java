@@ -19,7 +19,7 @@ public class Stock {
 
 	public void diedai1() {
 		// double sum = 7693;
-		double base = 3000;
+		double base = 20000;
 		double temp = 0l;
 		double rate = 0.03;
 
