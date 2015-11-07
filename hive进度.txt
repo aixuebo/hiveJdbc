@@ -1,3 +1,4 @@
+s
 18:D:\workspaceHive\hiveJdbc\java\conf\hive-site.xml
 19:D:\workspaceHive\hiveJdbc\java\org\apache\hadoop\hive\hbase\package-info.java
 22:D:\workspaceHive\hiveJdbc\java\org\apache\hadoop\hive\metastore\parser\package-info.java
