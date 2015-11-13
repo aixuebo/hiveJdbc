@@ -19,9 +19,9 @@ public class Stock {
 
 	public void diedai1() {
 		// double sum = 7693;
-		double base = 20000;
+		double base = 3000;
 		double temp = 0l;
-		double rate = 0.03;
+		double rate = 0.01;
 
 		double sum = 0d;
 		for (int i = 1; i < 270; i++) {
@@ -32,6 +32,42 @@ public class Stock {
 				temp = base;
 			}
 			sum = sum + temp * rate;
+			System.out.println(i + "==" + temp + "==" + sum);
+		}
+	}
+	
+	public void diedai2() {
+		// double sum = 7693;
+		double base = 3000;
+		double temp = 0l;
+
+		double sum = 0d;
+		for (int i = 1; i < 270; i++) {
+			// sum = sum + (sum*rate);
+			if ((sum / base) >= 1) {
+				temp = base + Double.valueOf(sum / base).intValue() * base;
+			} else {
+				temp = base;
+			}
+			sum = sum + (temp/base)*90;
+			System.out.println(i + "==" + temp + "==" + sum);
+		}
+	}
+	
+	
+	//一半资金用于迭代投资方式
+	public void diedai3() {
+		double base = 3000;
+		double temp = 0l;
+
+		double sum = 0d;
+		for (int i = 1; i < 270; i++) {
+				if ((sum / base) >= 1) {
+					temp = base + (Double.valueOf(sum / base)/2) * base;
+				} else {
+					temp = base;
+				}
+				sum = sum + (temp/base)*90;
 			System.out.println(i + "==" + temp + "==" + sum);
 		}
 	}
