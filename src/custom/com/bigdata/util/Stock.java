@@ -2,11 +2,12 @@ package com.bigdata.util;
 
 public class Stock {
 
+	//每天涨rate
 	public void diedai() {
 		// double sum = 7693;
-		double sum = 4600;
+		double sum = 20000;
 		double temp = 0l;
-		double rate = 0.03;
+		double rate = 0.01;
 
 		for (int i = 1; i < 270; i++) {
 			// sum = sum + (sum*rate);
@@ -57,8 +58,9 @@ public class Stock {
 	
 	//一半资金用于迭代投资方式
 	public void diedai3() {
-		double base = 3000;
+		double base = 5000;
 		double temp = 0l;
+		double rate = 0.01;
 
 		double sum = 0d;
 		for (int i = 1; i < 270; i++) {
@@ -67,13 +69,13 @@ public class Stock {
 				} else {
 					temp = base;
 				}
-				sum = sum + (temp/base)*90;
+				sum = sum + (temp/base)* (base*rate);
 			System.out.println(i + "==" + temp + "==" + sum);
 		}
 	}
 	
 	public static void main(String[] args) {
 		Stock stock = new Stock();
-		stock.diedai1();
+		stock.diedai3();
 	}
 }
