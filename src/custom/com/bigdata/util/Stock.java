@@ -2,7 +2,7 @@ package com.bigdata.util;
 
 public class Stock {
 
-	//Ã¿ÌìÕÇrate
+	//æ¯å¤©æ¶¨rate
 	public void diedai() {
 		// double sum = 7693;
 		double sum = 20000;
@@ -56,7 +56,7 @@ public class Stock {
 	}
 	
 	
-	//Ò»°ë×Ê½ğÓÃÓÚµü´úÍ¶×Ê·½Ê½
+	//ä¸€åŠèµ„é‡‘ç”¨äºè¿­ä»£æŠ•èµ„æ–¹å¼
 	public void diedai3() {
 		double base = 5000;
 		double temp = 0l;
