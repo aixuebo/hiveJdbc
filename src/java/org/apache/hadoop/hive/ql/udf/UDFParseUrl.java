@@ -37,6 +37,13 @@ import org.apache.hadoop.hive.ql.exec.UDF;
  * will return 'http' Possible values are
  * HOST,PATH,QUERY,REF,PROTOCOL,AUTHORITY,FILE,USERINFO Also you can get a value
  * of particular key in QUERY, using syntax QUERY:<KEY_NAME> eg: QUERY:k1.
+ * 
+ * parse_url(String url,String key) 从url中解析执行部分,然后返回截取的指定地方
+ * 第二个参数是:HOST, PATH, QUERY, REF, PROTOCOL, AUTHORITY, FILE
+ * 例如
+ * 1.parse_url('http://facebook.com/path/p1.php?query=1','HOST') 返回值是facebook.com
+ * 2.parse_url('http://facebook.com/path/p1.php?query=1','QUERY') 返回值是query=1
+ * 3.parse_url('http://facebook.com/path/p1.php?query=1','QUERY','query') 返回值是1
  */
 @Description(name = "parse_url",
     value = "_FUNC_(url, partToExtract[, key]) - extracts a part from a URL",
@@ -102,16 +109,19 @@ public class UDFParseUrl extends UDF {
     return null;
   }
 
+  //必须是解析query中的某一个字段
   public String evaluate(String urlStr, String partToExtract, String key) {
     if (!partToExtract.equals("QUERY")) {
       return null;
     }
 
+    //返回query信息
     String query = this.evaluate(urlStr, partToExtract);
     if (query == null) {
       return null;
     }
 
+    //获取指定key对应的值
     if (!key.equals(lastKey)) {
       p = Pattern.compile("(&|^)" + key + "=([^&]*)");
     }

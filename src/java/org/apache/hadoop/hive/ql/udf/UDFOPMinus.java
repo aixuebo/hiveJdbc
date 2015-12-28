@@ -29,7 +29,7 @@ import org.apache.hadoop.io.LongWritable;
 
 /**
  * UDFOPMinus.
- *
+ * a-bȡֵ
  */
 @Description(name = "-", value = "a _FUNC_ b - Returns the difference a-b")
 public class UDFOPMinus extends UDFBaseNumericOp {

@@ -27,9 +27,12 @@ import java.util.List;
  * 
  * Always use the ObjectInspectorFactory to create new ObjectInspector objects,
  * instead of directly creating an instance of this class.
+ * 
+ * 代表一个array类型的对象
  */
 public class StandardListObjectInspector implements SettableListObjectInspector {
-
+ 
+  //array类型中存储的元素类型
   ObjectInspector listElementObjectInspector;
 
   /**
@@ -49,7 +52,7 @@ public class StandardListObjectInspector implements SettableListObjectInspector 
     return listElementObjectInspector;
   }
 
-  // with data
+  // with data 获取data中第index个位置的元素
   public Object getListElement(Object data, int index) {
     if (data == null) {
       return null;
@@ -72,6 +75,7 @@ public class StandardListObjectInspector implements SettableListObjectInspector 
     }
   }
 
+  //获取data集合元素的数量
   public int getListLength(Object data) {
     if (data == null) {
       return -1;
@@ -88,6 +92,7 @@ public class StandardListObjectInspector implements SettableListObjectInspector 
     }
   }
 
+  //获取data集合元素内容
   public List<?> getList(Object data) {
     if (data == null) {
       return null;

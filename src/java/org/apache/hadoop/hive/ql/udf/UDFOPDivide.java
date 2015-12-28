@@ -26,7 +26,7 @@ import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable;
 
 /**
  * UDFOPDivide.
- *
+ * a/b 例如 3/2 = 1.5,而不是整数1.这点与java不同
  */
 @Description(name = "/", value = "a _FUNC_ b - Divide a by b", extended = "Example:\n"
     + "  > SELECT 3 _FUNC_ 2 FROM src LIMIT 1;\n" + "  1.5")
@@ -34,6 +34,7 @@ import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable;
  * Note that in SQL, the return type of divide is not necessarily the same
  * as the parameters. For example, 3 / 2 = 1.5, not 1. To follow SQL, we always
  * return a double for divide.
+ * 注意在sql中除法后的结果类型,不是必须要与参数类型相同的,例如 3/2 = 1.5,而不是整数1.
  */
 public class UDFOPDivide extends UDF {
 

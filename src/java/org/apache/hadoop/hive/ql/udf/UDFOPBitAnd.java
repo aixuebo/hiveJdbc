@@ -26,7 +26,7 @@ import org.apache.hadoop.io.LongWritable;
 
 /**
  * UDFOPBitAnd.
- *
+ *  表示 a & b 按位与操作,例如3 & 5 = 1
  */
 @Description(name = "&", value = "a _FUNC_ b - Bitwise and", extended = "Example:\n"
     + "  > SELECT 3 _FUNC_ 5 FROM src LIMIT 1;\n" + "  1")

@@ -37,7 +37,6 @@ import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorFactory;
 import org.apache.hadoop.hive.serde2.objectinspector.StructObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.PrimitiveObjectInspector.PrimitiveCategory;
 import org.apache.hadoop.hive.serde2.objectinspector.primitive.PrimitiveObjectInspectorFactory;
-import org.apache.hadoop.hive.serde2.objectinspector.primitive.PrimitiveObjectInspectorUtils;
 import org.apache.hadoop.hive.serde2.typeinfo.ParameterizedPrimitiveTypeUtils;
 import org.apache.hadoop.hive.serde2.typeinfo.PrimitiveTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.TypeInfo;
@@ -155,8 +154,6 @@ public class RegexSerDe extends AbstractSerDe {
       }  else if (typeInfo instanceof PrimitiveTypeInfo
           &&
           ((PrimitiveTypeInfo) typeInfo).getPrimitiveCategory() == PrimitiveCategory.VARCHAR) {
-        VarcharTypeParams varcharParams = (VarcharTypeParams)
-            ParameterizedPrimitiveTypeUtils.getTypeParamsFromTypeInfo(typeInfo);
         columnOIs.add(PrimitiveObjectInspectorFactory.getPrimitiveJavaObjectInspector(
             (PrimitiveTypeInfo) typeInfo));
       } else {

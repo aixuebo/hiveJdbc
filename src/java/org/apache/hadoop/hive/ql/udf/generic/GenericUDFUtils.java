@@ -171,6 +171,7 @@ key是类型,value是该类型对应的转换器
     /**
      * Convert the return Object if necessary (when the ObjectInspectors of
      * different possibilities are not all the same).
+     * 当参数oi与返回值是不同类型时,需要对o进行转换
      */
     public Object convertIfNecessary(Object o, ObjectInspector oi) {
       Object converted = null;
@@ -371,6 +372,7 @@ key是类型,value是该类型对应的转换器
 
   /**
    * Helper class for UDFs returning string/varchar/char
+   * 一个帮助类,返回值转变成string/varchar/char
    */
   public static class StringHelper {
 
@@ -413,6 +415,7 @@ key是类型,value是该类型对应的转换器
      * @param poi PrimitiveObjectInspector representing the type
      * @return character length of the type
      * @throws UDFArgumentException
+     * 获取verchar类型的长度
      */
     public static int getFixedStringSizeForType(PrimitiveObjectInspector poi)
         throws UDFArgumentException {

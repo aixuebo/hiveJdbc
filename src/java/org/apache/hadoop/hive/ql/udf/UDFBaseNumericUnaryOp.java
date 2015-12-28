@@ -30,6 +30,7 @@ import org.apache.hadoop.io.LongWritable;
 /**
  * Base class for numeric operators like +, -, / etc. All these operators share
  * a common method resolver (NumericOpMethodResolver).
+ * 针对正数对操作,比如 加减乘除
  */
 public abstract class UDFBaseNumericUnaryOp extends UDF {
 

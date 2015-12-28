@@ -84,12 +84,12 @@ public abstract class GenericUDF implements Closeable {
   /**
    * Initialize this GenericUDF. This will be called once and only once per
    * GenericUDF instance.
-   *
+   * 初始化函数
    * @param arguments
-   *          The ObjectInspector for the arguments
+   *          The ObjectInspector for the arguments 函数的参数类型集合
    * @throws UDFArgumentException
-   *           Thrown when arguments have wrong types, wrong length, etc.
-   * @return The ObjectInspector for the return value
+   *           Thrown when arguments have wrong types, wrong length, etc. 参数校验失败,产生的异常
+   * @return The ObjectInspector for the return value 函数的返回值类型
    */
   public abstract ObjectInspector initialize(ObjectInspector[] arguments)
       throws UDFArgumentException;
@@ -172,6 +172,7 @@ public abstract class GenericUDF implements Closeable {
    *          actual argument Object. The Objects can be inspected by the
    *          ObjectInspectors passed in the initialize call.
    * @return The
+   * 具体的参数值传递进来,该参数与init方法对应的参数类型要匹配,返回值要与init对应的返回值匹配
    */
   public abstract Object evaluate(DeferredObject[] arguments)
       throws HiveException;

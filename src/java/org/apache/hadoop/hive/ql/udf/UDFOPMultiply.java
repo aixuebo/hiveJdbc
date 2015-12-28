@@ -29,7 +29,7 @@ import org.apache.hadoop.io.LongWritable;
 
 /**
  * UDFOPMultiply.
- *
+ * UDFOPMultiply 表示乘法,获取a*b的返回值
  */
 @Description(name = "*", value = "a _FUNC_ b - Multiplies a by b")
 public class UDFOPMultiply extends UDFBaseNumericOp {

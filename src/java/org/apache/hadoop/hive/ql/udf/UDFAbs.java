@@ -27,7 +27,7 @@ import org.apache.hadoop.io.LongWritable;
 
 /**
  * UDFAbs.
- *
+ * abs(double) 获取正数,例如abs(-5.3),返回5.3
  */
 @Description(name = "abs",
     value = "_FUNC_(x) - returns the absolute value of x",
@@ -36,6 +36,8 @@ import org.apache.hadoop.io.LongWritable;
     + "  0\n"
     + "  > SELECT _FUNC_(-5) FROM src LIMIT 1;\n" + "  5")
 public class UDFAbs extends UDF {
+	
+  //分别对应不同类型的参数处理
   private final DoubleWritable resultDouble = new DoubleWritable();
   private final LongWritable resultLong = new LongWritable();
   private final IntWritable resultInt = new IntWritable();

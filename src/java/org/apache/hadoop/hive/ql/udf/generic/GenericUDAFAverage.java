@@ -47,13 +47,18 @@ import org.apache.hadoop.util.StringUtils;
 
 /**
  * GenericUDAFAverage.
- *
+ * 求平均值,参数可以是java的基本类型
+ * avg(age)
  */
 @Description(name = "avg", value = "_FUNC_(x) - Returns the mean of a set of numbers")
 public class GenericUDAFAverage extends AbstractGenericUDAFResolver {
 
   static final Log LOG = LogFactory.getLog(GenericUDAFAverage.class.getName());
 
+  /**
+   * 1.校验平均是的参数类型一定是一个类型,并且是java的基本类型
+   * 2.根据类型不同,转换成对应的解析类
+   */
   @Override
   public GenericUDAFEvaluator getEvaluator(TypeInfo[] parameters)
       throws SemanticException {
@@ -115,6 +120,7 @@ public class GenericUDAFAverage extends AbstractGenericUDAFResolver {
 
     }
 
+    //局部合并
     @Override
     protected void doMerge(AverageAggregationBuffer<Double> aggregation, Long partialCount,
         ObjectInspector sumFieldOI, Object partialSum) {
@@ -123,6 +129,7 @@ public class GenericUDAFAverage extends AbstractGenericUDAFResolver {
       aggregation.sum += value;
     }
 
+    //终止局部
     @Override
     protected void doTerminatePartial(AverageAggregationBuffer<Double> aggregation) {
       if(partialResult[1] == null) {

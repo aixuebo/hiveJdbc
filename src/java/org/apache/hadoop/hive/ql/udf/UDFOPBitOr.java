@@ -26,7 +26,7 @@ import org.apache.hadoop.io.LongWritable;
 
 /**
  * UDFOPBitOr.
- *
+ * a | b 按位操作 例如 3|5 = 7
  */
 @Description(name = "|", value = "a _FUNC_ b - Bitwise or", extended = "Example:\n"
     + "  > SELECT 3 _FUNC_ 5 FROM src LIMIT 1;\n" + "  7")

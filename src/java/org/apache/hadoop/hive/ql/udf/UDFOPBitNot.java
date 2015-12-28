@@ -26,7 +26,7 @@ import org.apache.hadoop.io.LongWritable;
 
 /**
  * UDFOPBitNot.
- *
+ * UDFOPBitNot 表示按位的非操作,即~0 = -1
  */
 @Description(name = "~", value = "_FUNC_ n - Bitwise not", extended = "Example:\n"
     + "  > SELECT _FUNC_ 0 FROM src LIMIT 1;\n" + "  -1")

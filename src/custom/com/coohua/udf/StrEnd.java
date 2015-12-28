@@ -6,13 +6,13 @@ import org.apache.hadoop.io.Text;
 
 /**
  * 实现string的endsWith方法
- * true返回1,false返回0
+ * true返回true,false返回false
  * create temporary function  strEnd as 'com.coohua.udf.StrEnd';  
  */
 @Description(name = "strEnd",
-value = "_FUNC_(str,suffer) - true return 1,false return 0 ",
+value = "_FUNC_(str,suffer) - true return true,false return false ",
 extended = "Example:\n"
-+ "  > SELECT strEnd('abcd','cd') FROM src LIMIT 1;\n" + "  return 1")
++ "  > SELECT strEnd('abcd','cd') FROM src LIMIT 1;\n" + "  return true")
 public class StrEnd extends UDF{
 	
 	Text result = new Text();
@@ -22,10 +22,10 @@ public class StrEnd extends UDF{
 
 	  public Text evaluate(Text s,Text prefix) {
 	    if (s == null) {
-	      result.set("0");
+	      result.set("false");
 	      return result;
 	    }
-	    result.set(s.toString().endsWith(prefix.toString()) ? "1":"0");
+	    result.set(s.toString().endsWith(prefix.toString()) ? "true":"false");
 	    return result;
 	  }
 }

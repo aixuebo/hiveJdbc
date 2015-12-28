@@ -24,6 +24,10 @@ import org.apache.hadoop.hive.ql.exec.UDF;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 
+/**
+ * 将字节数组按照base64反编译成字符串
+ * base64(Bytes),将字节数组转换成Text对象,使用Base64.encodeBase64(bytes)方法反编译
+ */
 @Description(name = "base64",
     value = "_FUNC_(bin) - Convert the argument from binary to a base 64 string")
 public class UDFBase64 extends UDF {

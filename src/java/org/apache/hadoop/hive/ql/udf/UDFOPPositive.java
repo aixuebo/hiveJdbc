@@ -29,7 +29,7 @@ import org.apache.hadoop.io.LongWritable;
 
 /**
  * UDFOPPositive.
- *
+ * positive(1) 表示 返回该参数,即返回1.如果是positive(-1)则返回结果是-1
  */
 @Description(name = "positive", value = "_FUNC_ a - Returns a")
 public class UDFOPPositive extends UDFBaseNumericUnaryOp {

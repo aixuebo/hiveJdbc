@@ -30,7 +30,7 @@ import org.apache.hadoop.io.LongWritable;
 
 /**
  * UDFOPMod.
- *
+ * UDFOPMod 表示取魔操作,即整除后还剩余多少 例如 9 % 2 = 1
  */
 @Description(name = "%", value = "a _FUNC_ b - Returns the remainder when dividing a by b")
 public class UDFOPMod extends UDFBaseNumericOp {

@@ -66,7 +66,7 @@ public final class ObjectInspectorConverters {
   }
 
   /**
-   * 基础类型转换器 
+   * 基础类型转换器 ,将inputOI类型的值转换成outputOI类型的值
    * @param inputOI
    * @param outputOI
    * @return
@@ -141,6 +141,7 @@ public final class ObjectInspectorConverters {
    * Returns a converter that converts objects from one OI to another OI. The
    * returned (converted) object belongs to this converter, so that it can be
    * reused across different calls.
+   * 将输入类型,转换成输出类型
    */
   public static Converter getConverter(ObjectInspector inputOI,
       ObjectInspector outputOI) {

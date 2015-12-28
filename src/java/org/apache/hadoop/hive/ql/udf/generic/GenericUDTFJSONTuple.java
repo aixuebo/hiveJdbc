@@ -44,6 +44,9 @@ import org.codehaus.jackson.type.JavaType;
 /**
  * GenericUDTFJSONTuple: this
  *
+ * 类似get_json_object,但是允许返回多个key对应的值,返回值组成的是元组
+ * 注意:所有的输入和输出类型都是String类型的
+ * 
  */
 @Description(name = "json_tuple",
     value = "_FUNC_(jsonStr, p1, p2, ..., pn) - like get_json_object, but it takes multiple names and return a tuple. " +
@@ -58,6 +61,8 @@ public class GenericUDTFJSONTuple extends GenericUDTF {
     // Allows for unescaped ASCII control characters in JSON values
     JSON_FACTORY.enable(Feature.ALLOW_UNQUOTED_CONTROL_CHARS);
   }
+  
+  //json对应的是Map结构的
   private static final ObjectMapper MAPPER = new ObjectMapper(JSON_FACTORY);
   private static final JavaType MAP_TYPE = TypeFactory.fromClass(Map.class);
 
@@ -108,6 +113,7 @@ public class GenericUDTFJSONTuple extends GenericUDTF {
       		"the json string and a path expression");
     }
 
+    //校验参数类型必须是String类型
     for (int i = 0; i < args.length; ++i) {
       if (args[i].getCategory() != ObjectInspector.Category.PRIMITIVE ||
           !args[i].getTypeName().equals(serdeConstants.STRING_TYPE_NAME)) {
@@ -206,6 +212,7 @@ public class GenericUDTFJSONTuple extends GenericUDTF {
     return "json_tuple";
   }
 
+  //报告参数不是有效的json字符串
   private void reportInvalidJson(String jsonStr) {
     if (!seenErrors) {
       LOG.error("The input is not a valid JSON string: " + jsonStr +

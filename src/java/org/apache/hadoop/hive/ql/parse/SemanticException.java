@@ -22,8 +22,8 @@ import org.apache.hadoop.hive.ql.metadata.HiveException;
 
 /**
  * Exception from SemanticAnalyzer.
+ * ”Ô“‚∑÷Œˆ“Ï≥£
  */
-
 public class SemanticException extends HiveException {
 
   private static final long serialVersionUID = 1L;

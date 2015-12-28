@@ -36,6 +36,7 @@ import org.apache.hadoop.hive.serde2.typeinfo.TypeInfo;
 
 /**
  * GenericUDAFCollectSet
+ * 合并所有元素到set集合内,相当于过滤重复了,返回值是一个set
  */
 @Description(name = "collect_set", value = "_FUNC_(x) - Returns a set of objects with duplicate elements eliminated")
 public class GenericUDAFCollectSet extends AbstractGenericUDAFResolver {
@@ -45,15 +46,20 @@ public class GenericUDAFCollectSet extends AbstractGenericUDAFResolver {
   public GenericUDAFCollectSet() {
   }
 
+  /**
+   * 通过参数类型,获取解析器
+   */
   @Override
   public GenericUDAFEvaluator getEvaluator(TypeInfo[] parameters)
       throws SemanticException {
 
+	//校验参数类型一定是一个,因为Set集合内仅允许存放一种数据类型的数据
     if (parameters.length != 1) {
       throw new UDFArgumentTypeException(parameters.length - 1,
           "Exactly one argument is expected.");
     }
 
+    //并且类型一定是java的基础类型
     if (parameters[0].getCategory() != ObjectInspector.Category.PRIMITIVE) {
       throw new UDFArgumentTypeException(0,
           "Only primitive type arguments are accepted but "

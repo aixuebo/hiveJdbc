@@ -24,7 +24,7 @@ import org.apache.hadoop.io.LongWritable;
 
 /**
  * UDFOPLongDivide.
- *
+ * a/b,与java相同,返回值仅仅是整除后的值
  */
 @Description(name = "div",
     value = "a _FUNC_ b - Divide a by b rounded to the long integer",

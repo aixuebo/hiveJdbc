@@ -27,7 +27,8 @@ import org.apache.hadoop.io.LongWritable;
 
 /**
  * UDFCeil.
- *
+ * ceil(5.3) = 6
+ * ceiling(5.3) = 6
  */
 @Description(name = "ceil,ceiling",
     value = "_FUNC_(x) - Find the smallest integer not smaller than x",
@@ -46,7 +47,7 @@ public class UDFCeil extends UDF {
     if (i == null) {
       return null;
     } else {
-      longWritable.set((long) Math.ceil(i.get()));
+      longWritable.set((long) Math.ceil(i.get()));//如果i是double的,比如5.3,则Math.ceil返回的是6.0,因此强转成long为6
       return longWritable;
     }
   }

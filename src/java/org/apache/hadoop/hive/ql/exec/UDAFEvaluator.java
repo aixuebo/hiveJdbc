@@ -23,6 +23,7 @@ package org.apache.hadoop.hive.ql.exec;
  * needed for every overloaded form of a UDAF .e.g max and min UDAFs would have
  * evaluators for integer, string and other types. On the other hand avg would
  * have an evaluator only for the double type.
+ * 自定义聚合函数,求值程序接口
  */
 public interface UDAFEvaluator {
 

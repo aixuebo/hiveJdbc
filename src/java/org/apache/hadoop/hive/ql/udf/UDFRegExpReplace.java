@@ -28,6 +28,8 @@ import org.apache.hadoop.io.Text;
 /**
  * UDFRegExpReplace.
  * 将全部符合正则表达式的地方都替换成指定值
+ * 
+ * regexp_replace('100-200', '(\\d+)', 'num') 返回值num-num,将所有的整数替换成num字符串
  */
 @Description(name = "regexp_replace",
     value = "_FUNC_(str, regexp, rep) - replace all substrings of str that "

@@ -26,7 +26,7 @@ import org.apache.hadoop.io.LongWritable;
 
 /**
  * UDFOPBitXor.
- *
+ * UDFOPBitXor ±íÊ¾3^5 = 2
  */
 @Description(name = "^", value = "a _FUNC_ b - Bitwise exclusive or", extended = "Example:\n"
     + "  > SELECT 3 _FUNC_ 5 FROM src LIMIT 1;\n" + "  2")

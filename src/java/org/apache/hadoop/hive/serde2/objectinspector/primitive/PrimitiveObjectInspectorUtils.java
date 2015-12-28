@@ -186,6 +186,7 @@ public final class PrimitiveObjectInspectorUtils {
       }
     }
 
+    //true表示有参数,false表示没参数
     public boolean isParameterized() {
       return (null != typeParamsClass);
     }
@@ -384,6 +385,7 @@ public final class PrimitiveObjectInspectorUtils {
 
   /**
    * Get the typeName from a Java Primitive Type or Java PrimitiveClass.
+   * 通过java原始类型或者包装类型,获取hive对应的typeName
    */
   public static String getTypeNameFromPrimitiveJava(Class<?> clazz) {
     PrimitiveTypeEntry t = primitiveJavaTypeToTypeEntry.get(clazz);
@@ -395,6 +397,7 @@ public final class PrimitiveObjectInspectorUtils {
 
   /**
    * Get the typeName from a Primitive Writable Class.
+   * 通过hadoop的序列化类,获取hive对应的typeName
    */
   public static String getTypeNameFromPrimitiveWritable(Class<?> clazz) {
     PrimitiveTypeEntry t = primitiveWritableClassToTypeEntry.get(clazz);
@@ -403,6 +406,7 @@ public final class PrimitiveObjectInspectorUtils {
 
   /**
    * Get the typeName from a Java Primitive Type or Java PrimitiveClass.
+   * 通过hive的分类,获取PrimitiveTypeEntry对象
    */
   public static PrimitiveTypeEntry getTypeEntryFromPrimitiveCategory(
       PrimitiveCategory category) {
@@ -481,7 +485,7 @@ public final class PrimitiveObjectInspectorUtils {
   /**
    * Compare 2 primitive objects. Conversion not allowed. Note that NULL does
    * not equal to NULL according to SQL standard.
-   * 比较是否相同
+   * 比较值是否相同
    */
   public static boolean comparePrimitiveObjects(Object o1,
       PrimitiveObjectInspector oi1, Object o2, PrimitiveObjectInspector oi2) {
@@ -558,6 +562,7 @@ public final class PrimitiveObjectInspectorUtils {
   /**
    * Convert a primitive object to double.
    * 将值转换为double的
+   * 将o的值,转换成double类型返回
    */
   public static double convertPrimitiveToDouble(Object o, PrimitiveObjectInspector oi) {
     switch (oi.getPrimitiveCategory()) {

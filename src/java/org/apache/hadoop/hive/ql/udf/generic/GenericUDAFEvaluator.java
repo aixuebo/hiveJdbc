@@ -31,12 +31,13 @@ import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
  * Hive.
  * 
  * New GenericUDAF classes need to inherit from this GenericUDAF class.
- * 
- * The GenericUDAF are superior to normal UDAFs in the following ways: 1. It can
- * accept arguments of complex types, and return complex types. 2. It can accept
- * variable length of arguments. 3. It can accept an infinite number of function
- * signature - for example, it's easy to write a GenericUDAF that accepts
- * array<int>, array<array<int>> and so on (arbitrary levels of nesting).
+ * 新的用户自定义聚合函数是需要继承GenericUDAF类的
+ * The GenericUDAF are superior to normal UDAFs in the following ways: 
+ * 1. It can accept arguments of complex types, and return complex types.可以接受复杂类型作为参数,返回值也可以是复杂类型
+ * 2. It can accept variable length of arguments. 可以接受多个参数
+ * 3. It can accept an infinite number of function signature
+ * - for example, it's easy to write a GenericUDAF that accepts
+ * array<int>, array<array<int>> and so on (arbitrary levels of nesting).任意级别的嵌套
  */
 @UDFType(deterministic = true)
 public abstract class GenericUDAFEvaluator implements Closeable {
@@ -45,6 +46,7 @@ public abstract class GenericUDAFEvaluator implements Closeable {
     boolean estimable() default false;
   }
 
+  //true表示可以估算指标
   public static boolean isEstimable(AggregationBuffer buffer) {
     if (buffer instanceof AbstractAggregationBuffer) {
       Class<? extends AggregationBuffer> clazz = buffer.getClass();
@@ -62,21 +64,25 @@ public abstract class GenericUDAFEvaluator implements Closeable {
     /**
      * PARTIAL1: from original data to partial aggregation data: iterate() and
      * terminatePartial() will be called.
+     * 相当于map阶段，调用iterate()和terminatePartial() 
      */
     PARTIAL1,
         /**
      * PARTIAL2: from partial aggregation data to partial aggregation data:
      * merge() and terminatePartial() will be called.
+     * 相当于combiner阶段，调用merge()和terminatePartial() 
      */
     PARTIAL2,
         /**
      * FINAL: from partial aggregation to full aggregation: merge() and
      * terminate() will be called.
+     * 相当于reduce阶段调用merge()和terminate() 
      */
     FINAL,
         /**
      * COMPLETE: from original data directly to full aggregation: iterate() and
      * terminate() will be called.
+     * 相当于没有reduce阶段map，调用iterate()和terminate() 
      */
     COMPLETE
   };
@@ -129,6 +135,7 @@ public abstract class GenericUDAFEvaluator implements Closeable {
   /**
    * The interface for a class that is used to store the aggregation result
    * during the process of aggregation.
+   * 该接口存储聚合函数聚合过程中 产生的临时结果
    * 
    * We split this piece of data out because there can be millions of instances
    * of this Aggregation in hash-based aggregation process, and it's very
@@ -145,20 +152,25 @@ public abstract class GenericUDAFEvaluator implements Closeable {
   public static abstract class AbstractAggregationBuffer implements AggregationBuffer {
     /**
      * Estimate the size of memory which is occupied by aggregation buffer.
+     * 估算已经被占用的内存大小
      * Currently, hive assumes that primitives types occupies 16 byte and java object has
      * 64 byte overhead for each. For map, each entry also has 64 byte overhead.
+     * 当前,hive假设原始类型占用16个字节,java类型占用64个字节头,map中每一个entry使用64个字节头
      */
     public int estimate() { return -1; }
   }
 
   /**
    * Get a new aggregation object.
+   * 创建一个新的集合函数临时容器
    */
   public abstract AggregationBuffer getNewAggregationBuffer() throws HiveException;
 
   /**
    * Reset the aggregation. This is useful if we want to reuse the same
    * aggregation.
+   * 重置聚合容器
+   * 当重新使用相同的聚合容器的时候是十分有用的
    */
   public abstract void reset(AggregationBuffer agg) throws HiveException;
 
@@ -204,9 +216,10 @@ public abstract class GenericUDAFEvaluator implements Closeable {
 
   /**
    * Iterate through original data.
-   * 
+   * 迭代通过每一个原始的数据
    * @param parameters
-   *          The objects of parameters.
+   *          The objects of parameters.原始数据的参数集合
+   *          
    */
   public abstract void iterate(AggregationBuffer agg, Object[] parameters) throws HiveException;
 
@@ -214,6 +227,7 @@ public abstract class GenericUDAFEvaluator implements Closeable {
    * Get partial aggregation result.
    * 
    * @return partial aggregation result.
+   * 局部终止.获取局部的聚合结果
    */
   public abstract Object terminatePartial(AggregationBuffer agg) throws HiveException;
 
@@ -230,6 +244,7 @@ public abstract class GenericUDAFEvaluator implements Closeable {
    * Get final aggregation result.
    * 
    * @return final aggregation result.
+   * 全部终止,获得最终的聚合结果
    */
   public abstract Object terminate(AggregationBuffer agg) throws HiveException;
 

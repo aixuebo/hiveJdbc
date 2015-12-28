@@ -25,7 +25,7 @@ import org.apache.hadoop.io.Text;
 
 /**
  * UDFLTrim.
- *
+ * ltrim(string),ÒÆ³ý×ó±ßµÄ¿Õ¸ñ
  */
 @Description(name = "ltrim",
     value = "_FUNC_(str) - Removes the leading space characters from str ",

@@ -24,7 +24,7 @@ import org.apache.hadoop.hive.serde2.io.DoubleWritable;
 
 /**
  * UDFExp.
- *
+ * exp(double) 表示e的几次方,e表示2.718281828459045
  */
 @Description(name = "exp",
     value = "_FUNC_(x) - Returns e to the power of x",

@@ -10,9 +10,9 @@ import org.apache.hadoop.io.Text;
  * create temporary function  strContain as 'com.coohua.udf.StrContain'; 
  */
 @Description(name = "strContains",
-value = "_FUNC_(str,strContain) - true return 1,false return 0 ",
+value = "_FUNC_(str,strContain) - true return true,false return false ",
 extended = "Example:\n"
-+ "  > SELECT strContain('abcd','bc') FROM src LIMIT 1;\n" + "  return 1")
++ "  > SELECT strContain('abcd','bc') FROM src LIMIT 1;\n" + "  return true")
 public class StrContain extends UDF{
 	
 	  Text result = new Text();
@@ -22,10 +22,10 @@ public class StrContain extends UDF{
 
 	  public Text evaluate(Text s,Text contain) {
 	    if (s == null) {
-	      result.set("0");
+	      result.set("false");
 	      return result;
 	    }
-	    result.set(s.toString().contains(contain.toString()) ? "1":"0");
+	    result.set(s.toString().contains(contain.toString()) ? "true":"false");
 	    return result;
 	  }
 }

@@ -25,7 +25,8 @@ import org.apache.hadoop.io.Text;
 
 /**
  * UDFAscii.
- *
+ * ascii(String) 对string进行getBytes()后,获取第一个字节对应的ascii码 
+ * 如果参数为null,或者"",则返回0
  */
 @Description(name = "ascii",
     value = "_FUNC_(str) - returns the numeric value of the first character"

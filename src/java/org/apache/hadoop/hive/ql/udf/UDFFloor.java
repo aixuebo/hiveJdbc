@@ -27,7 +27,8 @@ import org.apache.hadoop.io.LongWritable;
 
 /**
  * UDFFloor.
- *
+ * 向下取整
+ * floor(5.3) = 5
  */
 @Description(name = "floor",
     value = "_FUNC_(x) - Find the largest integer not greater than x",
@@ -46,7 +47,7 @@ public class UDFFloor extends UDF {
     if (i == null) {
       return null;
     } else {
-      result.set((long) Math.floor(i.get()));
+      result.set((long) Math.floor(i.get()));//double类型值5.3,则返回值是5.0,然后强转成long的5
       return result;
     }
   }

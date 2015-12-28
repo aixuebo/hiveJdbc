@@ -24,6 +24,9 @@ import org.apache.hadoop.hive.ql.exec.Description;
 import org.apache.hadoop.hive.ql.exec.UDF;
 import org.apache.hadoop.hive.serde2.io.DoubleWritable;
 
+/**
+ * E(),·µ»ØeµÄÖµ2.718281828459045
+ */
 @Description (
   name="E",
   value="_FUNC_() - returns E ",

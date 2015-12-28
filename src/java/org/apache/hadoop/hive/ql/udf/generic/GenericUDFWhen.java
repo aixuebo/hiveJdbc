@@ -30,9 +30,16 @@ import org.apache.hadoop.hive.serde2.objectinspector.primitive.BooleanObjectInsp
  * NOTES: 1. a and b should have the same TypeInfo, or an exception will be
  * thrown. 2. c and f should have the same TypeInfo, or an exception will be
  * thrown.
+ * 1.a和b,互相比较的类型,必须是相同的类型
+ * 2.c和f返回值必须是相同的类型
+ * 
+ * 对case column when a then b else c end 形式进行处理
+ * 注意:
+ * a 类型必须是boolean类型的
+ * b和c必须返回值类型相同
  */
 public class GenericUDFWhen extends GenericUDF {
-  private transient ObjectInspector[] argumentOIs;
+  private transient ObjectInspector[] argumentOIs;//参数值,针对when a then b else c进行设置参数值
   private transient GenericUDFUtils.ReturnObjectInspectorResolver returnOIResolver;
 
   @Override
@@ -42,11 +49,14 @@ public class GenericUDFWhen extends GenericUDF {
     returnOIResolver = new GenericUDFUtils.ReturnObjectInspectorResolver();
 
     for (int i = 0; i + 1 < arguments.length; i += 2) {
+    //a对应的参数值必须是boolean类型
       if (!arguments[i].getTypeName().equals(serdeConstants.BOOLEAN_TYPE_NAME)) {
         throw new UDFArgumentTypeException(i, "\""
             + serdeConstants.BOOLEAN_TYPE_NAME + "\" is expected after WHEN, "
             + "but \"" + arguments[i].getTypeName() + "\" is found");
       }
+      
+      //所有的返回值必须是相同的类型
       if (!returnOIResolver.update(arguments[i + 1])) {
         throw new UDFArgumentTypeException(i + 1,
             "The expressions after THEN should have the same type: \""
@@ -55,6 +65,8 @@ public class GenericUDFWhen extends GenericUDF {
             + "\" is found");
       }
     }
+    
+    //校验else的返回值必须与then的返回值类型相同
     if (arguments.length % 2 == 1) {
       int i = arguments.length - 2;
       if (!returnOIResolver.update(arguments[i + 1])) {
@@ -71,19 +83,20 @@ public class GenericUDFWhen extends GenericUDF {
 
   @Override
   public Object evaluate(DeferredObject[] arguments) throws HiveException {
+	  //每次循环都会进行对when a then b进行处理
     for (int i = 0; i + 1 < arguments.length; i += 2) {
-      Object caseKey = arguments[i].get();
+      Object caseKey = arguments[i].get();//获取a
       if (caseKey != null
-          && ((BooleanObjectInspector) argumentOIs[i]).get(caseKey)) {
-        Object caseValue = arguments[i + 1].get();
+          && ((BooleanObjectInspector) argumentOIs[i]).get(caseKey)) {//必须是boolean类型的
+        Object caseValue = arguments[i + 1].get();//获取value值
         return returnOIResolver.convertIfNecessary(caseValue,
-            argumentOIs[i + 1]);
+            argumentOIs[i + 1]);//将返回值进行类型转换
       }
     }
-    // Process else statement
+    // Process else statement 处理slse部分逻辑
     if (arguments.length % 2 == 1) {
       int i = arguments.length - 2;
-      Object elseValue = arguments[i + 1].get();
+      Object elseValue = arguments[i + 1].get();//将else的值进行类型转换
       return returnOIResolver.convertIfNecessary(elseValue, argumentOIs[i + 1]);
     }
     return null;

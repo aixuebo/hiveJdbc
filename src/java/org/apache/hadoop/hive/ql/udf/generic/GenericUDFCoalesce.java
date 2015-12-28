@@ -25,9 +25,13 @@ import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 
 /**
  * GenericUDF Class for SQL construct "COALESCE(a, b, c)".
- * 
+ * 使用三个参数进行组装sql
  * NOTES: 1. a, b and c should have the same TypeInfo, or an exception will be
  * thrown.
+ * 注意,三个参数要有一样的类型,否则会被抛异常
+ * 
+ * 函数说明:
+ * 返回第一个不是null的值
  */
 @Description(name = "coalesce",
     value = "_FUNC_(a1, a2, ...) - Returns the first non-null argument",
@@ -37,6 +41,7 @@ public class GenericUDFCoalesce extends GenericUDF {
   private transient ObjectInspector[] argumentOIs;
   private transient GenericUDFUtils.ReturnObjectInspectorResolver returnOIResolver;
 
+  //校验参数类型必须是相同的
   @Override
   public ObjectInspector initialize(ObjectInspector[] arguments) throws UDFArgumentTypeException {
 
@@ -55,6 +60,7 @@ public class GenericUDFCoalesce extends GenericUDF {
     return returnOIResolver.get();
   }
 
+  //返回第一个不是null的值
   @Override
   public Object evaluate(DeferredObject[] arguments) throws HiveException {
     for (int i = 0; i < arguments.length; i++) {

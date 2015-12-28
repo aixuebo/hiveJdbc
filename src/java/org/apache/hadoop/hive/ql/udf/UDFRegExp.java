@@ -30,7 +30,8 @@ import org.apache.hadoop.io.Text;
 
 /**
  * UDFRegExp.
- *
+ * rlike(string,regexp) 校验string是否匹配正则表达式
+ * regexp(string,regexp) 校验string是否匹配正则表达式
  */
 @Description(name = "rlike,regexp",
     value = "str _FUNC_ regexp - Returns true if str matches regexp and "

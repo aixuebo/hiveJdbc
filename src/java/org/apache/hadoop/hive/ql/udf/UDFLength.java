@@ -26,7 +26,9 @@ import org.apache.hadoop.io.Text;
 
 /**
  * UDFLength.
- *
+ * length(str | binary)
+ * 1.如果是str参数,返回字符串的个数,字母是1个,汉字也是1个,因为汉字是用UTF-8编码的,会依据UTF-8的分隔符进行查找多少个汉字
+ * 2.如果是binary参数,则返回字节数组的个数
  */
 @Description(name = "length",
     value = "_FUNC_(str | binary) - Returns the length of str or number of bytes in binary data",

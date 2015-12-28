@@ -42,7 +42,7 @@ public class NumDistinctValueEstimator {
 
   private int[] a;
   private int[] b;
-  private  FastBitSet[] bitVector = new FastBitSet[numBitVectors];
+  private FastBitSet[] bitVector = new FastBitSet[numBitVectors];
 
   private Random aValue;
   private Random bValue;

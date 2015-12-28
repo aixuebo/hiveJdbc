@@ -32,6 +32,10 @@ import org.apache.hadoop.io.Text;
  * 如果要从5开始截取.则是从1开始计算字符串的.[5,因此第五个是要被保留的
  * 如果从-5开始截取,从后面查,后面自后一个也是1,例如-5,从后查询[5,因此第五个是要被保留的
  * 
+ * substr(String,int pos,int lenth) 截取字符串
+  例如:substr("abcd",1,2) 返回ab
+    substr("abcd",2) 返回bcd,表示从2开始一直到结尾
+ 注意,pos下标从1开始计算,length表示最终获取多少个数字
  */
 @Description(name = "substr,substring",
     value = "_FUNC_(str, pos[, len]) - returns the substring of str that"

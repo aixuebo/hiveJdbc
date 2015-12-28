@@ -6,13 +6,13 @@ import org.apache.hadoop.io.Text;
 
 /**
  * 实现string的startsWith方法
- * true返回1,false返回0
+ * true返回true,false返回false
  * create temporary function  strStart as 'com.coohua.udf.StrStart';  
  */
 @Description(name = "strStart",
-value = "_FUNC_(str,prefix) - true return 1,false return 0 ",
+value = "_FUNC_(str,prefix) - true return true,false return false ",
 extended = "Example:\n"
-+ "  > SELECT strStart('abcd','ab') FROM src LIMIT 1;\n" + "  return 1")
++ "  > SELECT strStart('abcd','ab') FROM src LIMIT 1;\n" + "  return true")
 public class StrStart extends UDF{
 	
 	Text result = new Text();
@@ -22,10 +22,10 @@ public class StrStart extends UDF{
 
 	  public Text evaluate(Text s,Text prefix) {
 	    if (s == null) {
-	      result.set("0");
+	      result.set("false");
 	      return result;
 	    }
-	    result.set(s.toString().startsWith(prefix.toString()) ? "1":"0");
+	    result.set(s.toString().startsWith(prefix.toString()) ? "true":"false");
 	    return result;
 	  }
 }

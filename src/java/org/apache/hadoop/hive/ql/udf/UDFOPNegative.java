@@ -29,7 +29,7 @@ import org.apache.hadoop.io.LongWritable;
 
 /**
  * UDFOPNegative.
- *
+ * UDFOPNegative negative(1) 表示 对参数取负数,即返回-1,如果是negative(-1)则返回结果是1
  */
 @Description(name = "-", value = "_FUNC_ a - Returns -a")
 public class UDFOPNegative extends UDFBaseNumericUnaryOp {

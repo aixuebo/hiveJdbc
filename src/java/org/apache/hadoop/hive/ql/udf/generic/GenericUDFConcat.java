@@ -35,6 +35,14 @@ import org.apache.hadoop.io.BytesWritable;
 
 /**
  * GenericUDFConcat.
+ * 将参数集合连接成串
+ * 
+ * 例如:
+ * SELECT concat('abc', 'def') FROM src LIMIT 1,返回abcdef
+ * 
+ * 注意:
+ * 1.如果有任意一个字符是null,则返回null
+ * 2.仅仅支持java的基础类型作为参数
  */
 @Description(name = "concat",
 value = "_FUNC_(str1, str2, ... strN) - returns the concatenation of str1, str2, ... strN or "+
@@ -47,7 +55,7 @@ extended = "Returns NULL if any argument is NULL.\n"
 public class GenericUDFConcat extends GenericUDF {
   private transient ObjectInspector[] argumentOIs;
   private transient StringConverter[] stringConverters;
-  private transient PrimitiveCategory returnType = PrimitiveCategory.STRING;
+  private transient PrimitiveCategory returnType = PrimitiveCategory.STRING;//返回类型,默认是String类型
   private transient BytesWritable[] bw;
   private transient GenericUDFUtils.StringHelper returnHelper;
 
@@ -55,26 +63,29 @@ public class GenericUDFConcat extends GenericUDF {
   public ObjectInspector initialize(ObjectInspector[] arguments) throws UDFArgumentException {
 
     // Loop through all the inputs to determine the appropriate return type/length.
-    // Either all arguments are binary, or all columns are non-binary.
+    // Either all arguments are binary, or all columns are non-binary.所有的参数类型必须一致,要么是二进制，要么是非二进制
     // Return type:
-    //  All VARCHAR inputs: return VARCHAR
-    //  All BINARY inputs: return BINARY
-    //  Otherwise return STRING
+    //  All VARCHAR inputs: return VARCHAR 所有的输入是verchar,则返回verchar
+    //  All BINARY inputs: return BINARY 所有的输入是BINARY,则返回BINARY
+    //  Otherwise return STRING  其他的输入,则返回字符串
     argumentOIs = arguments;
 
     PrimitiveCategory currentCategory;
     PrimitiveObjectInspector poi;
-    boolean fixedLengthReturnValue = true;
-    int returnLength = 0;  // Only for char/varchar return types
+    boolean fixedLengthReturnValue = true;//返回值是否固定
+    int returnLength = 0;  // Only for char/varchar return types 仅仅使用在char/varchar的返回值中
     for (int idx = 0; idx < arguments.length; ++idx) {
+      
+      //校验仅仅支持java的基础类型作为参数
       if (arguments[idx].getCategory() != Category.PRIMITIVE) {
         throw new UDFArgumentException("CONCAT only takes primitive arguments");
       }
       poi = (PrimitiveObjectInspector)arguments[idx];
       currentCategory = poi.getPrimitiveCategory();
-      if (idx == 0) {
+      if (idx == 0) {//第一个参数类型就是返回的类型
         returnType = currentCategory;
       }
+      
       switch (currentCategory) {
         case BINARY:
           fixedLengthReturnValue = false;
@@ -149,6 +160,9 @@ public class GenericUDFConcat extends GenericUDF {
     }
   }
 
+  /**
+   * 将二进制数组数据转入到一个BytesWritable中
+   */
   public Object binaryEvaluate(DeferredObject[] arguments) throws HiveException {
     int len = 0;
     for (int idx = 0; idx < arguments.length; ++idx) {
@@ -170,6 +184,11 @@ public class GenericUDFConcat extends GenericUDF {
     return new BytesWritable(out);
   }
 
+  /**
+   * 将String参数集合转换成一个String
+   * 
+   * 如果有一个参数是null,则返回值就是null
+   */
   public String stringEvaluate(DeferredObject[] arguments) throws HiveException {
     StringBuilder sb = new StringBuilder();
     for (int idx = 0; idx < arguments.length; ++idx) {

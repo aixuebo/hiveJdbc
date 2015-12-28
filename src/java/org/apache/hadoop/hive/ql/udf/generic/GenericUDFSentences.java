@@ -34,7 +34,7 @@ import org.apache.hadoop.io.Text;
 
 /**
  * GenericUDFSentences: splits a natural language chunk of text into sentences and words.
- *
+ * 拆分一个自然语言字符串组成的块,拆分成句子和单词
  */
 @Description(name = "sentences", value = "_FUNC_(str, lang, country) - Splits str" 
     + " into arrays of sentences, where each sentence is an array of words. The 'lang' and"
@@ -51,6 +51,7 @@ import org.apache.hadoop.io.Text;
 public class GenericUDFSentences extends GenericUDF {
   private transient ObjectInspectorConverters.Converter[] converters;
 
+  //返回一个即可,元素是Text类型的集合
   @Override
   public ObjectInspector initialize(ObjectInspector[] arguments) throws UDFArgumentException {
     if (arguments.length < 1 || arguments.length > 3) {
@@ -64,6 +65,7 @@ public class GenericUDFSentences extends GenericUDF {
           PrimitiveObjectInspectorFactory.writableStringObjectInspector);
     }
 
+    //返回一个即可,元素是Text类型的集合
     return ObjectInspectorFactory.getStandardListObjectInspector(
              ObjectInspectorFactory.getStandardListObjectInspector(   
               PrimitiveObjectInspectorFactory.writableStringObjectInspector));
