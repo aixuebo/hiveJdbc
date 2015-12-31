@@ -39,8 +39,10 @@ public class ColumnAccessAnalyzer {
   }
 
   public ColumnAccessInfo analyzeColumnAccess() throws SemanticException {
+	//一个table可以访问哪些属性
     ColumnAccessInfo columnAccessInfo = new ColumnAccessInfo();
     Map<TableScanOperator, Table> topOps = pGraphContext.getTopToTable();
+    
     for (TableScanOperator op : topOps.keySet()) {
       Table table = topOps.get(op);
       String tableName = table.getCompleteName();

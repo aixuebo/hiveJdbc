@@ -35,7 +35,7 @@ public class QueryProperties {
   boolean hasJoin = false;//from子句是否有join子句
   boolean hasGroupBy = false;//是否设置了group by
   boolean hasOrderBy = false;//是否设置了order by
-  boolean hasSortBy = false;//是否设置了sort by
+  boolean hasSortBy = false;//是否设置了sort by,是分桶ClusterBy的一个子步骤,但是仅仅排序,但是没有按照什么字段去进行分桶操作
   boolean hasJoinFollowedByGroupBy = false;//是否在有join表链接的情况下,依然设置了group by语句
   boolean hasPTF = false;//from子句使用了partitionTableFunctionSource,属于窗口函数的应用
   boolean hasWindowing = false;//使用了窗口函数
@@ -43,8 +43,8 @@ public class QueryProperties {
   // does the query have a using clause
   boolean usesScript = false;
 
-  boolean hasDistributeBy = false;//是否设置了Distribute by
-  boolean hasClusterBy = false;//是否设置了Cluster by
+  boolean hasDistributeBy = false;//是否设置了Distribute by,仅仅是类似分桶,将按照哪些字段进行分桶,但是不排序,但是没有sort排序功能
+  boolean hasClusterBy = false;//是否设置了Cluster by,即设置了分桶,按照哪个字段分到多少个桶里面,桶里面按照什么顺序排序,都可以设置,多少个分桶,就相当于多少个reduce文件
   boolean mapJoinRemoved = false;//true表示忽略map-join的hint
   boolean hasMapGroupBy = false;
 

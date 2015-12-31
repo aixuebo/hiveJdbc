@@ -34,6 +34,7 @@ public class ColumnAccessInfo {
     tableToColumnAccessMap = new HashMap<String, Set<String>>();
   }
 
+  //添加可以访问该table的col属性
   public void add(String table, String col) {
     Set<String> tableColumns = tableToColumnAccessMap.get(table);
     if (tableColumns == null) {

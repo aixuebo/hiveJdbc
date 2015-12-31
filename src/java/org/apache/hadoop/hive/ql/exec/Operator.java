@@ -176,7 +176,7 @@ public abstract class Operator<T extends OperatorDesc> implements Serializable,C
   }
 
   protected T conf;
-  protected boolean done;
+  protected boolean done;//true表示已经结束
 
   public void setConf(T conf) {
     this.conf = conf;

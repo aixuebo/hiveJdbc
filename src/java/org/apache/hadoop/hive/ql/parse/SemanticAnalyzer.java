@@ -176,7 +176,6 @@ import org.apache.hadoop.mapred.InputFormat;
 /**
  * Implementation of the semantic analyzer.
  */
-
 public class SemanticAnalyzer extends BaseSemanticAnalyzer {
   private HashMap<TableScanOperator, ExprNodeDesc> opToPartPruner;
   private HashMap<TableScanOperator, PrunedPartitionList> opToPartList;
@@ -830,13 +829,12 @@ tableSource
   /**
    * Phase 1: (including, but not limited to):
    *
-   * 1. Gets all the aliases for all the tables / subqueries and makes the
-   * appropriate mapping in aliasToTabs, aliasToSubq 2. Gets the location of the
-   * destination and names the clase "inclause" + i 3. Creates a map from a
-   * string representation of an aggregation tree to the actual aggregation AST
-   * 4. Creates a mapping from the clause name to the select expression AST in
-   * destToSelExpr 5. Creates a mapping from a table alias to the lateral view
-   * AST's in aliasToLateralViews
+   * 1. Gets all the aliases for all the tables / subqueries and makes the appropriate mapping in aliasToTabs, aliasToSubq
+   * 获取所有的table或者子查询的别名,并且去映射别名与table,别名与子查询 
+   * 2. Gets the location of the destination and names the clase "inclause" + i
+   * 3. Creates a map from a string representation of an aggregation tree to the actual aggregation AST
+   * 4. Creates a mapping from the clause name to the select expression AST in destToSelExpr
+   * 5. Creates a mapping from a table alias to the lateral view AST's in aliasToLateralViews
    *
    * @param ast
    * @param qb
@@ -854,10 +852,10 @@ tableSource
 
     boolean phase1Result = true;
     QBParseInfo qbp = qb.getParseInfo();
-    boolean skipRecursion = false;
+    boolean skipRecursion = false;//true表示跳出递归
 
     if (ast.getToken() != null) {
-      skipRecursion = true;
+      skipRecursion = true;//跳出递归
       switch (ast.getToken().getType()) {
       case HiveParser.TOK_SELECTDI://select distinct
         qb.countSelDi();
@@ -1157,7 +1155,7 @@ tableSource
       }
     }
 
-    if (!skipRecursion) {
+    if (!skipRecursion) {//false说明要进行递归操作
       // Iterate over the rest of the children
       int child_count = ast.getChildCount();
       for (int child_pos = 0; child_pos < child_count && phase1Result; ++child_pos) {
@@ -1249,6 +1247,7 @@ tableSource
           // This is the last time we'll see the Table objects for views, so add it to the inputs
           // now
           ReadEntity viewInput = new ReadEntity(tab, parentInput);
+          //向所有的输入源中添加新的输入源viewInput
           viewInput = PlanUtils.addInput(inputs, viewInput);
           aliasToViewInfo.put(alias, new ObjectPair<String, ReadEntity>(fullViewName, viewInput));
           viewAliasToInput.put(getAliasId(alias, qb), viewInput);
@@ -1262,6 +1261,7 @@ tableSource
               ErrorMsg.INVALID_INPUT_FORMAT_TYPE.getMsg()));
         }
 
+        //设置校验好的table别名与table对象映射关系
         qb.getMetaData().setSrcForAlias(alias, tab);
 
         if (qb.getParseInfo().isAnalyzeCommand()) {//需要分析表
@@ -1463,22 +1463,29 @@ tableSource
     }
   }
 
-  //如果该tab是一个视图
+  /**
+   * 如果该tab是一个视图 
+   * @param qb 
+   * @param tab table对象
+   * @param tab_name table的真实name名字
+   * @param alias table此时使用的别名
+   */
   private void replaceViewReferenceWithDefinition(QB qb, Table tab,
       String tab_name, String alias) throws SemanticException {
 
     ParseDriver pd = new ParseDriver();
-    ASTNode viewTree;
+    ASTNode viewTree;//视图的sql解析后的语法树
     final ASTNodeOrigin viewOrigin = new ASTNodeOrigin("VIEW", tab.getTableName(),
         tab.getViewExpandedText(), alias, qb.getParseInfo().getSrcForAlias(
             alias));
     try {
-      String viewText = tab.getViewExpandedText();
+      String viewText = tab.getViewExpandedText();//如果该table是视图的话,则返回该视图的内容
       // Reparse text, passing null for context to avoid clobbering
       // the top-level token stream.
-      ASTNode tree = pd.parse(viewText, null);
-      tree = ParseUtils.findRootNonNullToken(tree);
+      ASTNode tree = pd.parse(viewText, null);//临时解析该视图的sql
+      tree = ParseUtils.findRootNonNullToken(tree);//过滤到第一个不是null的节点
       viewTree = tree;
+      
       Dispatcher nodeOriginDispatcher = new Dispatcher() {
         public Object dispatch(Node nd, java.util.Stack<Node> stack,
             Object... nodeOutputs) {
@@ -8475,6 +8482,7 @@ tableSource
     LOG.info("Starting Semantic Analysis");
 
     // analyze and process the position alias可以除了name之外,可以设置位置编号,前提是必须是true,因此将编号设置为select中的名字
+    //该方法处理order by或者group by中使用数字映射select对应的字段的行为
     processPositionAlias(ast);
 
     // analyze create table command
@@ -8508,9 +8516,11 @@ tableSource
       return;
     }
 
+    //已经完成了第一阶段的语意解析
     LOG.info("Completed phase 1 of Semantic Analysis");
 
     getMetaData(qb);
+    //已经完成了获取元数据的语意解析
     LOG.info("Completed getting MetaData in Semantic Analysis");
 
     // Save the result schema derived from the sink operator produced
@@ -9404,6 +9414,7 @@ KW_CREATE (orReplace)? KW_VIEW (ifNotExists)? name=tableName
     }
   }
 
+  //该方法处理order by或者group by中使用数字映射select对应的字段的行为
   //可以除了name之外,可以设置位置编号,前提是必须是true,因此将编号设置为select中的名字
   // Process the position alias in GROUPBY and ORDERBY
   //select aa alias1,bb,cc asa alias2 group by alias1 order by alias2 好像可以写成group by 0 order by 2 因此需要设置具体的值为alias1和alias2
@@ -9440,6 +9451,7 @@ KW_CREATE (orReplace)? KW_VIEW (ifNotExists)? name=tableName
       int selectExpCnt = selectNode.getChildCount();
 
       // replace each of the position alias in GROUPBY with the actual column name
+      //循环所有的group by的语句,找到所有的字段是数字类型的,则将其替换成select中的对应的字段
       if (groupbyNode != null) {
         for (int child_pos = 0; child_pos < groupbyNode.getChildCount(); ++child_pos) {
           ASTNode node = (ASTNode) groupbyNode.getChild(child_pos);
@@ -9459,8 +9471,10 @@ KW_CREATE (orReplace)? KW_VIEW (ifNotExists)? name=tableName
       }
 
       // replace each of the position alias in ORDERBY with the actual column name
+      //循环所有的order by的语句,找到所有的字段是数字类型的,则将其替换成select中的对应的字段
+      //select中可能有*,因此要特殊处理
       if (orderbyNode != null) {
-        isAllCol = false;//是否select对应的是*查询,true表示是*查询
+        isAllCol = false;//是否select对应的是*查询,true表示是包含了*查询
         for (int child_pos = 0; child_pos < selectNode.getChildCount(); ++child_pos) {
           ASTNode node = (ASTNode) selectNode.getChild(child_pos).getChild(0);
           if (node.getToken().getType() == HiveParser.TOK_ALLCOLREF) {
@@ -9482,7 +9496,7 @@ KW_CREATE (orReplace)? KW_VIEW (ifNotExists)? name=tableName
                   "The Select List is indexed from 1 to " + selectExpCnt));
               }
             } else {
-              throw new SemanticException(
+              throw new SemanticException(//select *时候,不支持order by中使用数字引用
                 ErrorMsg.NO_SUPPORTED_ORDERBY_ALLCOLREF_POS.getMsg());
             }
           }
@@ -9491,6 +9505,7 @@ KW_CREATE (orReplace)? KW_VIEW (ifNotExists)? name=tableName
     }
 
     // Recursively process through the children ASTNodes
+    //因为上面已经重新将编号设置成了select中的某一个字段,递归继续寻找匹配关系,一般的sql不会有这种行为,多发生在嵌套复杂sql中,sql中到处都使用了该序号方法
     for (int child_pos = 0; child_pos < child_count; ++child_pos) {
       processPositionAlias((ASTNode) ast.getChild(child_pos));
     }

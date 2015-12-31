@@ -853,6 +853,7 @@ public final class PlanUtils {
   // When addInput is called for the second time for V1, the input V1 from inputs is picked up,
   // and it's parents are enhanced to include V2 and V3
   // The inputs will contain: (V2, no parent), (V3, no parent), (v1, parents(V2, v3))
+  //向所有的输入源中添加新的输入源viewInput,返回新的输入源
   public static ReadEntity addInput(Set<ReadEntity> inputs, ReadEntity newInput) {
     // If the input is already present, make sure the new parent is added to the input.
     if (inputs.contains(newInput)) {

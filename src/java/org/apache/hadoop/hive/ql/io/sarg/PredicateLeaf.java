@@ -28,19 +28,21 @@ public interface PredicateLeaf {
   /**
    * The possible operators for predicates. To get the opposites, construct
    * an expression with a not operator.
+   * 表达式操作符
    */
   public static enum Operator {
-    EQUALS,
+    EQUALS,//=
     NULL_SAFE_EQUALS,
-    LESS_THAN,
-    LESS_THAN_EQUALS,
-    IN,
-    BETWEEN,
-    IS_NULL
+    LESS_THAN,// >
+    LESS_THAN_EQUALS,// >=
+    IN,// in
+    BETWEEN,// between
+    IS_NULL// is null
   }
 
   /**
    * The possible types for sargs.
+   * 参数类型
    */
   public static enum Type {
     INTEGER, // all of the integer types

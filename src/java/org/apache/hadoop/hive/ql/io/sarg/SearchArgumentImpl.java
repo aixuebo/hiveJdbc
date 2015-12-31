@@ -272,6 +272,7 @@ final class SearchArgumentImpl implements SearchArgument {
      * Get the type of the given expression node.
      * @param expr the expression to get the type of
      * @return int, string, or float or null if we don't know the type
+     * 将参数的类型转换成int float String三种之一
      */
     private static PredicateLeaf.Type getType(ExprNodeDesc expr) {
       TypeInfo type = expr.getTypeInfo();

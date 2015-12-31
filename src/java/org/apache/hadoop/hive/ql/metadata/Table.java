@@ -796,6 +796,7 @@ public class Table implements Serializable {
 
   /**
    * @return the expanded view text, or null if this table is not a view
+   * 如果该table是视图的话,则返回该视图的内容,如果不是视图的话,则返回null
    */
   public String getViewExpandedText() {
     return tTable.getViewExpandedText();

@@ -61,7 +61,7 @@ public class TableScanOperator extends Operator<TableScanDesc> implements
   private transient Stat currentStat;
   private transient Map<String, Stat> stats;
 
-  private transient int rowLimit = -1;
+  private transient int rowLimit = -1;//最多允许扫描table的行数
   private transient int currCount = 0;
 
   public TableDesc getTableDesc() {
@@ -81,7 +81,7 @@ public class TableScanOperator extends Operator<TableScanDesc> implements
    **/
   @Override
   public void processOp(Object row, int tag) throws HiveException {
-    if (rowLimit >= 0 && currCount++ >= rowLimit) {
+    if (rowLimit >= 0 && currCount++ >= rowLimit) {//扫描行数到达一定阀值,扫描结束
       setDone(true);
       return;
     }

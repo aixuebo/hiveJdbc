@@ -199,6 +199,12 @@ public class QB {
     return aliasToProps.get(alias.toLowerCase());
   }
 
+  /**
+   * 重新定义一个视图到子查询中
+   * @param alias 在sql中用到的别名
+   * @param viewName 视图的真正的名称,即tableName
+   * @param qbexpr 视图的表达式
+   */
   public void rewriteViewToSubq(String alias, String viewName, QBExpr qbexpr) {
     alias = alias.toLowerCase();
     String tableName = aliasToTabs.remove(alias);

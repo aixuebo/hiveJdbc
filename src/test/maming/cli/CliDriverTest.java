@@ -46,7 +46,7 @@ public class CliDriverTest {
 		  HiveConf conf = new HiveConf();
 		  SessionState.start(conf);
 		  StringBuffer command = new StringBuffer();
-			command.append("select distinct biao11.id,biao11.name,biao11.age,biao11.sex from  ")
+			command.append("select distinct biao11.id,biao11.name,biao11.age,biao11.sex from ")
 		       .append(" (select * from biao1) biao11")
 		       .append(" where biao11.id = 100 ");
 		  Driver driver = new Driver(conf);
