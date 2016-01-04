@@ -24,6 +24,12 @@ import org.apache.hadoop.hive.ql.exec.Description;
 import org.apache.hadoop.hive.ql.exec.UDF;
 import org.apache.hadoop.hive.serde2.io.DoubleWritable;
 
+/**
+ * sign(double) 返回-1 0 1 三个值,
+ * double>0 则返回1
+ * double=0 则返回0
+ * double<0 则返回-1
+ */
 @Description(
     name = "sign",
     value = "_FUNC_(x) - returns the sign of x )",

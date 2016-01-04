@@ -28,6 +28,12 @@ import org.apache.hadoop.io.Text;
 
 /**
  * UDFLike.
+ * like模糊查询
+ * like(str,pattern) ,
+ * 其中pattern注意事项
+ * 1.将_字符转换成. 表示匹配任意一个字符,\\_结果就是_
+ * 2.将%字符转换成.*,表示匹配任意多个字符,\\%结果就是%
+ * 最终将pattern转换成正则表达式即可
  *
  */
 @Description(name = "like",
@@ -57,11 +63,20 @@ public class UDFLike extends UDF {
   public UDFLike() {
   }
 
+  /**
+   * 将likePattern模式转换成正则表达式模式
+   * 主要针对_和%两个字符进行处理
+   * 比如:
+   * abc\\% 可以转换成abc%,说明他们是需要转义的
+   * abc% 可以转换成abc.*的正则表达式
+   */
   public static String likePatternToRegExp(String likePattern) {
     StringBuilder sb = new StringBuilder();
+    //循环查找特别的字符%或者_,以\开头的说明是转义的,而不是真正的_或者%的含义
+    // Make a special case for "\\_" and "\\%"
     for (int i = 0; i < likePattern.length(); i++) {
-      // Make a special case for "\\_" and "\\%"
       char n = likePattern.charAt(i);
+      //因为是\,并且下一个是_或者%,则是要转义的,因此将%或者_输入到字符串即可
       if (n == '\\'
           && i + 1 < likePattern.length()
           && (likePattern.charAt(i + 1) == '_' || likePattern.charAt(i + 1) == '%')) {
@@ -70,6 +85,10 @@ public class UDFLike extends UDF {
         continue;
       }
 
+      /**
+       * 1.将_字符转换成. 表示匹配任意一个字符
+       * 2.将%字符转换成.*,表示匹配任意多个字符
+       */
       if (n == '_') {
         sb.append(".");
       } else if (n == '%') {

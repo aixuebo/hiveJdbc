@@ -41,6 +41,7 @@ public class UDFReverse extends UDF {
    *          The beginning of the portion (inclusive).
    * @param last
    *          The end of the portion (inclusive).
+   * 将arr数组的从first到last之间的字节进行翻转
    */
   private void reverse(byte[] arr, int first, int last) {
     for (int i = 0; i < (last - first + 1) / 2; i++) {
