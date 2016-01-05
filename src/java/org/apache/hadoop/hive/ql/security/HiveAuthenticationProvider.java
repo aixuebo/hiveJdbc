@@ -26,6 +26,7 @@ import org.apache.hadoop.hive.ql.metadata.HiveException;
 /**
  * HiveAuthenticationProvider is an interface for authentication. The
  * implementation should return userNames and groupNames.
+ * hadooop的权限系统
  */
 public interface HiveAuthenticationProvider extends Configurable{
   

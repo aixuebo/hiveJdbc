@@ -44,8 +44,21 @@ public final class HiveUtils {
   public static final String RBRACKET = "]";
   public static final String LBRACE = "{";
   public static final String RBRACE = "}";
-  public static final String LINE_SEP = System.getProperty("line.separator");
+  public static final String LINE_SEP = System.getProperty("line.separator");//回车 换行 字节数组是13和10
 
+  /**
+  	定义字符串String str = "ss\\s\n\rs";
+  1.打印该字符串System.out.println(str);
+  输出:
+	ss\s
+
+	s
+   总结:可以看出来该字符串自动被转换了
+   2.原样打印该字符串 System.out.println(escapeString(str));
+     输出:依然是:ss\\s\n\rs
+     
+     该方法是原样输出字符串内容,防止转义等情况发生
+   */
   public static String escapeString(String str) {
     int length = str.length();
     StringBuilder escape = new StringBuilder(length + 16);
@@ -80,7 +93,7 @@ public final class HiveUtils {
         break;
       default:
         // Control characeters! According to JSON RFC u0020
-        if (c < ' ') {
+        if (c < ' ') {//asscii比32还小的话,使用16进制
           String hex = Integer.toHexString(c);
           escape.append('\\');
           escape.append('u');
@@ -97,16 +110,19 @@ public final class HiveUtils {
     return (escape.toString());
   }
 
-  static final byte[] escapeEscapeBytes = "\\\\".getBytes();;
-  static final byte[] escapeUnescapeBytes = "\\".getBytes();
-  static final byte[] newLineEscapeBytes = "\\n".getBytes();;
-  static final byte[] newLineUnescapeBytes = "\n".getBytes();
-  static final byte[] carriageReturnEscapeBytes = "\\r".getBytes();;
-  static final byte[] carriageReturnUnescapeBytes = "\r".getBytes();
-  static final byte[] tabEscapeBytes = "\\t".getBytes();;
-  static final byte[] tabUnescapeBytes = "\t".getBytes();
-  static final byte[] ctrlABytes = "\u0001".getBytes();
+  static final byte[] escapeEscapeBytes = "\\\\".getBytes();//92 92 即\ \ 
+  static final byte[] escapeUnescapeBytes = "\\".getBytes();//92 即\
+  static final byte[] newLineEscapeBytes = "\\n".getBytes();;//92 110,即\和n
+  static final byte[] newLineUnescapeBytes = "\n".getBytes();//10
+  static final byte[] carriageReturnEscapeBytes = "\\r".getBytes();//92 114,即\和r
+  static final byte[] carriageReturnUnescapeBytes = "\r".getBytes();//13
+  static final byte[] tabEscapeBytes = "\\t".getBytes();//92 116,即\和t
+  static final byte[] tabUnescapeBytes = "\t".getBytes();//9
+  static final byte[] ctrlABytes = "\u0001".getBytes();//1
 
+  /**
+   * escapeText(new Text("ss\\s\n\rs")),返回值还是原样的new Text("ss\\s\n\rs")
+   */
   public static Text escapeText(Text text) {
     int length = text.getLength();
     byte[] textBytes = text.getBytes();
@@ -116,9 +132,9 @@ public final class HiveUtils {
 
     for (int i = 0; i < length; ++i) {
       int c = text.charAt(i);
-      byte[] escaped;
-      int start;
-      int len;
+      byte[] escaped;//转义字节数组
+      int start;//从转义字节数组的第几个位置开始截取
+      int len;//截取转义字节数组的长度
 
       switch (c) {
 
@@ -165,6 +181,15 @@ public final class HiveUtils {
     return escape;
   }
 
+  /**
+   * 将text中的内容进行解析
+   * 例如:unescapeText(new Text("ss\\s\n\rs"))
+   * 输出的text为:
+   * ss\s
+
+	s
+	返回值是7.即输出的长度
+   */
   public static int unescapeText(Text text) {
     Text escape = new Text(text);
     text.clear();
@@ -240,6 +265,12 @@ public final class HiveUtils {
     return text.getLength();
   }
 
+  /**
+   * 轻量级别的保留字符串内容,仅仅保留\n \r \t三种转义
+   * 例如lightEscapeString("ss\\s\n\rs")
+   * 返回值ss\s\n\rs
+   * 可见,\\被转义成\了,但是\r和\n没有被转义
+   */
   public static String lightEscapeString(String str) {
     int length = str.length();
     StringBuilder escape = new StringBuilder(length + 16);
@@ -269,6 +300,7 @@ public final class HiveUtils {
 
   /**
    * Regenerate an identifier as part of unparsing it back to SQL text.
+   * 对sql的关键字而言,添加``字符
    */
   public static String unparseIdentifier(String identifier) {
     // In the future, if we support arbitrary characters in
@@ -345,6 +377,13 @@ public final class HiveUtils {
     return ret;
   }
 
+  /**
+   * 返回hadoop的访问权限
+   * @param conf
+   * @param authenticatorConfKey
+   * @return
+   * @throws HiveException
+   */
   @SuppressWarnings("unchecked")
   public static HiveAuthenticationProvider getAuthenticator(
       Configuration conf, HiveConf.ConfVars authenticatorConfKey
@@ -373,7 +412,8 @@ public final class HiveUtils {
 
   /**
    * Convert FieldSchemas to columnNames with backticks around them.
-   */
+   * 将所有的属性,转换成`column1`,`column2`,`column3` 这样的字符串返回
+   * */
   public static String getUnparsedColumnNamesFromFieldSchema(
       List<FieldSchema> fieldSchemas) {
     StringBuilder sb = new StringBuilder();

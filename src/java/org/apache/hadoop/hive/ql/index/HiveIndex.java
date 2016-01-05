@@ -22,6 +22,8 @@ import org.apache.commons.logging.LogFactory;
 
 /**
  * Holds index related constants
+ * 索引的处理引擎
+ * 参见hiveParser中createIndexStatement的 as typeName
  */
 public class HiveIndex {
 
@@ -29,6 +31,7 @@ public class HiveIndex {
 
   public static String INDEX_TABLE_CREATETIME = "hive.index.basetbl.dfs.lastModifiedTime";
 
+  //所有的索引类型
   public static enum IndexType {
     AGGREGATE_TABLE("aggregate", "org.apache.hadoop.hive.ql.AggregateIndexHandler"),
     COMPACT_SUMMARY_TABLE("compact", "org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler"),
@@ -52,6 +55,9 @@ public class HiveIndex {
     }
   }
 
+  /**
+   * 通过name获取对应的IndexType
+   */
   public static IndexType getIndexType(String name) {
     IndexType[] types = IndexType.values();
     for (IndexType type : types) {
@@ -62,6 +68,9 @@ public class HiveIndex {
     return null;
   }
 
+  /**
+   * 通过className获取对应的IndexType
+   */
   public static IndexType getIndexTypeByClassName(String className) {
     IndexType[] types = IndexType.values();
     for (IndexType type : types) {

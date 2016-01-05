@@ -838,6 +838,35 @@ truncateTableStatement
 @after { msgs.pop(); }
     : KW_TRUNCATE KW_TABLE tablePartitionPrefix (KW_COLUMNS LPAREN columnNameList RPAREN)? -> ^(TOK_TRUNCATETABLE tablePartitionPrefix columnNameList?);
 
+/**
+CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
+其他的是可选项
+
+注意:
+1.含义,对table01表建立索引,该索引针对column1,column2两个列建立索引,索引名称是table01_index
+2.as 后面的内容是COMPACT、aggregate、bitmap、或者class全路径,参见HiveIndex类
+3.autoRebuild:  with deferred rebuild 表示延期建立索引
+4.indexPropertiesPrefixed: IDXPROPERTIES (key=value,key=value) 表示该index的额外属性信息
+5.indexTblName: in table tableName
+6.tableRowFormat:表示如何存储一行数据,由以下内容表示
+//方式1:ROW FORMAT DELIMITED [FIELDS terminated by xxx [ESCAPED by xx] ] 
+//[COLLECTION ITEMS terminated by xxx ]
+//[MAP KEYS terminated by xxx ]
+//[LINES terminated by xxx ]
+//方式2:
+//ROW FORMAT SERDE "class全路径" [WHIN SERDEPROPERTIES TBLPROPERTIES (key=value,key=value,key)]
+
+7.tableFileFormat:表示文件存储格式,由以下内容存储
+//STORED as SEQUENCEFILE |
+//STORED as TEXTFILE |
+//STORED as RCFILE |
+//STORED as TEXTFILE |
+//STORED as INPUTFORMAT xxx OUTPUTFORMAT xxx [INPUTDRIVER xxx OUTPUTDRIVER xxx]
+//STORED BY xxxx存储引擎, WITH SERDEPROPERTIES (key=value,key=value,key) ,注意key=value集合是为xxx存储引擎提供的参数集合
+//STORED AS xxxx
+8.tableLocation:LOCATION xxx 表示存储在HDFS上的路径
+9.indexComment:  comment xxx 表示为索引添加备注
+*/
 createIndexStatement
 @init { msgs.push("create index statement");}
 @after {msgs.pop();}
@@ -863,6 +892,7 @@ createIndexStatement
         indexComment?)
     ;
 
+//索引的备注  格式 comment xxx
 indexComment
 @init { msgs.push("comment on an index");}
 @after {msgs.pop();}
@@ -870,6 +900,7 @@ indexComment
                 KW_COMMENT comment=StringLiteral  -> ^(TOK_INDEXCOMMENT $comment)
         ;
 
+//索引的可选项  格式  with deferred rebuild
 autoRebuild
 @init { msgs.push("auto rebuild index");}
 @after {msgs.pop();}
@@ -877,6 +908,7 @@ autoRebuild
     ->^(TOK_DEFERRED_REBUILDINDEX)
     ;
 
+//格式 in table tableName
 indexTblName
 @init { msgs.push("index table name");}
 @after {msgs.pop();}
@@ -884,6 +916,8 @@ indexTblName
     ->^(TOK_CREATEINDEX_INDEXTBLNAME $indexTbl)
     ;
 
+//格式 IDXPROPERTIES (key=value,key=value)
+//表示索引的属性信息
 indexPropertiesPrefixed
 @init { msgs.push("table properties with prefix"); }
 @after { msgs.pop(); }
@@ -891,6 +925,7 @@ indexPropertiesPrefixed
         KW_IDXPROPERTIES! indexProperties
     ;
 
+//格式 (key=value,key=value)
 indexProperties
 @init { msgs.push("index properties"); }
 @after { msgs.pop(); }
@@ -898,6 +933,7 @@ indexProperties
       LPAREN indexPropertiesList RPAREN -> ^(TOK_INDEXPROPERTIES indexPropertiesList)
     ;
 
+//格式: key=value,key=value
 indexPropertiesList
 @init { msgs.push("index properties list"); }
 @after { msgs.pop(); }
@@ -1677,7 +1713,7 @@ tablePropertiesList
     ;
 
 //解析一个key-value键值对属性
-//key = value
+//例如:key = value
 keyValueProperty
 @init { msgs.push("specifying key/value property"); }
 @after { msgs.pop(); }
@@ -1741,6 +1777,8 @@ tableRowFormatLinesIdentifier
 //STORED as RCFILE |
 //STORED as TEXTFILE |
 //STORED as INPUTFORMAT xxx OUTPUTFORMAT xxx [INPUTDRIVER xxx OUTPUTDRIVER xxx]
+//STORED BY xxxx存储引擎, WITH SERDEPROPERTIES (key=value,key=value,key) ,注意key=value集合是为xxx存储引擎提供的参数集合
+//STORED AS xxxx
 tableFileFormat
 @init { msgs.push("table file format specification"); }
 @after { msgs.pop(); }
@@ -1759,7 +1797,7 @@ tableFileFormat
     ;
 
 //存储路径
-//LOCATION xxx
+//格式:LOCATION xxx
 tableLocation
 @init { msgs.push("table location specification"); }
 @after { msgs.pop(); }

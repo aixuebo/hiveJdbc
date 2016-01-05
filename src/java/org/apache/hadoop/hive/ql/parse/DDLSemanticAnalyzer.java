@@ -141,7 +141,7 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
   private static final Log LOG = LogFactory.getLog(DDLSemanticAnalyzer.class);
   private static final Map<Integer, String> TokenToTypeName = new HashMap<Integer, String>();
 
-  private final Set<String> reservedPartitionValues;
+  private final Set<String> reservedPartitionValues;//预先保留的partition名字集合,这些名字的partition是不允许被命名的
   static {
     TokenToTypeName.put(HiveParser.TOK_BOOLEAN, serdeConstants.BOOLEAN_TYPE_NAME);
     TokenToTypeName.put(HiveParser.TOK_TINYINT, serdeConstants.TINYINT_TYPE_NAME);
@@ -159,17 +159,20 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
     TokenToTypeName.put(HiveParser.TOK_DECIMAL, serdeConstants.DECIMAL_TYPE_NAME);
   }
 
+  /**
+   * 返回该field属性节点对应的类型值,例如String类型被返回
+   */
   public static String getTypeName(ASTNode node) throws SemanticException {
     int token = node.getType();
     String typeName;
 
-    // datetime type isn't currently supported
+    // datetime type isn't currently supported 当前不支持datetime类型
     if (token == HiveParser.TOK_DATETIME) {
       throw new SemanticException(ErrorMsg.UNSUPPORTED_TYPE.getMsg());
     }
 
     switch (token) {
-    case HiveParser.TOK_VARCHAR:
+    case HiveParser.TOK_VARCHAR://记录varchar的字节长度
       PrimitiveCategory primitiveCategory = PrimitiveCategory.VARCHAR;
       typeName = TokenToTypeName.get(token);
       VarcharTypeParams varcharParams = ParseUtils.getVarcharParams(typeName, node);
@@ -202,11 +205,12 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
 
   public DDLSemanticAnalyzer(HiveConf conf) throws SemanticException {
     super(conf);
+    //设置预先保留的partition名字集合,这些名字的partition是不允许被命名的
     reservedPartitionValues = new HashSet<String>();
-    // Partition can't have this name
+    // Partition can't have this name 不允许partition的命名规则
     reservedPartitionValues.add(HiveConf.getVar(conf, ConfVars.DEFAULTPARTITIONNAME));
     reservedPartitionValues.add(HiveConf.getVar(conf, ConfVars.DEFAULT_ZOOKEEPER_PARTITION_NAME));
-    // Partition value can't end in this suffix
+    // Partition value can't end in this suffix partition不能使用的后缀
     reservedPartitionValues.add(HiveConf.getVar(conf, ConfVars.METASTORE_INT_ORIGINAL));
     reservedPartitionValues.add(HiveConf.getVar(conf, ConfVars.METASTORE_INT_ARCHIVED));
     reservedPartitionValues.add(HiveConf.getVar(conf, ConfVars.METASTORE_INT_EXTRACTED));
@@ -1014,11 +1018,65 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
     return true;
   }
 
+  /**
+createIndexStatement
+@init { msgs.push("create index statement");}
+@after {msgs.pop();}
+    : KW_CREATE KW_INDEX indexName=identifier
+      KW_ON KW_TABLE tab=tableName LPAREN indexedCols=columnNameList RPAREN
+      KW_AS typeName=StringLiteral
+      autoRebuild?
+      indexPropertiesPrefixed?
+      indexTblName?
+      tableRowFormat?
+      tableFileFormat?
+      tableLocation?
+      tablePropertiesPrefixed?
+      indexComment?
+    ->^(TOK_CREATEINDEX $indexName $typeName $tab $indexedCols
+        autoRebuild?
+        indexPropertiesPrefixed?
+        indexTblName?
+        tableRowFormat?
+        tableFileFormat?
+        tableLocation?
+        tablePropertiesPrefixed?
+        indexComment?)
+    ;
+创建索引
+CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
+其他的是可选项
+
+注意:
+1.含义,对table01表建立索引,该索引针对column1,column2两个列建立索引,索引名称是table01_index
+2.as 后面的内容是COMPACT、aggregate、bitmap、或者class全路径,参见HiveIndex类
+3.autoRebuild:  with deferred rebuild 表示延期建立索引
+4.indexPropertiesPrefixed: IDXPROPERTIES (key=value,key=value) 表示该index的额外属性信息
+5.indexTblName: in table tableName
+6.tableRowFormat:表示如何存储一行数据,由以下内容表示
+//方式1:ROW FORMAT DELIMITED [FIELDS terminated by xxx [ESCAPED by xx] ] 
+//[COLLECTION ITEMS terminated by xxx ]
+//[MAP KEYS terminated by xxx ]
+//[LINES terminated by xxx ]
+//方式2:
+//ROW FORMAT SERDE "class全路径" [WHIN SERDEPROPERTIES TBLPROPERTIES (key=value,key=value,key)]
+
+7.tableFileFormat:表示文件存储格式,由以下内容存储
+//STORED as SEQUENCEFILE |
+//STORED as TEXTFILE |
+//STORED as RCFILE |
+//STORED as TEXTFILE |
+//STORED as INPUTFORMAT xxx OUTPUTFORMAT xxx [INPUTDRIVER xxx OUTPUTDRIVER xxx]
+//STORED BY xxxx存储引擎, WITH SERDEPROPERTIES (key=value,key=value,key) ,注意key=value集合是为xxx存储引擎提供的参数集合
+//STORED AS xxxx
+8.tableLocation:LOCATION xxx 表示存储在HDFS上的路径
+9.indexComment:  comment xxx 表示为索引添加备注
+   */
   private void analyzeCreateIndex(ASTNode ast) throws SemanticException {
-    String indexName = unescapeIdentifier(ast.getChild(0).getText());
-    String typeName = unescapeSQLString(ast.getChild(1).getText());
-    String tableName = getUnescapedName((ASTNode) ast.getChild(2));
-    List<String> indexedCols = getColumnNames((ASTNode) ast.getChild(3));
+    String indexName = unescapeIdentifier(ast.getChild(0).getText());//索引名称
+    String typeName = unescapeSQLString(ast.getChild(1).getText());//索引的引擎,HiveIndex表内的name或者自定义的class全路径
+    String tableName = getUnescapedName((ASTNode) ast.getChild(2));//对哪个表建立索引
+    List<String> indexedCols = getColumnNames((ASTNode) ast.getChild(3));//对哪些列建立索引
 
     IndexType indexType = HiveIndex.getIndexType(typeName);
     if (indexType != null) {
@@ -1031,43 +1089,49 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
       }
     }
 
-    String indexTableName = null;
-    boolean deferredRebuild = false;
-    String location = null;
+    String indexTableName = null;//解析in table tableName语法
+    boolean deferredRebuild = false;//true表示延期建立索引
+    String location = null;//语法解析LOCATION xxx 表示存储在HDFS上的路径
     Map<String, String> tblProps = null;
-    Map<String, String> idxProps = null;
-    String indexComment = null;
+    Map<String, String> idxProps = null;//IDXPROPERTIES (key=value,key=value) 表示该index的额外属性信息
+    String indexComment = null;//索引的备注信息
 
+    //设置行分隔符信息
     RowFormatParams rowFormatParams = new RowFormatParams();
+    
+    //解析store as 以什么格式进行存储数据
     StorageFormat storageFormat = new StorageFormat();
+    
+    //STORED BY xxxx存储引擎, WITH SERDEPROPERTIES (key=value,key=value,key) ,注意key=value集合是为xxx存储引擎提供的参数集合
     AnalyzeCreateCommonVars shared = new AnalyzeCreateCommonVars();
 
+    //循环所有的可选项子节点
     for (int idx = 4; idx < ast.getChildCount(); idx++) {
       ASTNode child = (ASTNode) ast.getChild(idx);
       if (storageFormat.fillStorageFormat(child, shared)) {
         continue;
       }
       switch (child.getToken().getType()) {
-      case HiveParser.TOK_TABLEROWFORMAT:
+      case HiveParser.TOK_TABLEROWFORMAT://创建解析table格式的信息
         rowFormatParams.analyzeRowFormat(shared, child);
         break;
-      case HiveParser.TOK_CREATEINDEX_INDEXTBLNAME:
+      case HiveParser.TOK_CREATEINDEX_INDEXTBLNAME://解析in table tableName语法
         ASTNode ch = (ASTNode) child.getChild(0);
         indexTableName = getUnescapedName((ASTNode) ch);
         break;
-      case HiveParser.TOK_DEFERRED_REBUILDINDEX:
+      case HiveParser.TOK_DEFERRED_REBUILDINDEX://解析是否延期建立索引
         deferredRebuild = true;
         break;
-      case HiveParser.TOK_TABLELOCATION:
+      case HiveParser.TOK_TABLELOCATION://语法解析LOCATION xxx 表示存储在HDFS上的路径
         location = unescapeSQLString(child.getChild(0).getText());
         break;
       case HiveParser.TOK_TABLEPROPERTIES:
         tblProps = DDLSemanticAnalyzer.getProps((ASTNode) child.getChild(0));
         break;
-      case HiveParser.TOK_INDEXPROPERTIES:
+      case HiveParser.TOK_INDEXPROPERTIES://IDXPROPERTIES (key=value,key=value) 表示该index的额外属性信息
         idxProps = DDLSemanticAnalyzer.getProps((ASTNode) child.getChild(0));
         break;
-      case HiveParser.TOK_TABLESERIALIZER:
+      case HiveParser.TOK_TABLESERIALIZER://解析STORED BY xxxx存储引擎, WITH SERDEPROPERTIES (key=value,key=value,key) ,注意key=value集合是为xxx存储引擎提供的参数集合
         child = (ASTNode) child.getChild(0);
         shared.serde = unescapeSQLString(child.getChild(0).getText());
         if (child.getChildCount() == 2) {
@@ -1075,7 +1139,7 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
               shared.serdeProps);
         }
         break;
-      case HiveParser.TOK_INDEXCOMMENT:
+      case HiveParser.TOK_INDEXCOMMENT://解析索引的备注信息
         child = (ASTNode) child.getChild(0);
         indexComment = unescapeSQLString(child.getText());
       }
@@ -3278,6 +3342,9 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
     return getTable(SessionState.get().getCurrentDatabase(), tblName, throwException);
   }
 
+  /**
+   * 查询数据库,如果查询不到,则根据throwException 是否为true,进行抛异常
+   */
   private Table getTable(String database, String tblName, boolean throwException)
       throws SemanticException {
     try {

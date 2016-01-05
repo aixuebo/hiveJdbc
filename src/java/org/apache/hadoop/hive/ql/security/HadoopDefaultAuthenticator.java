@@ -26,10 +26,13 @@ import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.shims.ShimLoader;
 import org.apache.hadoop.security.UserGroupInformation;
 
+/**
+ * hadooop的权限系统
+ */
 public class HadoopDefaultAuthenticator implements HiveAuthenticationProvider {
 
-  private String userName;
-  private List<String> groupNames;
+  private String userName;//使用者
+  private List<String> groupNames;//组集合
   
   private Configuration conf;
 

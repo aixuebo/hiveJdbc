@@ -78,7 +78,7 @@ public abstract class Operator<T extends OperatorDesc> implements Serializable,C
 
   private transient ExecMapperContext execContext;
 
-  private static AtomicInteger seqId;
+  private static AtomicInteger seqId;//全局唯一的ID,自增长ID
 
   // It can be optimized later so that an operator operator (init/close) is performed
   // only after that operation has been performed on all the parents. This will require
@@ -101,7 +101,7 @@ public abstract class Operator<T extends OperatorDesc> implements Serializable,C
 
   protected transient State state = State.UNINIT;
 
-  static transient boolean fatalError = false; // fatalError is shared acorss
+  static transient boolean fatalError = false; // fatalError is shared acorss,true表示期间遇到了异常导致的失败
   // all operators
 
   static {
@@ -176,7 +176,7 @@ public abstract class Operator<T extends OperatorDesc> implements Serializable,C
   }
 
   protected T conf;
-  protected boolean done;//true表示已经结束
+  protected boolean done;//true表示已经成功结束
 
   public void setConf(T conf) {
     this.conf = conf;
@@ -187,6 +187,7 @@ public abstract class Operator<T extends OperatorDesc> implements Serializable,C
     return conf;
   }
 
+  //成功完成了,或者失败了,都是属于已经完成
   public boolean getDone() {
     return done || fatalError;
   }
@@ -214,7 +215,7 @@ public abstract class Operator<T extends OperatorDesc> implements Serializable,C
   protected transient boolean isLogInfoEnabled = LOG.isInfoEnabled();
   protected transient String alias;
   protected transient Reporter reporter;
-  protected transient String id;
+  protected transient String id;//当该对象创建的时候,会根据seqId属性,创建一个ID
   // object inspectors for input rows
   // We will increase the size of the array on demand 输入行集合
   protected transient ObjectInspector[] inputObjInspectors = new ObjectInspector[1];
@@ -1147,10 +1148,10 @@ public abstract class Operator<T extends OperatorDesc> implements Serializable,C
    */
   private static int lastEnumUsed;
 
-  protected transient long inputRows = 0;
+  protected transient long inputRows = 0;//已经输入多少行
   protected transient long outputRows = 0;
   protected transient long beginTime = 0;
-  protected transient long totalTime = 0;
+  protected transient long totalTime = 0;//计算消耗总时间
 
   protected transient Object groupKeyObject;
 

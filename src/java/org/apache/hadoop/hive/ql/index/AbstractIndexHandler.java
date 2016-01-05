@@ -35,6 +35,7 @@ import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
  */
 public abstract class AbstractIndexHandler implements HiveIndexHandler {
   
+  //将所有的属性,转换成`column1`,`column2`,`column3` 这样的字符串返回
   public static String getColumnNames(List<FieldSchema> fieldSchemas) {
     StringBuilder sb = new StringBuilder();
     for (int i = 0; i < fieldSchemas.size(); i++) {

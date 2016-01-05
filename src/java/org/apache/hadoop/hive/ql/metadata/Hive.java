@@ -2484,6 +2484,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
       }
     }
 
+  //根据数据库和表名字创建Table对象
   public Table newTable(String tableName) throws HiveException {
     String[] names = getQualifiedNames(tableName);
     switch (names.length) {
@@ -2521,6 +2522,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
     }
   }
 
+  //按照.去拆分数据库和表名字,返回两个数组
   private static String[] getQualifiedNames(String qualifiedName) {
     return qualifiedName.split("\\.");
   }

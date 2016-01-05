@@ -1,12 +1,13 @@
 package maming;
 
+import org.apache.hadoop.io.Text;
 import org.junit.Test;
 
 public class Test1 {
 
 	@Test
 	public void test1(){
-		int a = 2;
+	/*	int a = 2;
 		switch(a){
 			case 1:
 				System.out.println("1");
@@ -18,12 +19,21 @@ public class Test1 {
 			case 6:		
 				System.out.println("6");
 				break;	
-		}
+		}*/
 	}
 	
 	private boolean done;
+	
+	  
 	@Test
 	public void test2(){
-		System.out.println(done);
+
 	}
+	  
+	  
+	@Test
+	public void test3(){
+		//System.out.println((byte)' ');
+	}
+	 
 }

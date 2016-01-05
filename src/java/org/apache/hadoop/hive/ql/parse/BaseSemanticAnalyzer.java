@@ -175,8 +175,10 @@ public abstract class BaseSemanticAnalyzer {
     }
   }
 
+  //STORED BY xxxx存储引擎, WITH SERDEPROPERTIES (key=value,key=value,key) ,注意key=value集合是为xxx存储引擎提供的参数集合
   class AnalyzeCreateCommonVars {
-    String serde = null;
+    String serde = null;//表示STORED BY后面的属性
+    //存储所有属性key-value信息集合
     Map<String, String> serdeProps = new HashMap<String, String>();
   }
 
