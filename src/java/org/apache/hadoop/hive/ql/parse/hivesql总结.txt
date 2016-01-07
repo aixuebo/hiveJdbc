@@ -455,8 +455,20 @@ d.ALTER DATABASE alterDatabaseStatementSuffix
   格式: String
 12.whenExpression
 格式:CASE WHEN expression THEN expression WHEN expression THEN expression .. [ELSE expression]
+eg:
+CASE 
+  WHEN Fruit = 'APPLE' THEN 'The owner is APPLE'
+  WHEN Fruit = 'ORANGE' THEN 'The owner is ORANGE'
+  ELSE 'It is another Fruit'
+END
 13.caseExpression
 格式:CASE expression WHEN expression THEN expression WHEN expression THEN expression .. [ELSE expression]
+eg:
+CASE Fruit
+  WHEN 'APPLE' THEN 'The owner is APPLE'
+  WHEN 'ORANGE' THEN 'The owner is ORANGE'
+  ELSE 'It is another Fruit'
+END
 14.castExpression
 格式:CAST (expression AS type类型)
 15.functionName
