@@ -84,4 +84,18 @@ public class TestRun {
 			e.printStackTrace();
 		}
 	}
+	
+	@Test
+	public void test6(){
+		
+		StringBuffer command = new StringBuffer();
+		command.append("alter table maming.statisticnginx add partition (log_day='20151101') location '/logs/statistics/statistics_hadoop/statisticNginx/20151101';");
+		try {
+			ASTNode node = new ParseDriver().parse(command.toString());
+			System.out.println(node.dump());
+			System.out.println(node);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
 }

@@ -44,8 +44,7 @@ catch (RecognitionException e) {
 }
 
 //-----------------------------------------------------------------------------------
-//GROUP BY expression,expression,expression [WITH ROLLUP | CUBE ] [GROUPING SETS (groupingSetExpression,groupingSetExpression) ]
-//注意:groupingSetExpression= expression | (expression,expression,expression) | ()
+格式:GROUP BY expression,expression...[WITH ROLLUP | WITH CUBE] [GROUPING SETS (groupingSetExpression,groupingSetExpression..)]
 groupByClause
 @init { gParent.msgs.push("group by clause"); }
 @after { gParent.msgs.pop(); }
@@ -62,6 +61,10 @@ groupByClause
     -> ^(TOK_GROUPBY groupByExpression+)
     ;
 
+格式:
+a.expression
+b.(expression,expression...)
+c.()
 groupingSetExpression
 @init {gParent.msgs.push("grouping set expression"); }
 @after {gParent.msgs.pop(); }
@@ -174,7 +177,10 @@ sortByClause
     ( (COMMA)=> COMMA columnRefOrder)* -> ^(TOK_SORTBY columnRefOrder+)
     ;
 
-// fun(par1, par2, par3)
+格式:
+functionName(*) [OVER window_specification]
+functionName() OVER window_specification
+functionName([DISTINCT] [selectExpression,selectExpression..]) OVER window_specification
 function
 @init { gParent.msgs.push("function specification"); }
 @after { gParent.msgs.pop(); }
@@ -191,6 +197,7 @@ function
                             -> ^(TOK_FUNCTIONDI functionName (selectExpression+)?)
     ;
 
+格式:IF | ARRAY | MAP | STRUCT | UNIONTYPE | String
 functionName
 @init { gParent.msgs.push("function name"); }
 @after { gParent.msgs.pop(); }
@@ -198,6 +205,7 @@ functionName
     KW_IF | KW_ARRAY | KW_MAP | KW_STRUCT | KW_UNIONTYPE | identifier
     ;
 
+格式:CAST (expression AS type类型)
 castExpression
 @init { gParent.msgs.push("cast expression"); }
 @after { gParent.msgs.pop(); }
@@ -210,6 +218,7 @@ castExpression
     RPAREN -> ^(TOK_FUNCTION primitiveType expression)
     ;
 
+格式:CASE expression WHEN expression THEN expression WHEN expression THEN expression .. [ELSE expression]
 caseExpression
 @init { gParent.msgs.push("case expression"); }
 @after { gParent.msgs.pop(); }
@@ -220,6 +229,7 @@ caseExpression
     KW_END -> ^(TOK_FUNCTION KW_CASE expression*)
     ;
 
+格式:CASE WHEN expression THEN expression WHEN expression THEN expression .. [ELSE expression]
 whenExpression
 @init { gParent.msgs.push("case expression"); }
 @after { gParent.msgs.pop(); }
@@ -486,14 +496,16 @@ partitionVal
     identifier (EQUAL constant)? -> ^(TOK_PARTVAL identifier constant?)
     ;
 
-//PARTITION( key (= 、 == 、 <>、 != 、 <= 、< 、 < 、 >=) value,key (= 、 == 、 <>、 != 、 <= 、< 、 < 、 >=) value)
+//PARTITION(key 符号 value,key 符号  value)
+注意:符号 = 、 == 、 <>、 != 、 <= 、< 、 < 、 >=
 dropPartitionSpec
     :
     KW_PARTITION
      LPAREN dropPartitionVal (COMMA  dropPartitionVal )* RPAREN -> ^(TOK_PARTSPEC dropPartitionVal +)
     ;
 
-//key (= 、 == 、 <>、 != 、 <= 、< 、 < 、 >=) value
+//key 符号  value
+注意:符号 = 、 == 、 <>、 != 、 <= 、< 、 < 、 >=
 dropPartitionVal
     :
     identifier dropPartitionOperator constant -> ^(TOK_PARTVAL identifier dropPartitionOperator constant)

@@ -1,0 +1,681 @@
+from子句
+1.from stat.nginx as u
+2.from stat.nginx TABLESAMPLE(BUCKET 1 OUT OF 2 ON coohua_id) as u
+3.from (select * from biao) table
+  注意
+  from (select * from biao) as table是错的,不允许有as,但是Hive的高版本的时候是可以允许有as的
+
+4.在from之后添加LATERAL VIEW explode(col1) myTable1 AS myCol1
+可以将from的结果进行行转换列操作,即对结果的每一行进行UDTF函数操作,eg:explode函数操作,操作后的列名字叫做myCol1,操作的表其一个临时名字叫做myTable1
+eg:
+SELECT qId, cId, vId FROM answer
+LATERAL VIEW explode(vIds) visitor AS vId
+WHERE cId = 2
+
+
+
+一、alterStatementSuffixLocation
+SET LOCATION xxxx
+二、alterStatementSuffixFileFormat
+1.SET FILEFORMAT SEQUENCEFILE
+2.SET FILEFORMAT TEXTFILE
+3.SET FILEFORMAT RCFILE
+4.SET FILEFORMAT ORCFILE
+5.SET FILEFORMAT INPUTFORMAT string OUTPUTFORMAT string [INPUTDRIVER string OUTPUTDRIVER string]
+6.SET FILEFORMAT xxxx 属于TOK_FILEFORMAT_GENERIC类型自定义格式
+三、alterStatementSuffixProtectMode
+1.ENABLE OFFLINE
+2.ENABLE NO_DROP [CASCADE]
+3.ENABLE READONLY
+4.DISABLE OFFLINE
+5.DISABLE NO_DROP [CASCADE]
+6.DISABLE READONLY
+四、alterStatementSuffixMergeFiles
+CONCATENATE
+五、alterStatementSuffixSerdeProperties
+1.SET SERDE string [WITH SERDEPROPERTIES(key=value,key=value)]
+2.SET SERDEPROPERTIES (key=value,key=value)
+六、alterStatementSuffixRenamePart
+RENAME TO PARTITION (name=value,name=value,name)
+七、alterStatementSuffixBucketNum
+INTO number BUCKETS
+八、alterTblPartitionStatementSuffixSkewedLocation 
+SET SKEWED LOCATION (key=value,key=value)
+九、alterStatementSuffixClusterbySortby
+1.NOT CLUSTERED
+2.NOT SORTED
+3.CLUSTERED BY (column1,column2) [SORTED BY (column1 desc,column2 desc)] into Number BUCKETS
+
+
+
+常用
+一、partitionSpec
+PARTITION (name=value,name=value,name)
+二、skewedColumnValue
+1.skewedColumnValue格式:常量
+2.skewedColumnValues格式:常量,常量
+3.skewedColumnValuePair 格式:(常量,常量)
+4.skewedColumnValuePairList 格式: (常量,常量),(常量,常量)
+5.skewedValueElement 格式:skewedColumnValues 或者 skewedColumnValuePairList
+a.常量,常量
+b.(常量,常量),(常量,常量)
+6.skewedValueLocationElement  格式:skewedColumnValue 或者skewedColumnValuePair
+a.常量
+b.(常量,常量)
+7.skewedLocationMap
+skewedValueLocationElement = String 即key=value形式
+8.skewedLocationsList
+  是skewedLocationMap的集合,格式:skewedLocationMap,skewedLocationMap
+9.skewedLocations
+  是skewedLocationsList用括号包裹上,格式:(skewedLocationMap,skewedLocationMap)
+
+
+三、columnNameOrder
+1.columnNameOrder 格式: string [ASC | DESC]
+  columnNameOrderList 格式: columnNameOrder,columnNameOrder,意义是columnNameOrder的集合
+2.columnNameComment 格式:string COMMENT string,表示属性 以及备注
+3.columnNameCommentList 格式:columnNameComment,columnNameComment 备注集合
+4.columnRefOrder 格式: expression [ASC | DESC], 意义表示对表达式进行排序
+5.columnName 意义,表示属性名称,格式: string
+  columnNameList 意义是columnName的集合,格式: string,string
+6.colType 意义表示字段的类型,格式type
+  colTypeList 意义表示字段的类型集合,即colType的集合,格式type,type
+7.columnNameColonType 意义表示定义一个属性,包含name、类型、注释
+  格式String:colType [COMMENT String]
+  columnNameType 意义表示定义一个属性,包含name、类型、注释
+  格式String colType [COMMENT String]
+  columnNameColonTypeList 意义表示定义一组属性,即columnNameColonType的集合,格式columnNameColonType,columnNameColonType
+  columnNameTypeList 意义表示定义一组属性,即columnNameType的集合,格式columnNameType,columnNameType,columnNameType
+8.tableOrPartition
+  格式: tableName [ PARTITION (name=value,name=value,name) ]
+9.ifExists 格式: IF EXISTS
+  ifNotExists 格式: IF NOT EXISTS
+10.dbPropertiesList 存储table的属性键值对信息集合
+   格式:key=value,key=value
+   dbProperties 存储table的属性键值对信息集合
+   格式:(key=value,key=value)
+11.dbLocation 和 partitionLocation
+   格式:LOCATION String
+12.ignoreProtection 表示忽略保护模式  格式:IGNORE PROTECTION
+13.orReplace 格式:OR REPLACE 
+14.restrictOrCascade 执行drop的时候使用的语法,表示是否强制执行约束条件
+格式:
+a.RESTRICT
+b.CASCADE
+15.
+
+
+四、
+1.tablePartitionPrefix
+格式:tableName [PARTITION (name=value,name=value,name)]
+2.tableFileFormat
+//STORED as SEQUENCEFILE |
+//STORED as TEXTFILE |
+//STORED as RCFILE |
+//STORED as TEXTFILE |
+//STORED as INPUTFORMAT xxx OUTPUTFORMAT xxx [INPUTDRIVER xxx OUTPUTDRIVER xxx]
+//STORED BY xxxx存储引擎, WITH SERDEPROPERTIES (key=value,key=value,key) ,注意key=value集合是为xxx存储引擎提供的参数集合
+//STORED AS xxxx
+3.tableRowFormatCollItemsIdentifier 为集合设置分隔符
+  格式COLLECTION ITEMS TERMINATED BY xxx 
+4.tableRowFormatMapKeysIdentifier 为Map设置分隔符
+  格式 MAP KEYS TERMINATED BY xxx 
+5.tableRowFormatLinesIdentifier 为每行设置分隔符
+  格式 LINES TERMINATED BY xxx
+6.tableRowFormatFieldIdentifier 为field设置分隔符
+  格式 FIELDS TERMINATED BY xxx [ESCAPED by xx]
+7.keyValueProperty  设置key=value属性
+  格式 String=String
+  keyProperty 设置key=null属性
+  格式 String=null
+  tablePropertiesList 是key=value集合,即格式 keyValueProperty,keyValueProperty,keyProperty,keyProperty
+  tableProperties 是key=value集合,即格式 (keyValueProperty,keyValueProperty,keyProperty,keyProperty)
+  tablePropertiesPrefixed
+  格式: TBLPROPERTIES (keyValueProperty,keyValueProperty,keyProperty,keyProperty)
+8.rowFormatDelimited 解析每一行的分隔信息
+ROW FORMAT DELIMITED [FIELDS TERMINATED BY xxx [ESCAPED by xx]]
+[COLLECTION ITEMS TERMINATED BY xxx ]
+[MAP KEYS TERMINATED BY xxx]
+[LINES TERMINATED BY xxx]
+9.rowFormatSerde 注意:key没有等号,表示默认值是null
+格式:
+ROW FORMAT SERDE "class全路径" [WHIN SERDEPROPERTIES TBLPROPERTIES (key=value,key=value,key)]
+10.rowFormat 或者 tableRowFormat, 解析一行信息
+a.
+ROW FORMAT DELIMITED [FIELDS TERMINATED BY xxx [ESCAPED by xx]]
+[COLLECTION ITEMS TERMINATED BY xxx ]
+[MAP KEYS TERMINATED BY xxx]
+[LINES TERMINATED BY xxx]
+b.ROW FORMAT SERDE "class全路径" [WHIN SERDEPROPERTIES TBLPROPERTIES (key=value,key=value,key)]
+11.tablePartition 定义一个表的分区集合,包括名字 类型 备注
+  格式:PARTITIONED BY (xxx colType COMMENT xxx,xxx colType COMMENT xxx)
+12.tableComment 或者databaseComment 为表或者数据库设置备注
+  格式:COMMENT String
+13.tableBuckets 为表进行分桶,即设置hadoop的partition类,以及设置每一个reduce中的排序方式
+  格式:CLUSTERED BY (column1,column2) [SORTED BY (column1 desc,column2 desc)] into Number BUCKETS
+14.tableSkewed 为表设置偏斜属性
+  格式:
+	SKEWED BY (属性字符串,属性字符串) on (属性值集合xxx,xxx) [STORED AS DIRECTORIES]
+	或者SKEWED BY (属性字符串,属性字符串) on (多组属性值集合 (xxx,xxx),(xxx,xxx),(xxx,xxx) ) [STORED AS DIRECTORIES]
+	例子:
+	create table T (c1 string, c2 string) skewed by (c1) on ('x1') 表示在c1属性的值为x1的时候可能会数据发生偏移,因此在join的时候要先预估一下是否一个表的c1=x1的值能否很少,并且存储在内存中,如果是,则可以进行优化
+	create table T (c1 string, c2 string) skewed by (c1,c2) on (('x11','x21'),('x12','x22')) 表示在c1,c2属性的值为(x11,x21),或者(x21,x22)的时候可能会数据发生偏移,因此在join的时候要先预估一下是否一个表的(x11,x21),或者(x21,x22)的值能否很少,并且存储在内存中,如果是,则可以进行优化
+
+
+
+五、索引
+1.indexPropertiesList 格式: key=value,key=value
+2.indexProperties 格式 (key=value,key=value)
+3.indexPropertiesPrefixed 格式 IDXPROPERTIES (key=value,key=value)
+4.indexTblName 格式: IN TABLE tableName
+5.autoRebuild 索引的可选项  格式  WITH DEFERRED REBUILD
+6.indexComment 索引的备注  格式 COMMENT String
+7.createIndexStatement 含义:对table01表建立索引,该索引针对column1,column2两个列建立索引,索引名称是table01_index
+格式:
+CREATE INDEX "索引名称" ON TABLE "表名" (column1,column2) AS "COMPACT、aggregate、bitmap、或者class全路径,参见HiveIndex类"
+[WITH DEFERRED REBUILD 表示延期建立索引] 
+[IDXPROPERTIES (key=value,key=value) 表示该index的额外属性信息]
+[IN TABLE tableName]
+[tableRowFormat]
+[tableFileFormat]
+[LOCATION xxx 表示存储在HDFS上的路径]
+[tablePropertiesPrefixed]
+[COMMENT String 索引的备注] 
+8.dropIndexStatement 删除一个数据表的一个索引
+格式:DROP INDEX [IF EXISTS] "indexName" ON tableName
+
+六、加载数据
+1.loadStatement
+格式:LOAD DATA [LOCAL] INPATH String [OVERWRITE] INTO TABLE tableName [PARTITION (name=value,name=value,name)]
+2.exportStatement 将表的数据导出到HDFS上
+格式: EXPORT TABLE tableName [PARTITION (name=value,name=value,name)] TO "Path"
+经过测试,纯粹的复制过程,将原始表的某个partition数据复制到新的path下
+3.importStatement 将HDFS上的数据导入到表中
+格式:IMPORT [EXTERNAL] TABLE [tableName [PARTITION (name=value,name=value,name)]] FROM "PATH" [LOCATION xxx]
+注意: 
+a.[LOCATION xxx] 表示将path的数据导入到表中,并且该表存储的路径是xxx
+b.经过测试,该导入是纯粹的复制过程,将FROM PATH 的内容复制到LOCATION xxx里面
+4.dropTableStatement 删除一个数据表
+格式:DROP TABLE [IF EXISTS] tableName
+5.dropDatabaseStatement 删除一个数据库
+格式:DROP (DATABASE|SCHEMA) [IF EXISTS] "database_name" [RESTRICT|CASCADE]; 
+6.createDatabaseStatement 创建一个数据库
+CREATE DATABASE|SCHEMA [IF NOT Exists] "databaseName" [COMMENT String] [LOCATION String][WITH DBPROPERTIES (key=value,key=value)]
+7.showStatement 表示SHOW 语法
+a.SHOW DATABASES|SCHEMAS LIKE "xxx" 模糊查询,一定要带引号
+b.SHOW TABLES [(FROM | IN) tableName ] like "xxx"
+c.SHOW COLUMNS (FROM | IN) tableName [(FROM | IN) db_name ]
+d.SHOW FUNCTIONS xxx
+e.SHOW PARTITIONS xxx PARTITION (name=value,name=value,name)
+f.SHOW CREATE TABLE tableName 
+g.SHOW TABLE EXTENDED [(FROM | IN) db_name ] like tableName [PARTITION (name=value,name=value,name)]
+h.SHOW TBLPROPERTIES tblName [(columnName)] 获取该表的某一个自定义属性内容
+i.SHOW LOCKS xxx .($ELEM$ | $KEY$ | $VALUE$ | xxx ) .($ELEM$ | $KEY$ | $VALUE$ | xxx )详细看.没看太懂
+j.SHOW [FORMATTED](INDEX|INDEXES) ON tableName (FROM | IN) db_name ]
+8.descTabTypeExpr 和 partTypeExpr
+  格式:.($ELEM$ | $KEY$ | $VALUE$ | xxx )
+9.descPartTypeExpr
+  格式:.($ELEM$ | $KEY$ | $VALUE$ | xxx ) [PARTITION (name=value,name=value,name)]
+10.descStatement 描述详细信息
+a.DESCRIBE | DESC [FORMATTED | EXTENDED | PRETTY] .($ELEM$ | $KEY$ | $VALUE$ | xxx ) [PARTITION (name=value,name=value,name)]
+b.DESCRIBE | DESC FUNCTION [EXTENDED] descFuncNames
+c.DESCRIBE | DESC DATABASE [EXTENDED] "dbName"
+11.analyzeStatement 分析执行语句
+  格式:ANALYZE TABLE tableName [ PARTITION (name=value,name=value,name) ] COMPUTE STATISTICS [NOSCAN | PARTIALSCAN | FOR COLUMNS "column1","column2"]
+12.createTableStatement 创建表
+格式:
+a.CREATE [EXTERNAL] TABLE [IF NOT Exists] tableName LIKE tableName [LOCATION xxx] [TBLPROPERTIES (keyValueProperty,keyValueProperty,keyProperty,keyProperty)]
+b.CREATE [EXTERNAL] TABLE [IF NOT Exists] tableName [(columnNameTypeList)] 
+  [COMMENT String] //备注
+  [PARTITIONED BY (xxx colType COMMENT xxx,xxx colType COMMENT xxx)] //分区
+  [CLUSTERED BY (column1,column2) [SORTED BY (column1 desc,column2 desc)] into Number BUCKETS] //为表进行分桶,即设置hadoop的partition类,以及设置每一个reduce中的排序方式
+  [tableSkewed] //为表设置偏斜属性
+  [tableRowFormat] //解析一行信息
+  [tableFileFormat] //数据表的存储方式
+  [LOCATION xxx] //存储在HDFS什么路径下
+  [TBLPROPERTIES (keyValueProperty,keyValueProperty,keyProperty,keyProperty)] //设置table的属性信息
+  [AS    selectClause
+   fromClause
+   whereClause?
+   groupByClause?
+   havingClause?
+   orderByClause?
+   clusterByClause?
+   distributeByClause?
+   sortByClause?
+   window_clause?] //写入sql查询语句,用于创建表
+13.destination
+格式:
+a.LOCAL DIRECTORY "path" [tableRowFormat] [tableFileFormat]
+b.DIRECTORY "path"
+c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
+注意:path必须是单引号或者双引号包裹
+14.insertClause
+格式:
+a.INSERT OVERWRITE LOCAL DIRECTORY "path" [tableRowFormat] [tableFileFormat] [IF NOT Exists]
+b.INSERT OVERWRITE DIRECTORY "path" [IF NOT Exists]
+c.INSERT OVERWRITE TABLE tableName [ PARTITION (name=value,name=value,name) ] [IF NOT Exists]
+d.INSERT INTO TABLE tableName [ PARTITION (name=value,name=value,name) ]
+注意:path必须是单引号或者双引号包裹
+15.truncateTableStatement
+格式:TRUNCATE TABLE tableName [PARTITION (name=value,name=value,name)] [COLUMNS (column1,column2...)]
+16.explainStatement
+格式:EXPLAIN [EXTENDED|FORMATTED|DEPENDENCY|LOGICAL] execStatement
+
+七、视图view
+1.createViewStatement 创建一个view视图
+格式:
+CREATE [OR REPLACE] VIEW [IF NOT Exists] tableName [("columnName1" COMMENT string,"columnName2" COMMENT string)] [COMMENT String]
+[PARTITIONED ON (columnName1,columnName2)]
+[TBLPROPERTIES (keyValueProperty,keyValueProperty,keyProperty,keyProperty)]
+AS selectStatement
+
+2.viewPartition
+格式:
+PARTITIONED ON (columnName1,columnName2)
+
+3.dropViewStatement 删除一个视图
+格式:
+DROP VIEW [IF Exists] viewName
+
+八、Macro
+1.createMacroStatement
+格式；
+a.CREATE TEMPORARY MACRO String() expression
+b.CREATE TEMPORARY MACRO String(columnNameTypeList) expression
+2.dropMacroStatement
+格式；
+DROP TEMPORARY MACRO [IF Exists] String
+
+九、函数
+1.createFunctionStatement 创建一个函数
+格式:CREATE TEMPORARY FUNCTION xxx as xxx
+
+2.dropFunctionStatement 删除一个自定义函数
+格式:DROP TEMPORARY FUNCTION [IF Exists] xxx
+
+十、ALERT
+1.alterStatementSuffixRename 重命名
+格式:"oldName" RENAME TO "newName"
+2.alterDatabaseStatementSuffix 和 alterDatabaseSuffixProperties 设置属性
+格式:String SET DBPROPERTIES (key=value,key=value)
+3.alterStatementSuffixArchive
+格式:String ARCHIVE PARTITION (name=value,name=value,name)
+4.alterStatementSuffixUnArchive
+格式:String UNARCHIVE PARTITION (name=value,name=value,name)
+5.alterStatementSuffixTouch
+格式:String TOUCH PARTITION (name=value,name=value,name)
+6.alterStatementSuffixDropPartitions 删除一些partition
+格式:String DROP [IF Exists] PARTITION(key 符号 value,key 符号 value),PARTITION( key 符号 value,key 符号 value) [IGNORE PROTECTION]
+注意:符号 = 、 == 、 <>、 != 、 <= 、< 、 < 、 >=
+7.alterViewSuffixProperties 和 alterStatementSuffixProperties 设置和取消一些属性
+格式:
+a.String SET TBLPROPERTIES (keyValueProperty,keyValueProperty)
+b.String UNSET TBLPROPERTIES [IF Exists](keyValueProperty,keyValueProperty)
+8.alterStatementSuffixAddPartitionsElement
+格式:PARTITION (name=value,name=value,name) [LOCATION String]
+9.alterStatementSuffixAddPartitions
+格式:String ADD [IF NOT Exists] alterStatementSuffixAddPartitionsElement+
+10.alterStatementSuffixAddCol
+格式:String ADD|REPLACE COLUMNS (columnNameTypeList)
+11.alterStatementSuffixRenameCol
+格式:String CHANGE [COLUMN] "oldName" "newName" type [COMMENT String] [FIRST|AFTER String]
+注意:type表示字段类型
+12.alterStatementChangeColPosition
+格式:FIRST|AFTER String
+13.alterViewStatementSuffix
+格式:
+a.String SET TBLPROPERTIES (keyValueProperty,keyValueProperty)
+b.String UNSET TBLPROPERTIES [IF Exists](keyValueProperty,keyValueProperty)
+c."oldName" RENAME TO "newName"
+d.PARTITION (name=value,name=value,name) [LOCATION String]
+e.String DROP [IF Exists] PARTITION(key 符号 value,key 符号 value),PARTITION( key 符号 value,key 符号 value) [IGNORE PROTECTION]
+注意:符号 = 、 == 、 <>、 != 、 <= 、< 、 < 、 >=
+表示删除一些partition
+f.tableName AS selectStatement
+
+14.alterIndexStatementSuffix
+格式:
+a."indexName" ON "tableName" [PARTITION (name=value,name=value,name)] REBUILD
+b."indexName" ON "tableName" [PARTITION (name=value,name=value,name)] SET IDXPROPERTIES (key=value,key=value)
+
+15.alterTableStatementSuffix
+格式:
+a."oldName" RENAME TO "newName"
+b.String ADD|REPLACE COLUMNS (columnNameTypeList)
+c.String CHANGE [COLUMN] "oldName" "newName" type [COMMENT String] [FIRST|AFTER String]
+注意:type表示字段类型
+d.String DROP [IF Exists] PARTITION(key 符号 value,key 符号 value),PARTITION( key 符号 value,key 符号 value) [IGNORE PROTECTION]
+注意:符号 = 、 == 、 <>、 != 、 <= 、< 、 < 、 >=
+删除一些partition
+e.PARTITION (name=value,name=value,name) [LOCATION String]
+f.String TOUCH PARTITION (name=value,name=value,name)
+g.String ARCHIVE PARTITION (name=value,name=value,name)
+h.String UNARCHIVE PARTITION (name=value,name=value,name)
+i.String SET TBLPROPERTIES (keyValueProperty,keyValueProperty)
+j.String UNSET TBLPROPERTIES [IF Exists](keyValueProperty,keyValueProperty)
+k.tableName [PARTITION (name=value,name=value,name)] alterTblPartitionStatementSuffix
+l.String PARTITION COLUMN (columnNameType)
+m.String tableSkewed
+n.String NOT SKEWED
+o.String NOT STORED AS DIRECTORIES
+p.tableName EXCHANGE PARTITION (name=value,name=value,name) WITH TABLE tableName
+
+16.alterTblPartitionStatement
+格式:
+a.tableName [PARTITION (name=value,name=value,name)] alterTblPartitionStatementSuffix
+b.String PARTITION COLUMN (columnNameType)
+
+17.alterStatementSuffixSkewedby
+格式:
+a.String tableSkewed
+b.String NOT SKEWED
+c.String NOT STORED AS DIRECTORIES
+
+18.alterStatementSuffixExchangePartition
+格式:tableName EXCHANGE PARTITION (name=value,name=value,name) WITH TABLE tableName
+
+19.alterStatement
+格式:
+a.ALTER TABLE alterTableStatementSuffix
+b.ALTER VIEW alterViewStatementSuffix
+c.ALTER INDEX alterIndexStatementSuffix
+d.ALTER DATABASE alterDatabaseStatementSuffix
+
+
+十一、权限
+1.lockStatement
+  格式:LOCK TABLE tableName [PARTITION (name=value,name=value,name)] (SHARED | EXCLUSIVE)
+2.unlockStatement
+  格式:UNLOCK TABLE tableName [PARTITION (name=value,name=value,name)]
+3.createRoleStatement
+  格式:CREATE ROLE "roleName"
+4.dropRoleStatement
+  格式:DROP ROLE "roleName"
+5.privilegeObject
+  格式:ON TABLE|DATABASE String [PARTITION (name=value,name=value,name)]
+6.privilegeList
+  格式:privlegeDef,...
+7.privlegeDef
+  格式:ALL | ALTER | UPDATE | CREATE | DROP | INDEX | LOCK | SELECT | SHOW_DATABASE [(column1,column2...)]
+8.privilegeType
+  格式: ALL | ALTER | UPDATE | CREATE | DROP | INDEX | LOCK | SELECT | SHOW_DATABASE
+9.principalSpecification
+  格式: USER | GROUP | ROLE String,USER | GROUP | ROLE String...
+10.metastoreCheck
+  格式: MSCK [REPAIR] [TABLE tableName PARTITION (name=value,name=value,name),PARTITION (name=value,name=value,name)...]
+11.privilegeIncludeColObject
+  格式:ON TABLE|DATABASE String [(column1,column2...)] [PARTITION (name=value,name=value,name)]
+12.grantPrivileges
+  格式:GRANT privilegeList [privilegeObject] TO principalSpecification [WITH GRANT OPTION]
+13.revokePrivileges
+  格式:REVOKE privilegeList [privilegeObject] FROM principalSpecification
+14.grantRole
+  格式:GRANT ROLE String,... TO principalSpecification
+15.revokeRole
+  格式:REVOKE ROLE String,... FROM principalSpecification
+16.showRoleGrants
+  格式:SHOW ROLE GRANT USER | GROUP | ROLE String
+17.showGrants
+  格式:SHOW GRANT USER | GROUP | ROLE String [privilegeIncludeColObject]
+十二、基础sql格式
+1.groupByClause
+  格式:GROUP BY expression,expression...[WITH ROLLUP | WITH CUBE] [GROUPING SETS (groupingSetExpression,groupingSetExpression..)]
+2.groupingSetExpression
+  格式:
+  a.expression
+  b.(expression,expression...)
+  c.()
+3.havingClause
+  格式:HAVING expression
+4.orderByClause
+  格式:
+  a.ORDER BY expression [ASC | DESC],expression [ASC | DESC]
+  b.ORDER BY (expression [ASC | DESC],expression [ASC | DESC])
+5.clusterByClause
+  格式:
+  a.CLUSTER BY (expression,expression)
+  b.CLUSTER BY expression,expression
+6.partitionByClause
+  格式:
+  a.PARTITION by (expression,expression)
+  b.PARTITION by expression,expression
+7.distributeByClause
+  格式:
+  a.DISTRIBUTE BY expression,expression
+  b.DISTRIBUTE BY (expression,expression)
+8.sortByClause
+  格式:
+  a.SORT BY expression [ASC | DESC],expression [ASC | DESC]
+  b.SORT BY (expression [ASC | DESC],expression [ASC | DESC])
+9.limitClause
+  格式:LIMIT Number
+10.storedAsDirs 格式 STORED AS DIRECTORIES
+11.showStmtIdentifier 即show后面的字符串,任意字符串即可
+  格式: String
+12.whenExpression
+格式:CASE WHEN expression THEN expression WHEN expression THEN expression .. [ELSE expression]
+13.caseExpression
+格式:CASE expression WHEN expression THEN expression WHEN expression THEN expression .. [ELSE expression]
+14.castExpression
+格式:CAST (expression AS type类型)
+15.functionName
+格式:IF | ARRAY | MAP | STRUCT | UNIONTYPE | String
+16.function
+格式:
+functionName(*) [OVER window_specification]
+functionName() OVER window_specification
+functionName([DISTINCT] [selectExpression,selectExpression..]) OVER window_specification
+17.hintArgName 暗示条款的每一个参数的name由有效标识符组成即可
+格式:String
+18.hintArgs 暗示条款的参数由逗号拆分的多个参数组成
+格式:String,String...
+19.hintName 由MAPJOIN、STREAMTABLE、HOLD_DDLTIME三个组成
+格式:MAPJOIN|STREAMTABLE|DDLTIME
+20.hintItem 每一个hintItem对象由hintName (hintArgs)或者hintName组成,例如STREAMTABLE(t1,t2)
+格式:MAPJOIN|STREAMTABLE|DDLTIME [(String,String...)]
+21.hintList 由逗号拆分的一组hintItem组成
+格式:hintItem,hintItem..
+22.hintClause 暗示条款以/*+开头,以*/结尾,期间包含hintList
+格式:/*+ hintList */
+eg:/*+ STREAMTABLE(t1) */
+23.selectItem 
+格式:
+a.selectExpression [AS] String 为每一个查询项起一个别名
+b.selectExpression [AS] (String,String..) 为每一个查询项起多个别名,但是好像现实环境是不允许的
+24.selectExpression 查询的某一项
+格式:tableName.* |dbName.tableName.* |expression
+25.selectExpressionList 查询的多项计划
+格式:selectExpression,selectExpression...
+26.selectList 查询的属性集合,包括使用as 别名语法
+格式:selectItem,selectItem..
+27.selectClause 查询语句
+格式:
+SELECT [hintClause] [ALL|DISTINCT] selectList
+SELECT [hintClause] TRANSFORM selectTrfmClause
+注意:
+例如SELECT DISTINCT col1, col2 FROM t1 表示按照col1和col2一起进行distinct,而不是仅仅按照col1进行过滤,相当于group by col1,col2操作
+并且DISTINCT后面的所有属性都是相当于要参与group by操作的含义,除非使用函数,否则不允许使用属性。
+
+十三、数据窗口
+1.window_frame
+格式:
+window_range_expression | window_value_expression
+
+2.window_range_expression 
+格式:
+a.ROWS UNBOUNDED PRECEDING
+b.ROWS CURRENT ROW
+c.ROWS Number PRECEDING
+d.ROWS BETWEEN window_frame_boundary AND window_frame_boundary
+3.window_value_expression 
+格式:
+a.RANGE UNBOUNDED PRECEDING
+b.RANGE CURRENT ROW
+c.RANGE Number PRECEDING
+d.RANGE BETWEEN window_frame_boundary AND window_frame_boundary
+4.window_frame_start_boundary 
+格式:
+a.UNBOUNDED PRECEDING
+b.CURRENT ROW
+c.Number PRECEDING
+
+5.window_frame_boundary
+格式:
+a.UNBOUNDED PRECEDING|FOLLOWING //不限制的规则或者不限制根据以下规则
+b.CURRENT ROW 
+c.Number PRECEDING|FOLLOWING
+
+6.window_clause 数据窗口
+格式:WINDOW window_defn,window_defn..
+
+7.window_specification 
+格式:
+a.String
+b.([String] [partitioningSpec] [window_frame])
+
+8.window_defn 任意字符串表达式 as @window_specification
+格式:
+a.String AS String
+b.String AS ([String] [partitioningSpec] [window_frame])
+
+十四、FROM 子句
+1.tableBucketSample 对table进行抽样提取数据
+  格式:TABLESAMPLE(BUCKET 数字 OUT OF 数字  [ ON expression,expression.. ] )
+2.splitSample 对table进行抽样提取数据
+  格式:
+  a.TABLESAMPLE (Number PERCENT | ROWS)
+  b.TABLESAMPLE(ByteLengthLiteral)
+  注意:
+  ByteLengthLiteral表示匹配数字+单位,即表示长度信息,即(Digit)+ ('b' | 'B' | 'k' | 'K' | 'm' | 'M' | 'g' | 'G')
+3.tableSample 对table进行抽样提取数据
+  格式:
+  a.TABLESAMPLE(BUCKET 数字 OUT OF 数字  [ ON expression,expression.. ] )
+  b.TABLESAMPLE (Number PERCENT | ROWS)
+  c.TABLESAMPLE(ByteLengthLiteral) 
+  注意:
+  ByteLengthLiteral表示匹配数字+单位,即表示长度信息,即(Digit)+ ('b' | 'B' | 'k' | 'K' | 'm' | 'M' | 'g' | 'G')
+4.tableSource
+  格式:
+  tableName [(keyValueProperty,keyValueProperty,keyProperty,keyProperty)] [tableSample] [ [AS] Identifier ]
+5.viewName 和 tableName 视图和数据库表命名规则
+  格式:database.tableName | tableName
+6.whereClause 
+  格式:WHERE expression
+7.subQuerySource
+  格式:(queryStatementExpression) String
+8.lateralView
+  格式:LATERAL VIEW [OUTER] function "tableAlias" [AS identifier,identifier..]
+9.fromSource 属于from后面接的信息
+  格式:
+  a.tableName [(keyValueProperty,keyValueProperty,keyProperty,keyProperty)] [tableSample] [ [AS] Identifier ] lateralView lateralView ..直接查询一个表,支持抽样
+  b.(queryStatementExpression) String lateralView lateralView .. 子查询
+  c.partitionedTableFunction lateralView lateralView ..
+10.fromClause from子句
+  格式:
+  a.FROM fromSource joinToken fromSource [ON expression] joinToken fromSource [ON expression]..
+  b.FROM UNIQUEJOIN [PRESERVE] fromSource (expression,expression..)
+11.joinSource
+  格式:
+  a.fromSource joinToken fromSource [ON expression] joinToken fromSource [ON expression]..
+  b.UNIQUEJOIN [PRESERVE] fromSource (expression,expression..)
+12.uniqueJoinSource
+  格式:[PRESERVE] fromSource (expression,expression..)
+13.joinToken
+  格式:JOIN | INNER JOIN |CROSS JOIN | LEFT [OUTER] JOIN | RIGHT [OUTER] JOIN | FULL [OUTER] JOIN | LEFT SEMI JOIN
+14.tableOrColumn 和 tableAlias 表示任意字符串,可以表示table名称或者列属性名称或者别名
+  格式:String
+15.expressionList 多个表达式集合
+  格式:expression,expression..
+16.aliasList 定义别名集合
+  格式:String,String..
+17.partitioningSpec
+  格式:
+  a.PARTITION by expression,expression.. [ORDER BY expression [ASC | DESC],expression [ASC | DESC]..]
+  b.ORDER BY expression [ASC | DESC],expression [ASC | DESC]..
+  c.DISTRIBUTE BY expression,expression.. [SORT BY expression [ASC | DESC],expression [ASC | DESC]..]
+  d.SORT BY expression [ASC | DESC],expression [ASC | DESC]..
+  e.CLUSTER BY (expression,expression..)
+18.partitionTableFunctionSource
+  格式:
+  a.(queryStatementExpression) String 子查询
+  b.tableName [(keyValueProperty,keyValueProperty,keyProperty,keyProperty)] [tableSample] [ [AS] Identifier ] 仅仅查询一个表,并且支持抽样
+  c.partitionedTableFunction 嵌套查询
+19.partitionedTableFunction
+   格式:Identifier (ON partitionTableFunctionSource [partitioningSpec] Identifier(expression ),Identifier(expression).. ) alias
+
+
+------------------------------------
+regular_body
+   :
+   insertClause
+   selectClause
+   fromClause
+   whereClause?
+   groupByClause?
+   havingClause?
+   orderByClause?
+   clusterByClause?
+   distributeByClause?
+   sortByClause?
+   window_clause?
+   limitClause? -> ^(TOK_QUERY fromClause ^(TOK_INSERT insertClause
+                     selectClause whereClause? groupByClause? havingClause? orderByClause? clusterByClause?
+                     distributeByClause? sortByClause? window_clause? limitClause?))
+   |
+   selectStatement
+   ;
+
+selectStatement
+   :
+   selectClause
+   fromClause
+   whereClause?
+   groupByClause?
+   havingClause?
+   orderByClause?
+   clusterByClause?
+   distributeByClause?
+   sortByClause?
+   window_clause?
+   limitClause? -> ^(TOK_QUERY fromClause ^(TOK_INSERT ^(TOK_DESTINATION ^(TOK_DIR TOK_TMP_FILE))
+                     selectClause whereClause? groupByClause? havingClause? orderByClause? clusterByClause?
+                     distributeByClause? sortByClause? window_clause? limitClause?))
+   ;
+
+
+body
+   :
+   insertClause
+   selectClause
+   lateralView?
+   whereClause?
+   groupByClause?
+   havingClause?
+   orderByClause?
+   clusterByClause?
+   distributeByClause?
+   sortByClause?
+   window_clause?
+   limitClause? -> ^(TOK_INSERT insertClause
+                     selectClause lateralView? whereClause? groupByClause? havingClause? orderByClause? clusterByClause?
+                     distributeByClause? sortByClause? window_clause? limitClause?)
+   |
+   selectClause
+   lateralView?
+   whereClause?
+   groupByClause?
+   havingClause?
+   orderByClause?
+   clusterByClause?
+   distributeByClause?
+   sortByClause?
+   window_clause?
+   limitClause? -> ^(TOK_INSERT ^(TOK_DESTINATION ^(TOK_DIR TOK_TMP_FILE))
+                     selectClause lateralView? whereClause? groupByClause? havingClause? orderByClause? clusterByClause?
+                     distributeByClause? sortByClause? window_clause? limitClause?)
+   ;
+
+----------------------
+
+

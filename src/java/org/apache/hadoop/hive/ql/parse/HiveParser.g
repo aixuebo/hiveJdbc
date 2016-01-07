@@ -557,12 +557,8 @@ statement
 	: explainStatement EOF
 	| execStatement EOF
 	;
-//执行以下sql语句,
-//EXPLAIN execStatement
-//EXPLAIN EXTENDED execStatement
-//EXPLAIN FORMATTED execStatement
-//EXPLAIN DEPENDENCY execStatement
-//EXPLAIN LOGICAL execStatement
+
+格式:EXPLAIN [EXTENDED|FORMATTED|DEPENDENCY|LOGICAL] execStatement
 explainStatement
 @init { msgs.push("explain statement"); }
 @after { msgs.pop(); }
@@ -580,6 +576,7 @@ execStatement
     | ddlStatement
     ;
 
+格式:LOAD DATA [LOCAL] INPATH String [OVERWRITE] INTO TABLE tableName [PARTITION (name=value,name=value,name)]
 loadStatement
 @init { msgs.push("load statement"); }
 @after { msgs.pop(); }
@@ -587,6 +584,8 @@ loadStatement
     -> ^(TOK_LOAD $path $tab $islocal? $isoverwrite?)
     ;
 
+将表的数据导出到HDFS上
+格式: EXPORT TABLE tableName [PARTITION (name=value,name=value,name)] TO "Path"
 exportStatement
 @init { msgs.push("export statement"); }
 @after { msgs.pop(); }
@@ -594,6 +593,9 @@ exportStatement
     -> ^(TOK_EXPORT $tab $path)
     ;
 
+将HDFS上的数据导入到表中
+格式:IMPORT [EXTERNAL] TABLE [tableName [PARTITION (name=value,name=value,name)]] FROM "PATH" [LOCATION xxx]
+注意: [LOCATION xxx] 表示将path的数据导入到表中,并且该表存储的路径是xxx
 importStatement
 @init { msgs.push("import statement"); }
 @after { msgs.pop(); }
@@ -686,7 +688,8 @@ ignoreProtection
         -> ^(TOK_IGNOREPROTECTION)
         ;
 
-//格式 create database|schema [ifNotExists] databaseName [databaseComment] [dbLocation] [with DBPROPERTIES (key=value,key=value)]
+创建一个数据库
+格式:CREATE DATABASE|SCHEMA [IF NOT Exists] "databaseName" [COMMENT String] [LOCATION String][WITH DBPROPERTIES (key=value,key=value)]
 createDatabaseStatement
 @init { msgs.push("create database statement"); }
 @after { msgs.pop(); }
@@ -752,42 +755,18 @@ databaseComment
     -> ^(TOK_DATABASECOMMENT $comment)
     ;
 
-//格式 create [EXTERNAL] table [ifNotExists] tableName LIKE tableNameSource [tableNameSourceLocation] [附加属性信息TBLPROPERTIES (key=value,key=value)]
-//或者 create [EXTERNAL] table [ifNotExists] tableName [(xxx colType COMMENT xxx,xxx colType COMMENT xxx)] [COMMENT 字符换] 
-//      [partitioned by (xxx colType COMMENT xxx,xxx colType COMMENT xxx)]
-//      [CLUSTERED BY (格式属性字符串,属性字符串) [SORTED by ( 字符串 [asc|desc],格式 字符串 [asc|desc]) ] into Number BUCKETS ] 
-// [     SKEWED BY (属性字符串,属性字符串) on (属性值集合xxx,xxx) [STORED AS DIRECTORIES]
-//         或者SKEWED BY (属性字符串,属性字符串) on (多组属性值集合 (xxx,xxx),(xxx,xxx),(xxx,xxx) ) [STORED AS DIRECTORIES]
-//	]
-// //解析每一行的分隔信息
-//[
-// ROW FORMAT DELIMITED [FIELDS terminated by xxx [ESCAPED by xx] ] 
-//[COLLECTION ITEMS terminated by xxx ]
-//[MAP KEYS terminated by xxx ]
-//[LINES terminated by xxx ] 
-// ]
-/**
-[
-//数据文件格式
-//STORED as SEQUENCEFILE |
-//STORED as TEXTFILE |
-//STORED as RCFILE |
-//STORED as TEXTFILE |
-//STORED as INPUTFORMAT xxx OUTPUTFORMAT xxx [INPUTDRIVER xxx OUTPUTDRIVER xxx]
-]
-
-[
-存储路径
-LOCATION xxx
-]
-
-[
-附加属性信息
-TBLPROPERTIES (key=value,key=value)
-]
-
-[as 
-   selectClause
+格式
+a.CREATE [EXTERNAL] TABLE [IF NOT Exists] tableName LIKE tableName [LOCATION xxx] [TBLPROPERTIES (keyValueProperty,keyValueProperty,keyProperty,keyProperty)]
+b.CREATE [EXTERNAL] TABLE [IF NOT Exists] tableName [(columnNameTypeList)] 
+  [COMMENT String] //备注
+  [PARTITIONED BY (xxx colType COMMENT xxx,xxx colType COMMENT xxx)] //分区
+  [CLUSTERED BY (column1,column2) [SORTED BY (column1 desc,column2 desc)] into Number BUCKETS] //为表进行分桶,即设置hadoop的partition类,以及设置每一个reduce中的排序方式
+  [tableSkewed] //为表设置偏斜属性
+  [tableRowFormat] //解析一行信息
+  [tableFileFormat] //数据表的存储方式
+  [LOCATION xxx] //存储在HDFS什么路径下
+  [TBLPROPERTIES (keyValueProperty,keyValueProperty,keyProperty,keyProperty)] //设置table的属性信息
+  [AS    selectClause
    fromClause
    whereClause?
    groupByClause?
@@ -796,11 +775,8 @@ TBLPROPERTIES (key=value,key=value)
    clusterByClause?
    distributeByClause?
    sortByClause?
-   window_clause?
-]
-
-*/
-createTableStatement
+   window_clause?] //写入sql查询语句,用于创建表
+createTableStatement 创建表
 @init { msgs.push("create table statement"); }
 @after { msgs.pop(); }
     : KW_CREATE (ext=KW_EXTERNAL)? KW_TABLE ifNotExists? name=tableName
@@ -833,6 +809,7 @@ createTableStatement
         )
     ;
 
+格式:TRUNCATE TABLE tableName [PARTITION (name=value,name=value,name)] [COLUMNS (column1,column2...)]
 truncateTableStatement
 @init { msgs.push("truncate table statement"); }
 @after { msgs.pop(); }
@@ -941,6 +918,8 @@ indexPropertiesList
       keyValueProperty (COMMA keyValueProperty)* -> ^(TOK_INDEXPROPLIST keyValueProperty+)
     ;
 
+删除一个数据表的一个索引
+格式:DROP INDEX [IF EXISTS] "indexName" ON tableName
 dropIndexStatement
 @init { msgs.push("drop index statement");}
 @after {msgs.pop();}
@@ -948,12 +927,19 @@ dropIndexStatement
     ->^(TOK_DROPINDEX $indexName $tab ifExists?)
     ;
 
+删除一个数据表
+格式:DROP TABLE [IF EXISTS] tableName
 dropTableStatement
 @init { msgs.push("drop statement"); }
 @after { msgs.pop(); }
     : KW_DROP KW_TABLE ifExists? tableName -> ^(TOK_DROPTABLE tableName ifExists?)
     ;
 
+格式:
+a.ALTER TABLE alterTableStatementSuffix
+b.ALTER VIEW alterViewStatementSuffix
+c.ALTER INDEX alterIndexStatementSuffix
+d.ALTER DATABASE alterDatabaseStatementSuffix
 alterStatement
 @init { msgs.push("alter statement"); }
 @after { msgs.pop(); }
@@ -969,6 +955,27 @@ alterStatement
         )
     ;
 
+
+格式:
+a."oldName" RENAME TO "newName"
+b.String ADD|REPLACE COLUMNS (columnNameTypeList)
+c.String CHANGE [COLUMN] "oldName" "newName" type [COMMENT String] [FIRST|AFTER String]
+注意:type表示字段类型
+d.String DROP [IF Exists] PARTITION(key 符号 value,key 符号 value),PARTITION( key 符号 value,key 符号 value) [IGNORE PROTECTION]
+注意:符号 = 、 == 、 <>、 != 、 <= 、< 、 < 、 >=
+删除一些partition
+e.PARTITION (name=value,name=value,name) [LOCATION String]
+f.String TOUCH PARTITION (name=value,name=value,name)
+g.String ARCHIVE PARTITION (name=value,name=value,name)
+h.String UNARCHIVE PARTITION (name=value,name=value,name)
+i.String SET TBLPROPERTIES (keyValueProperty,keyValueProperty)
+j.String UNSET TBLPROPERTIES [IF Exists](keyValueProperty,keyValueProperty)
+k.tableName [PARTITION (name=value,name=value,name)] alterTblPartitionStatementSuffix
+l.String PARTITION COLUMN (columnNameType)
+m.String tableSkewed
+n.String NOT SKEWED
+o.String NOT STORED AS DIRECTORIES
+p.tableName EXCHANGE PARTITION (name=value,name=value,name) WITH TABLE tableName
 alterTableStatementSuffix
 @init { msgs.push("alter table statement"); }
 @after { msgs.pop(); }
@@ -986,6 +993,16 @@ alterTableStatementSuffix
     | alterStatementSuffixExchangePartition
     ;
 
+
+格式:
+a.String SET TBLPROPERTIES (keyValueProperty,keyValueProperty)
+b.String UNSET TBLPROPERTIES [IF Exists](keyValueProperty,keyValueProperty)
+c."oldName" RENAME TO "newName"
+d.PARTITION (name=value,name=value,name) [LOCATION String]
+e.String DROP [IF Exists] PARTITION(key 符号 value,key 符号 value),PARTITION( key 符号 value,key 符号 value) [IGNORE PROTECTION]
+注意:符号 = 、 == 、 <>、 != 、 <= 、< 、 < 、 >=
+表示删除一些partition
+f.tableName AS selectStatement
 alterViewStatementSuffix
 @init { msgs.push("alter view statement"); }
 @after { msgs.pop(); }
@@ -1000,6 +1017,10 @@ alterViewStatementSuffix
         -> ^(TOK_ALTERVIEW_AS $name selectStatement)
     ;
 
+
+格式:
+a."indexName" ON "tableName" [PARTITION (name=value,name=value,name)] REBUILD
+b."indexName" ON "tableName" [PARTITION (name=value,name=value,name)] SET IDXPROPERTIES (key=value,key=value)
 alterIndexStatementSuffix
 @init { msgs.push("alter index statement"); }
 @after { msgs.pop(); }
@@ -1016,12 +1037,16 @@ alterIndexStatementSuffix
     )
     ;
 
+设置属性
+格式:String SET DBPROPERTIES (key=value,key=value)
 alterDatabaseStatementSuffix
 @init { msgs.push("alter database statement"); }
 @after { msgs.pop(); }
     : alterDatabaseSuffixProperties
     ;
 
+设置属性
+格式:String SET DBPROPERTIES (key=value,key=value)
 alterDatabaseSuffixProperties
 @init { msgs.push("alter database properties statement"); }
 @after { msgs.pop(); }
@@ -1029,6 +1054,8 @@ alterDatabaseSuffixProperties
     -> ^(TOK_ALTERDATABASE_PROPERTIES $name dbProperties)
     ;
 
+重命名
+格式:"oldName" RENAME TO "newName"
 alterStatementSuffixRename
 @init { msgs.push("rename statement"); }
 @after { msgs.pop(); }
@@ -1036,6 +1063,7 @@ alterStatementSuffixRename
     -> ^(TOK_ALTERTABLE_RENAME $oldName $newName)
     ;
 
+格式:String ADD|REPLACE COLUMNS (columnNameTypeList)
 alterStatementSuffixAddCol
 @init { msgs.push("add column statement"); }
 @after { msgs.pop(); }
@@ -1044,6 +1072,9 @@ alterStatementSuffixAddCol
     ->                 ^(TOK_ALTERTABLE_REPLACECOLS identifier columnNameTypeList)
     ;
 
+
+格式:String CHANGE [COLUMN] "oldName" "newName" type [COMMENT String] [FIRST|AFTER String]
+注意:type表示字段类型
 alterStatementSuffixRenameCol
 @init { msgs.push("rename column name"); }
 @after { msgs.pop(); }
@@ -1051,12 +1082,14 @@ alterStatementSuffixRenameCol
     ->^(TOK_ALTERTABLE_RENAMECOL identifier $oldName $newName colType $comment? alterStatementChangeColPosition?)
     ;
 
+格式:FIRST|AFTER String
 alterStatementChangeColPosition
     : first=KW_FIRST|KW_AFTER afterCol=identifier
     ->{$first != null}? ^(TOK_ALTERTABLE_CHANGECOL_AFTER_POSITION )
     -> ^(TOK_ALTERTABLE_CHANGECOL_AFTER_POSITION $afterCol)
     ;
 
+格式:String ADD [IF NOT Exists] alterStatementSuffixAddPartitionsElement+
 alterStatementSuffixAddPartitions
 @init { msgs.push("add partition statement"); }
 @after { msgs.pop(); }
@@ -1064,10 +1097,12 @@ alterStatementSuffixAddPartitions
     -> ^(TOK_ALTERTABLE_ADDPARTS identifier ifNotExists? alterStatementSuffixAddPartitionsElement+)
     ;
 
+格式:PARTITION (name=value,name=value,name) [LOCATION String]
 alterStatementSuffixAddPartitionsElement
     : partitionSpec partitionLocation?
     ;
 
+格式:String TOUCH PARTITION (name=value,name=value,name)
 alterStatementSuffixTouch
 @init { msgs.push("touch statement"); }
 @after { msgs.pop(); }
@@ -1075,6 +1110,7 @@ alterStatementSuffixTouch
     -> ^(TOK_ALTERTABLE_TOUCH identifier (partitionSpec)*)
     ;
 
+格式:String ARCHIVE PARTITION (name=value,name=value,name)
 alterStatementSuffixArchive
 @init { msgs.push("archive statement"); }
 @after { msgs.pop(); }
@@ -1082,6 +1118,7 @@ alterStatementSuffixArchive
     -> ^(TOK_ALTERTABLE_ARCHIVE identifier (partitionSpec)*)
     ;
 
+格式:String UNARCHIVE PARTITION (name=value,name=value,name)
 alterStatementSuffixUnArchive
 @init { msgs.push("unarchive statement"); }
 @after { msgs.pop(); }
@@ -1096,6 +1133,9 @@ partitionLocation
       KW_LOCATION locn=StringLiteral -> ^(TOK_PARTITIONLOCATION $locn)
     ;
 
+删除一些partition
+格式:String DROP [IF Exists] PARTITION(key 符号 value,key 符号 value),PARTITION( key 符号 value,key 符号 value) [IGNORE PROTECTION]
+注意:符号 = 、 == 、 <>、 != 、 <= 、< 、 < 、 >=
 alterStatementSuffixDropPartitions
 @init { msgs.push("drop partition statement"); }
 @after { msgs.pop(); }
@@ -1103,6 +1143,10 @@ alterStatementSuffixDropPartitions
     -> ^(TOK_ALTERTABLE_DROPPARTS identifier dropPartitionSpec+ ifExists? ignoreProtection?)
     ;
 
+设置和取消一些属性
+格式:
+a.String SET TBLPROPERTIES (keyValueProperty,keyValueProperty)
+b.String UNSET TBLPROPERTIES [IF Exists](keyValueProperty,keyValueProperty)
 alterStatementSuffixProperties
 @init { msgs.push("alter properties statement"); }
 @after { msgs.pop(); }
@@ -1112,6 +1156,10 @@ alterStatementSuffixProperties
     -> ^(TOK_DROPTABLE_PROPERTIES $name tableProperties ifExists?)
     ;
 
+设置和取消一些属性
+格式:
+a.String SET TBLPROPERTIES (keyValueProperty,keyValueProperty)
+b.String UNSET TBLPROPERTIES [IF Exists](keyValueProperty,keyValueProperty)
 alterViewSuffixProperties
 @init { msgs.push("alter view properties statement"); }
 @after { msgs.pop(); }
@@ -1120,6 +1168,10 @@ alterViewSuffixProperties
     | name=identifier KW_UNSET KW_TBLPROPERTIES ifExists? tableProperties
     -> ^(TOK_DROPVIEW_PROPERTIES $name tableProperties ifExists?)
     ;
+
+格式
+1.SET SERDE string [WITH SERDEPROPERTIES(key=value,key=value)]
+2.SET SERDEPROPERTIES (key=value,key=value)
 
 alterStatementSuffixSerdeProperties
 @init { msgs.push("alter serdes statement"); }
@@ -1130,7 +1182,7 @@ alterStatementSuffixSerdeProperties
     -> ^(TOK_ALTERTABLE_SERDEPROPERTIES tableProperties)
     ;
 
-//tableName []
+//tableName [PARTITION (name=value,name=value,name)]
 tablePartitionPrefix
 @init {msgs.push("table partition prefix");}
 @after {msgs.pop();}
@@ -1138,6 +1190,9 @@ tablePartitionPrefix
   ->^(TOK_TABLE_PARTITION $name partitionSpec?)
   ;
 
+格式:
+a.tableName [PARTITION (name=value,name=value,name)] alterTblPartitionStatementSuffix
+b.String PARTITION COLUMN (columnNameType)
 alterTblPartitionStatement
 @init {msgs.push("alter table partition statement");}
 @after {msgs.pop();}
@@ -1147,6 +1202,39 @@ alterTblPartitionStatement
   -> ^(TOK_ALTERTABLE_ALTERPARTS Identifier columnNameType)
   ;
 
+
+格式:
+一、alterStatementSuffixLocation
+SET LOCATION xxxx
+二、alterStatementSuffixFileFormat
+1.SET FILEFORMAT SEQUENCEFILE
+2.SET FILEFORMAT TEXTFILE
+3.SET FILEFORMAT RCFILE
+4.SET FILEFORMAT ORCFILE
+5.SET FILEFORMAT INPUTFORMAT string OUTPUTFORMAT string [INPUTDRIVER string OUTPUTDRIVER string]
+6.SET FILEFORMAT xxxx 属于TOK_FILEFORMAT_GENERIC类型自定义格式
+三、alterStatementSuffixProtectMode
+1.ENABLE OFFLINE
+2.ENABLE NO_DROP [CASCADE]
+3.ENABLE READONLY
+4.DISABLE OFFLINE
+5.DISABLE NO_DROP [CASCADE]
+6.DISABLE READONLY
+四、alterStatementSuffixMergeFiles
+CONCATENATE
+五、alterStatementSuffixSerdeProperties
+1.SET SERDE string [WITH SERDEPROPERTIES(key=value,key=value)]
+2.SET SERDEPROPERTIES (key=value,key=value)
+六、alterStatementSuffixRenamePart
+RENAME TO PARTITION (name=value,name=value,name)
+七、alterStatementSuffixBucketNum
+INTO number BUCKETS
+八、alterTblPartitionStatementSuffixSkewedLocation 
+SET SKEWED LOCATION (key=value,key=value)
+九、alterStatementSuffixClusterbySortby
+1.NOT CLUSTERED
+2.NOT SORTED
+3.CLUSTERED BY (column1,column2) [SORTED BY (column1 desc,column2 desc)] into Number BUCKETS
 alterTblPartitionStatementSuffix
 @init {msgs.push("alter table partition statement suffix");}
 @after {msgs.pop();}
@@ -1161,6 +1249,13 @@ alterTblPartitionStatementSuffix
   | alterStatementSuffixClusterbySortby
   ;
 
+//设置文件格式
+1.SET FILEFORMAT SEQUENCEFILE
+2.SET FILEFORMAT TEXTFILE
+3.SET FILEFORMAT RCFILE
+4.SET FILEFORMAT ORCFILE
+5.SET FILEFORMAT INPUTFORMAT string OUTPUTFORMAT string [INPUTDRIVER string OUTPUTDRIVER string]
+6.SET FILEFORMAT xxxx 属于TOK_FILEFORMAT_GENERIC类型自定义格式
 alterStatementSuffixFileFormat
 @init {msgs.push("alter fileformat statement"); }
 @after {msgs.pop();}
@@ -1168,6 +1263,10 @@ alterStatementSuffixFileFormat
 	-> ^(TOK_ALTERTABLE_FILEFORMAT fileFormat)
 	;
 
+格式:
+1.NOT CLUSTERED
+2.NOT SORTED
+3.CLUSTERED BY (column1,column2) [SORTED BY (column1 desc,column2 desc)] into Number BUCKETS
 alterStatementSuffixClusterbySortby
 @init {msgs.push("alter partition cluster by sort by statement");}
 @after {msgs.pop();}
@@ -1176,13 +1275,16 @@ alterStatementSuffixClusterbySortby
   | tableBuckets -> ^(TOK_ALTERTABLE_CLUSTER_SORT tableBuckets)
   ;
 
+格式:SET SKEWED LOCATION (key=value,key=value)
 alterTblPartitionStatementSuffixSkewedLocation
 @init {msgs.push("alter partition skewed location");}
 @after {msgs.pop();}
   : KW_SET KW_SKEWED KW_LOCATION skewedLocations
   -> ^(TOK_ALTERTBLPART_SKEWED_LOCATION skewedLocations)
   ;
-  
+
+是skewedLocationsList用括号包裹上,
+格式:(skewedLocationMap,skewedLocationMap)
 skewedLocations
 @init { msgs.push("skewed locations"); }
 @after { msgs.pop(); }
@@ -1190,6 +1292,8 @@ skewedLocations
       LPAREN skewedLocationsList RPAREN -> ^(TOK_SKEWED_LOCATIONS skewedLocationsList)
     ;
 
+是skewedLocationMap的集合,
+格式:skewedLocationMap,skewedLocationMap
 skewedLocationsList
 @init { msgs.push("skewed locations list"); }
 @after { msgs.pop(); }
@@ -1197,6 +1301,8 @@ skewedLocationsList
       skewedLocationMap (COMMA skewedLocationMap)* -> ^(TOK_SKEWED_LOCATION_LIST skewedLocationMap+)
     ;
 
+格式 skewedValueLocationElement = String
+格式 即key=value形式
 skewedLocationMap
 @init { msgs.push("specifying skewed location map"); }
 @after { msgs.pop(); }
@@ -1204,6 +1310,7 @@ skewedLocationMap
       key=skewedValueLocationElement EQUAL value=StringLiteral -> ^(TOK_SKEWED_LOCATION_MAP $key $value)
     ;
 
+//格式: SET LOCATION xxxx
 alterStatementSuffixLocation
 @init {msgs.push("alter location");}
 @after {msgs.pop();}
@@ -1211,7 +1318,10 @@ alterStatementSuffixLocation
   -> ^(TOK_ALTERTABLE_LOCATION $newLoc)
   ;
 
-	
+格式:
+a.String tableSkewed
+b.String NOT SKEWED
+c.String NOT STORED AS DIRECTORIES
 alterStatementSuffixSkewedby
 @init {msgs.push("alter skewed by statement");}
 @after{msgs.pop();}
@@ -1225,6 +1335,8 @@ alterStatementSuffixSkewedby
 	->^(TOK_ALTERTABLE_SKEWED $name storedAsDirs)
 	;
 
+
+格式:tableName EXCHANGE PARTITION (name=value,name=value,name) WITH TABLE tableName
 alterStatementSuffixExchangePartition
 @init {msgs.push("alter exchange partition");}
 @after{msgs.pop();}
@@ -1232,6 +1344,14 @@ alterStatementSuffixExchangePartition
     -> ^(TOK_EXCHANGEPARTITION $name partitionSpec $exchangename)
     ;
 
+格式
+1.ENABLE OFFLINE
+2.ENABLE NO_DROP [CASCADE]
+3.ENABLE READONLY
+4.DISABLE OFFLINE
+5.DISABLE NO_DROP [CASCADE]
+6.DISABLE READONLY
+alterProtectMode
 alterStatementSuffixProtectMode
 @init { msgs.push("alter partition protect mode statement"); }
 @after { msgs.pop(); }
@@ -1239,6 +1359,8 @@ alterStatementSuffixProtectMode
     -> ^(TOK_ALTERTABLE_ALTERPARTS_PROTECTMODE alterProtectMode)
     ;
 
+格式:
+RENAME TO PARTITION (name=value,name=value,name)
 alterStatementSuffixRenamePart
 @init { msgs.push("alter table rename partition statement"); }
 @after { msgs.pop(); }
@@ -1246,6 +1368,7 @@ alterStatementSuffixRenamePart
     ->^(TOK_ALTERTABLE_RENAMEPART partitionSpec)
     ;
 
+格式 :CONCATENATE
 alterStatementSuffixMergeFiles
 @init { msgs.push(""); }
 @after { msgs.pop(); }
@@ -1253,6 +1376,13 @@ alterStatementSuffixMergeFiles
     -> ^(TOK_ALTERTABLE_ALTERPARTS_MERGEFILES)
     ;
 
+格式
+1.ENABLE OFFLINE
+2.ENABLE NO_DROP [CASCADE]
+3.ENABLE READONLY
+4.DISABLE OFFLINE
+5.DISABLE NO_DROP [CASCADE]
+6.DISABLE READONLY
 alterProtectMode
 @init { msgs.push("protect mode specification enable"); }
 @after { msgs.pop(); }
@@ -1260,6 +1390,10 @@ alterProtectMode
     | KW_DISABLE alterProtectModeMode  -> ^(TOK_DISABLE alterProtectModeMode)
     ;
 
+//格式 
+1.OFFLINE
+2.NO_DROP [CASCADE]
+3.READONLY
 alterProtectModeMode
 @init { msgs.push("protect mode specification enable"); }
 @after { msgs.pop(); }
@@ -1268,12 +1402,22 @@ alterProtectModeMode
     | KW_READONLY  -> ^(TOK_READONLY)
     ;
 
+格式:
+INTO number BUCKETS
 alterStatementSuffixBucketNum
 @init { msgs.push(""); }
 @after { msgs.pop(); }
     : KW_INTO num=Number KW_BUCKETS
     -> ^(TOK_TABLEBUCKETS $num)
     ;
+
+//文件格式
+1.SET FILEFORMAT SEQUENCEFILE
+2.SET FILEFORMAT TEXTFILE
+3.SET FILEFORMAT RCFILE
+4.SET FILEFORMAT ORCFILE
+5.SET FILEFORMAT INPUTFORMAT string OUTPUTFORMAT string [INPUTDRIVER string OUTPUTDRIVER string]
+6.SET FILEFORMAT xxxx 属于TOK_FILEFORMAT_GENERIC类型自定义格式
 
 fileFormat
 @init { msgs.push("file format specification"); }
@@ -1295,6 +1439,7 @@ tabTypeExpr
    : identifier (DOT^ (KW_ELEM_TYPE | KW_KEY_TYPE | KW_VALUE_TYPE | identifier))*
    ;
 
+//xxx .($ELEM$ | $KEY$ | $VALUE$ | xxx ) .($ELEM$ | $KEY$ | $VALUE$ | xxx )
 descTabTypeExpr
 @init { msgs.push("specifying describe table types"); }
 @after { msgs.pop(); }
@@ -1308,12 +1453,17 @@ partTypeExpr
     :  tabTypeExpr partitionSpec? -> ^(TOK_TABTYPE tabTypeExpr partitionSpec?)
     ;
 
+格式:.($ELEM$ | $KEY$ | $VALUE$ | xxx ) [PARTITION (name=value,name=value,name)]
 descPartTypeExpr
 @init { msgs.push("specifying describe table partitions"); }
 @after { msgs.pop(); }
     :  descTabTypeExpr partitionSpec? -> ^(TOK_TABTYPE descTabTypeExpr partitionSpec?)
     ;
 
+格式:
+a.DESCRIBE | DESC [FORMATTED | EXTENDED | PRETTY] .($ELEM$ | $KEY$ | $VALUE$ | xxx ) [PARTITION (name=value,name=value,name)]
+b.DESCRIBE | DESC FUNCTION [EXTENDED] descFuncNames
+c.DESCRIBE | DESC DATABASE [EXTENDED] "dbName"
 descStatement
 @init { msgs.push("describe statement"); }
 @after { msgs.pop(); }
@@ -1322,25 +1472,24 @@ descStatement
     | (KW_DESCRIBE|KW_DESC) KW_DATABASE KW_EXTENDED? (dbName=identifier) -> ^(TOK_DESCDATABASE $dbName KW_EXTENDED?)
     ;
 
+格式:ANALYZE TABLE tableName [ PARTITION (name=value,name=value,name) ] COMPUTE STATISTICS [NOSCAN | PARTIALSCAN | FOR COLUMNS "column1","column2"]
 analyzeStatement
 @init { msgs.push("analyze statement"); }
 @after { msgs.pop(); }
     : KW_ANALYZE KW_TABLE (parttype=tableOrPartition) KW_COMPUTE KW_STATISTICS ((noscan=KW_NOSCAN) | (partialscan=KW_PARTIALSCAN) | (KW_FOR KW_COLUMNS statsColumnName=columnNameList))? -> ^(TOK_ANALYZE $parttype $noscan? $partialscan? $statsColumnName?)
     ;
 
-/**
-SHOW 语法
-1.SHOW DATABASES|SCHEMAS LIKE "xxx" 模糊查询,一定要带引号
-2.SHOW TABLES [ (from | in) tableName ] like "xxx"
-3.SHOW COLUMNS (from | in) tableName [ (from | in) db_name ]
-4.SHOW FUNCTIONS xxx
-5.SHOW PARTITIONS xxx [ PARTITION( xxx [ (== | =) constant],xxx [ (== | =) constant] ) ]
-6.SHOW CREATE TABLE tableName 
-7.SHOW TABLE EXTENDED [ (from | in) db_name ] like tableName [  PARTITION (name=value,name=value,name) ]
-8.SHOW TBLPROPERTIES 表名xxx [ (属性名xxx) ] 获取该表的某一个自定义属性内容
-9.SHOW LOCKS xxx .($ELEM$ | $KEY$ | $VALUE$ | xxx ) .($ELEM$ | $KEY$ | $VALUE$ | xxx )详细看.没看太懂
-10.SHOW [FORMATTED] [(INDEX|INDEXES) on xxx (from | in) db_name ]
-*/
+表示SHOW 语法
+a.SHOW DATABASES|SCHEMAS LIKE "xxx" 模糊查询,一定要带引号
+b.SHOW TABLES [(FROM | IN) tableName ] like "xxx"
+c.SHOW COLUMNS (FROM | IN) tableName [(FROM | IN) db_name ]
+d.SHOW FUNCTIONS xxx
+e.SHOW PARTITIONS xxx PARTITION (name=value,name=value,name)
+f.SHOW CREATE TABLE tableName 
+g.SHOW TABLE EXTENDED [(FROM | IN) db_name ] like tableName [PARTITION (name=value,name=value,name)]
+h.SHOW TBLPROPERTIES tblName [(columnName)] 获取该表的某一个自定义属性内容
+i.SHOW LOCKS xxx .($ELEM$ | $KEY$ | $VALUE$ | xxx ) .($ELEM$ | $KEY$ | $VALUE$ | xxx )详细看.没看太懂
+j.SHOW [FORMATTED](INDEX|INDEXES) ON tableName (FROM | IN) db_name ]
 showStatement
 @init { msgs.push("show statement"); }
 @after { msgs.pop(); }
@@ -1359,7 +1508,7 @@ showStatement
     -> ^(TOK_SHOWINDEXES showStmtIdentifier $showOptions? $db_name?)
     ;
 
-//LOCK TABLE tableName [PARTITION( xxx [ (== | =) constant],xxx [ (== | =) constant] )] (SHARED | EXCLUSIVE)
+格式:LOCK TABLE tableName [PARTITION (name=value,name=value,name)] (SHARED | EXCLUSIVE)
 lockStatement
 @init { msgs.push("lock statement"); }
 @after { msgs.pop(); }
@@ -1372,13 +1521,14 @@ lockMode
     : KW_SHARED | KW_EXCLUSIVE
     ;
 
-//UNLOCK TABLE tableName [PARTITION( xxx [ (== | =) constant],xxx [ (== | =) constant] )]
+格式:UNLOCK TABLE tableName [PARTITION (name=value,name=value,name)]
 unlockStatement
 @init { msgs.push("unlock statement"); }
 @after { msgs.pop(); }
     : KW_UNLOCK KW_TABLE tableName partitionSpec?  -> ^(TOK_UNLOCKTABLE tableName partitionSpec?)
     ;
 
+格式:CREATE ROLE "roleName"
 createRoleStatement
 @init { msgs.push("create role"); }
 @after { msgs.pop(); }
@@ -1386,6 +1536,7 @@ createRoleStatement
     -> ^(TOK_CREATEROLE $roleName)
     ;
 
+  格式:DROP ROLE "roleName"
 dropRoleStatement
 @init {msgs.push("drop role");}
 @after {msgs.pop();}
@@ -1445,6 +1596,7 @@ privilegeIncludeColObject
     -> ^(TOK_PRIV_OBJECT_COL identifier $table? $cols? partitionSpec?)
     ;
 
+  格式:ON TABLE|DATABASE String [PARTITION (name=value,name=value,name)]
 privilegeObject
 @init {msgs.push("privilege subject");}
 @after {msgs.pop();}
@@ -1452,6 +1604,7 @@ privilegeObject
     -> ^(TOK_PRIV_OBJECT identifier $table? partitionSpec?)
     ;
 
+格式:privlegeDef,...
 privilegeList
 @init {msgs.push("grant privilege list");}
 @after {msgs.pop();}
@@ -1459,6 +1612,7 @@ privilegeList
     -> ^(TOK_PRIVILEGE_LIST privlegeDef+)
     ;
 
+格式:ALL | ALTER | UPDATE | CREATE | DROP | INDEX | LOCK | SELECT | SHOW_DATABASE [(column1,column2...)]
 privlegeDef
 @init {msgs.push("grant privilege");}
 @after {msgs.pop();}
@@ -1466,6 +1620,7 @@ privlegeDef
     -> ^(TOK_PRIVILEGE privilegeType $cols?)
     ;
 
+格式: ALL | ALTER | UPDATE | CREATE | DROP | INDEX | LOCK | SELECT | SHOW_DATABASE
 privilegeType
 @init {msgs.push("privilege type");}
 @after {msgs.pop();}
@@ -1480,12 +1635,14 @@ privilegeType
     | KW_SHOW_DATABASE -> ^(TOK_PRIV_SHOW_DATABASE)
     ;
 
+  格式: USER | GROUP | ROLE String,USER | GROUP | ROLE String...
 principalSpecification
 @init { msgs.push("user/group/role name list"); }
 @after { msgs.pop(); }
     : principalName (COMMA principalName)* -> ^(TOK_PRINCIPAL_NAME principalName+)
     ;
 
+  格式: USER | GROUP | ROLE String
 principalName
 @init {msgs.push("user|group|role name");}
 @after {msgs.pop();}
@@ -1494,6 +1651,7 @@ principalName
     | KW_ROLE identifier -> ^(TOK_ROLE identifier)
     ;
 
+格式:GRANT OPTION
 withOption
 @init {msgs.push("grant with option");}
 @after {msgs.pop();}
@@ -1501,6 +1659,7 @@ withOption
     -> ^(TOK_GRANT_WITH_OPTION)
     ;
 
+格式:MSCK [REPAIR] [TABLE tableName PARTITION (name=value,name=value,name),PARTITION (name=value,name=value,name)...]
 metastoreCheck
 @init { msgs.push("metastore check statement"); }
 @after { msgs.pop(); }
@@ -1508,8 +1667,8 @@ metastoreCheck
     -> ^(TOK_MSCK $repair? ($table partitionSpec*)?)
     ;
 
-//创建一个function函数
-//CREATE TEMPORARY FUNCTION xxx as xxx
+创建一个函数
+格式:CREATE TEMPORARY FUNCTION xxx as xxx
 createFunctionStatement
 @init { msgs.push("create function statement"); }
 @after { msgs.pop(); }
@@ -1517,7 +1676,8 @@ createFunctionStatement
     -> ^(TOK_CREATEFUNCTION identifier StringLiteral)
     ;
 
-//删除一个自定义函数drop TEMPORARY FUNCTION [ifExists] xxx
+删除一个自定义函数
+格式:DROP TEMPORARY FUNCTION [IF Exists] xxx
 dropFunctionStatement
 @init { msgs.push("drop temporary function statement"); }
 @after { msgs.pop(); }
@@ -1525,6 +1685,9 @@ dropFunctionStatement
     -> ^(TOK_DROPFUNCTION identifier ifExists?)
     ;
 
+格式；
+a.CREATE TEMPORARY MACRO String() expression
+b.CREATE TEMPORARY MACRO String(columnNameTypeList) expression
 createMacroStatement
 @init { msgs.push("create macro statement"); }
 @after { msgs.pop(); }
@@ -1533,6 +1696,7 @@ createMacroStatement
     -> ^(TOK_CREATEMACRO Identifier columnNameTypeList? expression)
     ;
 
+格式；DROP TEMPORARY MACRO [IF Exists] String
 dropMacroStatement
 @init { msgs.push("drop macro statement"); }
 @after { msgs.pop(); }
@@ -1540,6 +1704,12 @@ dropMacroStatement
     -> ^(TOK_DROPMACRO Identifier ifExists?)
     ;
 
+创建一个view视图
+格式:
+CREATE [OR REPLACE] VIEW [IF NOT Exists] tableName [("columnName1" COMMENT string,"columnName2" COMMENT string)] [COMMENT String]
+[PARTITIONED ON (columnName1,columnName2)]
+[TBLPROPERTIES (keyValueProperty,keyValueProperty,keyProperty,keyProperty)]
+AS selectStatement
 createViewStatement
 @init {
     msgs.push("create view statement");
@@ -1560,6 +1730,8 @@ createViewStatement
         )
     ;
 
+格式:
+PARTITIONED ON (columnName1,columnName2)
 viewPartition
 @init { msgs.push("view partition specification"); }
 @after { msgs.pop(); }
@@ -1567,6 +1739,8 @@ viewPartition
     -> ^(TOK_VIEWPARTCOLS columnNameList)
     ;
 
+删除一个视图
+格式:DROP VIEW [IF Exists] viewName
 dropViewStatement
 @init { msgs.push("drop view statement"); }
 @after { msgs.pop(); }
@@ -1581,8 +1755,8 @@ showStmtIdentifier
     | StringLiteral
     ;
 
-//为table添加注释
-//COMMENT 字符换
+为表设置备注
+格式:COMMENT String
 tableComment
 @init { msgs.push("table's comment"); }
 @after { msgs.pop(); }
@@ -1590,7 +1764,8 @@ tableComment
       KW_COMMENT comment=StringLiteral  -> ^(TOK_TABLECOMMENT $comment)
     ;
 
-//partitioned by (xxx colType COMMENT xxx,xxx colType COMMENT xxx)
+定义一个表的分区集合,包括名字 类型 备注
+格式:PARTITIONED BY (xxx colType COMMENT xxx,xxx colType COMMENT xxx)
 tablePartition
 @init { msgs.push("table partition specification"); }
 @after { msgs.pop(); }
@@ -1598,7 +1773,7 @@ tablePartition
     -> ^(TOK_TABLEPARTCOLS columnNameTypeList)
     ;
 
-//CLUSTERED BY (格式属性字符串,属性字符串) [SORTED by ( 字符串 [asc|desc],格式 字符串 [asc|desc]) ] into Number BUCKETS
+//CLUSTERED BY (column1,column2) [SORTED BY (column1 desc,column2 desc)] into Number BUCKETS
 tableBuckets
 @init { msgs.push("table buckets specification"); }
 @after { msgs.pop(); }
@@ -1653,10 +1828,10 @@ rowFormatSerde
     ;
 
 //解析每一行的分隔信息
-//ROW FORMAT DELIMITED [FIELDS terminated by xxx [ESCAPED by xx] ] 
-//[COLLECTION ITEMS terminated by xxx ]
-//[MAP KEYS terminated by xxx ]
-//[LINES terminated by xxx ]
+ROW FORMAT DELIMITED [FIELDS TERMINATED BY xxx [ESCAPED by xx]]
+[COLLECTION ITEMS TERMINATED BY xxx ]
+[MAP KEYS TERMINATED BY xxx]
+[LINES TERMINATED BY xxx]
 rowFormatDelimited
 @init { msgs.push("serde properties specification"); }
 @after { msgs.pop(); }
@@ -1684,6 +1859,7 @@ tableRowFormat
 
 //解析table的键值对属性值的前缀信息
 //格式TBLPROPERTIES (key=value,key=value,key) 注意:key没有等号,表示默认值是null
+格式: TBLPROPERTIES (keyValueProperty,keyValueProperty,keyProperty,keyProperty)
 tablePropertiesPrefixed
 @init { msgs.push("table properties with prefix"); }
 @after { msgs.pop(); }
@@ -1694,6 +1870,7 @@ tablePropertiesPrefixed
 //存储table的属性键值对信息集合
 //格式(key=value,key=value,key)
 //(此时认为解析成key=null,即不需要value属性值)
+是key=value集合,即格式 (keyValueProperty,keyValueProperty,keyProperty,keyProperty)
 tableProperties
 @init { msgs.push("table properties"); }
 @after { msgs.pop(); }
@@ -1703,6 +1880,7 @@ tableProperties
 
 //存储table的属性键值对信息集合
 //格式key=value,key=value,或者key(此时认为解析成key=null,即不需要value属性值)
+是key=value集合,即格式 keyValueProperty,keyValueProperty,keyProperty,keyProperty
 tablePropertiesList
 @init { msgs.push("table properties list"); }
 @after { msgs.pop(); }
@@ -1714,6 +1892,7 @@ tablePropertiesList
 
 //解析一个key-value键值对属性
 //例如:key = value
+格式 String=String
 keyValueProperty
 @init { msgs.push("specifying key/value property"); }
 @after { msgs.pop(); }
@@ -1724,6 +1903,7 @@ keyValueProperty
 
 //解析一个key键值对属性,并且设置value属性为null
 //内容就是一个字符串,代表key
+格式 String=null
 keyProperty
 @init { msgs.push("specifying key property"); }
 @after { msgs.pop(); }
@@ -1732,7 +1912,7 @@ keyProperty
     ;
 
 //设置每行的field分隔符
-//格式FIELDS terminated by xxx [ESCAPED by xx]
+//格式 FIELDS TERMINATED BY xxx [ESCAPED by xx]
 tableRowFormatFieldIdentifier
 @init { msgs.push("table row format's field separator"); }
 @after { msgs.pop(); }
@@ -1856,7 +2036,7 @@ skewedValueElement
     ;
 
 //返回多组列值集合,用逗号拆分,每组用()分隔
-//格式(xxx,xxx),(xxx,xxx),(xxx,xxx)
+//格式(常量,常量),(常量,常量)
 skewedColumnValuePairList
 @init { msgs.push("column value pair list"); }
 @after { msgs.pop(); }
@@ -1864,7 +2044,7 @@ skewedColumnValuePairList
     ;
 
 //返回列值集合,用逗号拆分
-//格式(xxx,xxx)
+//格式(常量,常量)
 skewedColumnValuePair
 @init { msgs.push("column value pair"); }
 @after { msgs.pop(); }
@@ -1874,7 +2054,7 @@ skewedColumnValuePair
     ;
 
 //返回列值集合,用逗号拆分
-//格式 xxx,xxx
+//格式
 skewedColumnValues
 @init { msgs.push("column values"); }
 @after { msgs.pop(); }
@@ -2128,12 +2308,12 @@ body
                      distributeByClause? sortByClause? window_clause? limitClause?)
    ;
 
-//方式1:INSERT OVERWRITE LOCAL DIRECTORY "path" [IF NOT EXISTS ]
-//方式2:INSERT OVERWRITE LOCAL DIRECTORY "path" ROW FORMAT DELIMITED [FIELDS terminated by xxx [ESCAPED by xx] ]    [COLLECTION ITEMS terminated by xxx ]    [MAP KEYS terminated by xxx ]  [LINES terminated by xxx ] [IF NOT EXISTS ]
-//方式3:INSERT OVERWRITE LOCAL DIRECTORY "path" ROW FORMAT SERDE "class全路径" [WHIN SERDEPROPERTIES TBLPROPERTIES (key=value,key=value,key)] [IF NOT EXISTS ] 注意:key没有等号,表示默认值是null
-//方式4:INSERT OVERWRITE DIRECTORY "path"
-//方式5:INSERT OVERWRITE TABLE tableName [PARTITION (task = 'share', date = '20150831')]
-//方式6:INSERT INTO TABLE tableName [PARTITION (task = 'share', date = '20150831')]
+格式:
+a.INSERT OVERWRITE LOCAL DIRECTORY "path" [tableRowFormat] [tableFileFormat] [IF NOT Exists]
+b.INSERT OVERWRITE DIRECTORY "path" [IF NOT Exists]
+c.INSERT OVERWRITE TABLE tableName [ PARTITION (name=value,name=value,name) ] [IF NOT Exists]
+d.INSERT INTO TABLE tableName [ PARTITION (name=value,name=value,name) ]
+注意:path必须是单引号或者双引号包裹
 insertClause
 @init { msgs.push("insert clause"); }
 @after { msgs.pop(); }
@@ -2143,12 +2323,11 @@ insertClause
        -> ^(TOK_INSERT_INTO tableOrPartition)
    ;
 
-//方式1:
-//a.LOCAL DIRECTORY "path" 注意:必须是单引号或者双引号包裹
-//b.LOCAL DIRECTORY "path" ROW FORMAT DELIMITED [FIELDS terminated by xxx [ESCAPED by xx] ]    [COLLECTION ITEMS terminated by xxx ]    [MAP KEYS terminated by xxx ]  [LINES terminated by xxx ]
-//c.LOCAL DIRECTORY "path" ROW FORMAT SERDE "class全路径" [WHIN SERDEPROPERTIES TBLPROPERTIES (key=value,key=value,key)] 注意:key没有等号,表示默认值是null
-//方式2:DIRECTORY "path" 注意:必须是单引号或者双引号包裹
-//方式3:TABLE tableName PARTITION (task = 'share', date = '20150831')
+格式:
+a.LOCAL DIRECTORY "path" [tableRowFormat] [tableFileFormat]
+b.DIRECTORY "path"
+c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
+注意:path必须是单引号或者双引号包裹
 destination
 @init { msgs.push("destination specification"); }
 @after { msgs.pop(); }
@@ -2158,7 +2337,7 @@ destination
    | KW_TABLE tableOrPartition -> tableOrPartition
    ;
 
-//limit+ 数字
+格式:LIMIT Number
 limitClause
 @init { msgs.push("limit clause"); }
 @after { msgs.pop(); }

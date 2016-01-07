@@ -192,6 +192,11 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
     public TablePartition() {
     }
 
+    /**
+     * 解析tablename和partition集合
+     * @param tblPart
+     * @throws SemanticException
+     */
     public TablePartition(ASTNode tblPart) throws SemanticException {
       tableName = unescapeIdentifier(tblPart.getChild(0).getText());
       if (tblPart.getChildCount() > 1) {
@@ -226,7 +231,7 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
       String tableName = tblPart.tableName;
       HashMap<String, String> partSpec = tblPart.partSpec;
       ast = (ASTNode) ast.getChild(1);
-      if (ast.getToken().getType() == HiveParser.TOK_ALTERTABLE_FILEFORMAT) {
+      if (ast.getToken().getType() == HiveParser.TOK_ALTERTABLE_FILEFORMAT) {//设置文件格式
         analyzeAlterTableFileFormat(ast, tableName, partSpec);
       }else if (ast.getToken().getType() == HiveParser.TOK_ALTERTABLE_LOCATION) {
         analyzeAlterTableLocation(ast, tableName, partSpec);
@@ -1383,6 +1388,7 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
         alterTblDesc), conf));
   }
 
+  //设置文件格式
   private void analyzeAlterTableFileFormat(ASTNode ast, String tableName,
       HashMap<String, String> partSpec)
       throws SemanticException {

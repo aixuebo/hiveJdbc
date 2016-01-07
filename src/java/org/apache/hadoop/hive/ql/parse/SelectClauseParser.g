@@ -56,8 +56,12 @@ b.STREAMTABLE(arg1),MAPJOIN(arg1,arg2,arg3),HOLD_DDLTIME(arg1,arg2,arg3) ¿ÉÒÔÓÐÈ
 c.DISTINCT col1,col2 ±íÊ¾°´ÕÕcol1ºÍcol2ºÏÔÚÒ»Æð½øÐÐ¹ýÂËÖØ¸´£¬Ïàµ±ÓÚ group by col1,col2
 d.as ºóÃæ¿ÉÒÔ¶¨Òå¶à¸ö±ðÃû
 e.selectExpression
-  * ¡¢ tableName.* ¡¢dbName.tableName.* »òÕß precedenceOrExpression
+  *  tableName.* ¡¢dbName.tableName.* »òÕß precedenceOrExpression
  **/
+²éÑ¯Óï¾ä
+¸ñÊ½:
+SELECT [hintClause] [ALL|DISTINCT] selectList
+SELECT [hintClause] TRANSFORM selectTrfmClause 
 selectClause
 @init { gParent.msgs.push("select clause"); }
 @after { gParent.msgs.pop(); }
@@ -71,7 +75,8 @@ selectClause
     trfmClause  ->^(TOK_SELECT ^(TOK_SELEXPR trfmClause))
     ;
 
-//¶ººÅ²ð·ÖµÄ´ý²éÑ¯ÊôÐÔ¼¯ºÏ
+²éÑ¯µÄÊôÐÔ¼¯ºÏ,°üÀ¨Ê¹ÓÃas ±ðÃûÓï·¨
+¸ñÊ½:selectItem,selectItem..
 selectList
 @init { gParent.msgs.push("select list"); }
 @after { gParent.msgs.pop(); }
@@ -92,15 +97,18 @@ selectTrfmClause
     -> ^(TOK_TRANSFORM selectExpressionList $inSerde $inRec StringLiteral $outSerde $outRec aliasList? columnNameTypeList?)
     ;
 
-// /*+ STREAMTABLE(t1) */ ÊôÓÚhintClause
-//°µÊ¾Ìõ¿îÒÔ/*+¿ªÍ·,ÒÔ*/½áÎ²,ÆÚ¼ä°üº¬hintList
+°µÊ¾Ìõ¿îÒÔ/*+¿ªÍ·,ÒÔ*/½áÎ²,ÆÚ¼ä°üº¬hintList
+¸ñÊ½:/*+ hintList */
+eg:/*+ STREAMTABLE(t1) */
 hintClause
 @init { gParent.msgs.push("hint clause"); }
 @after { gParent.msgs.pop(); }
     :
     DIVIDE STAR PLUS hintList STAR DIVIDE -> ^(TOK_HINTLIST hintList)
     ;
-//hintListÓÉ¶ººÅ²ð·ÖµÄÒ»×éhintItem×é³É
+    
+ÓÉ¶ººÅ²ð·ÖµÄÒ»×éhintItem×é³É
+¸ñÊ½:hintItem,hintItem..
 hintList
 @init { gParent.msgs.push("hint list"); }
 @after { gParent.msgs.pop(); }
@@ -108,8 +116,8 @@ hintList
     hintItem (COMMA hintItem)* -> hintItem+
     ;
 
-//Ã¿Ò»¸öhintItem¶ÔÏóÓÉhintName (hintArgs)»òÕßhintName×é³É
-// STREAMTABLE(t1)
+Ã¿Ò»¸öhintItem¶ÔÏóÓÉhintName (hintArgs)»òÕßhintName×é³É,ÀýÈçSTREAMTABLE(t1,t2)
+¸ñÊ½:MAPJOIN|STREAMTABLE|DDLTIME [(String,String...)]
 hintItem
 @init { gParent.msgs.push("hint item"); }
 @after { gParent.msgs.pop(); }
@@ -117,7 +125,8 @@ hintItem
     hintName (LPAREN hintArgs RPAREN)? -> ^(TOK_HINT hintName hintArgs?)
     ;
 
-//hintNameÓÉMAPJOIN¡¢STREAMTABLE¡¢HOLD_DDLTIMEÈý¸ö×é³É
+ÓÉMAPJOIN¡¢STREAMTABLE¡¢HOLD_DDLTIMEÈý¸ö×é³É
+¸ñÊ½:MAPJOIN|STREAMTABLE|DDLTIME
 hintName
 @init { gParent.msgs.push("hint name"); }
 @after { gParent.msgs.pop(); }
@@ -127,7 +136,8 @@ hintName
     | KW_HOLD_DDLTIME -> TOK_HOLD_DDLTIME
     ;
 
-//°µÊ¾Ìõ¿îµÄ²ÎÊýÓÉ¶ººÅ²ð·ÖµÄ¶à¸ö²ÎÊý×é³É
+°µÊ¾Ìõ¿îµÄ²ÎÊýÓÉ¶ººÅ²ð·ÖµÄ¶à¸ö²ÎÊý×é³É
+¸ñÊ½:String,String...
 hintArgs
 @init { gParent.msgs.push("hint arguments"); }
 @after { gParent.msgs.pop(); }
@@ -135,7 +145,8 @@ hintArgs
     hintArgName (COMMA hintArgName)* -> ^(TOK_HINTARGLIST hintArgName+)
     ;
 
-//°µÊ¾Ìõ¿îµÄÃ¿Ò»¸ö²ÎÊýµÄnameÓÉÓÐÐ§±êÊ¶·û×é³É¼´¿É
+°µÊ¾Ìõ¿îµÄÃ¿Ò»¸ö²ÎÊýµÄnameÓÉÓÐÐ§±êÊ¶·û×é³É¼´¿É
+¸ñÊ½:String
 hintArgName
 @init { gParent.msgs.push("hint argument name"); }
 @after { gParent.msgs.pop(); }
@@ -143,7 +154,9 @@ hintArgName
     identifier
     ;
 
-//select identifier as identifier,Ã¿Ò»¸ö´ý²éÑ¯µÄÊôÐÔ,¿ÉÒÔÉèÖÃ±ðÃû
+¸ñÊ½:
+a.selectExpression [AS] String ÎªÃ¿Ò»¸ö²éÑ¯ÏîÆðÒ»¸ö±ðÃû
+b.selectExpression [AS] (String,String..) ÎªÃ¿Ò»¸ö²éÑ¯ÏîÆð¶à¸ö±ðÃû,µ«ÊÇºÃÏñÏÖÊµ»·¾³ÊÇ²»ÔÊÐíµÄ
 selectItem 
 @init { gParent.msgs.push("selection target"); }
 @after { gParent.msgs.pop(); }
@@ -166,7 +179,8 @@ trfmClause
     -> ^(TOK_TRANSFORM selectExpressionList $inSerde $inRec StringLiteral $outSerde $outRec aliasList? columnNameTypeList?)
     ;
 
-//tableName.* ¡¢dbName.tableName.*¡¢ *
+²éÑ¯µÄÄ³Ò»Ïî
+¸ñÊ½:tableName.* |dbName.tableName.* |expression
 selectExpression
 @init { gParent.msgs.push("select expression"); }
 @after { gParent.msgs.pop(); }
@@ -174,6 +188,8 @@ selectExpression
     expression | tableAllColumns
     ;
 
+²éÑ¯µÄ¶àÏî¼Æ»®
+¸ñÊ½:selectExpression,selectExpression...
 selectExpressionList
 @init { gParent.msgs.push("select expression list"); }
 @after { gParent.msgs.pop(); }
@@ -182,7 +198,8 @@ selectExpressionList
     ;
 
 //---------------------- Rules for windowing clauses -------------------------------
-//WINDOW ¶ººÅ²ð·ÖµÄ@window_defn 
+Êý¾Ý´°¿Ú
+¸ñÊ½:WINDOW window_defn,window_defn..
 window_clause 
 @init { gParent.msgs.push("window_clause"); }
 @after { gParent.msgs.pop(); } 
@@ -190,7 +207,10 @@ window_clause
   KW_WINDOW window_defn (COMMA window_defn)* -> ^(KW_WINDOW window_defn+)
 ;  
 
-//ÈÎÒâ×Ö·û´®±í´ïÊ½ as @window_specification
+ÈÎÒâ×Ö·û´®±í´ïÊ½ as @window_specification
+¸ñÊ½:
+a.String AS String
+b.String AS ([String] [partitioningSpec] [window_frame])
 window_defn 
 @init { gParent.msgs.push("window_defn"); }
 @after { gParent.msgs.pop(); } 
@@ -198,6 +218,9 @@ window_defn
   Identifier KW_AS window_specification -> ^(TOK_WINDOWDEF Identifier window_specification)
 ;  
 
+¸ñÊ½:
+a.String
+b.([String] [partitioningSpec] [window_frame])
 window_specification 
 @init { gParent.msgs.push("window_specification"); }
 @after { gParent.msgs.pop(); } 
@@ -205,11 +228,18 @@ window_specification
   (Identifier | ( LPAREN Identifier? partitioningSpec? window_frame? RPAREN)) -> ^(TOK_WINDOWSPEC Identifier? partitioningSpec? window_frame?)
 ;
 
+¸ñÊ½:
+window_range_expression | window_value_expression
 window_frame :
  window_range_expression |
  window_value_expression
 ;
 
+¸ñÊ½:
+a.ROWS UNBOUNDED PRECEDING
+b.ROWS CURRENT ROW
+c.ROWS Number PRECEDING
+d.ROWS BETWEEN window_frame_boundary AND window_frame_boundary
 window_range_expression 
 @init { gParent.msgs.push("window_range_expression"); }
 @after { gParent.msgs.pop(); } 
@@ -218,6 +248,12 @@ window_range_expression
  KW_ROWS KW_BETWEEN s=window_frame_boundary KW_AND end=window_frame_boundary -> ^(TOK_WINDOWRANGE $s $end)
 ;
 
+
+¸ñÊ½:
+a.RANGE UNBOUNDED PRECEDING
+b.RANGE CURRENT ROW
+c.RANGE Number PRECEDING
+d.RANGE BETWEEN window_frame_boundary AND window_frame_boundary
 window_value_expression 
 @init { gParent.msgs.push("window_value_expression"); }
 @after { gParent.msgs.pop(); } 
@@ -226,6 +262,10 @@ window_value_expression
  KW_RANGE KW_BETWEEN s=window_frame_boundary KW_AND end=window_frame_boundary -> ^(TOK_WINDOWVALUES $s $end)
 ;
 
+¸ñÊ½:
+a.UNBOUNDED PRECEDING
+b.CURRENT ROW
+c.Number PRECEDING
 window_frame_start_boundary 
 @init { gParent.msgs.push("windowframestartboundary"); }
 @after { gParent.msgs.pop(); } 
@@ -235,8 +275,11 @@ window_frame_start_boundary
   Number KW_PRECEDING -> ^(KW_PRECEDING Number)
 ;
 
-//UNBOUNDED PRECEDING »òÕßUNBOUNDED FOLLOWING ¼´²»ÏÞÖÆµÄ¹æÔò»òÕß²»ÏÞÖÆ¸ù¾ÝÒÔÏÂ¹æÔò
-//CURRENT ROW CURRENT »òÕß Êý×Ö PRECEDING »òÕß Êý×Ö FOLLOWING
+
+¸ñÊ½:
+a.UNBOUNDED PRECEDING|FOLLOWING //²»ÏÞÖÆµÄ¹æÔò»òÕß²»ÏÞÖÆ¸ù¾ÝÒÔÏÂ¹æÔò
+b.CURRENT ROW 
+c.Number PRECEDING|FOLLOWING
 window_frame_boundary 
 @init { gParent.msgs.push("windowframeboundary"); }
 @after { gParent.msgs.pop(); } 

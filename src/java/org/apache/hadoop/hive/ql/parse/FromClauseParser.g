@@ -55,9 +55,8 @@ tableAllColumns
         -> ^(TOK_ALLCOLREF tableName)
     ;
 
-// (table|column)
-//任意字符串,可以表示table名称或者列属性名称
-//xxx
+表示任意字符串,可以表示table名称或者列属性名称或者别名
+格式:String
 tableOrColumn
 @init { gParent.msgs.push("table or column identifier"); }
 @after { gParent.msgs.pop(); }
@@ -65,8 +64,8 @@ tableOrColumn
     identifier -> ^(TOK_TABLE_OR_COL identifier)
     ;
 
-//expression,expression,expression
-//多个表达式集合
+多个表达式集合
+格式:expression,expression..
 expressionList
 @init { gParent.msgs.push("expression list"); }
 @after { gParent.msgs.pop(); }
@@ -74,8 +73,8 @@ expressionList
     expression (COMMA expression)* -> ^(TOK_EXPLIST expression+)
     ;
 
-//identifier,identifier,identifier
-//任意字符串集合,定义别名集合
+定义别名集合
+格式:String,String..
 aliasList
 @init { gParent.msgs.push("alias list"); }
 @after { gParent.msgs.pop(); }
@@ -84,7 +83,10 @@ aliasList
     ;
 
 //----------------------- Rules for parsing fromClause ------------------------------
-// from [col1, col2, col3] table1, [col4, col5] table2
+from子句
+格式:
+a.FROM fromSource joinToken fromSource [ON expression] joinToken fromSource [ON expression]..
+b.FROM UNIQUEJOIN [PRESERVE] fromSource (expression,expression..)
 fromClause
 @init { gParent.msgs.push("from clause"); }
 @after { gParent.msgs.pop(); }
@@ -92,6 +94,9 @@ fromClause
     KW_FROM joinSource -> ^(TOK_FROM joinSource)
     ;
 
+格式:
+a.fromSource joinToken fromSource [ON expression] joinToken fromSource [ON expression]..
+b.UNIQUEJOIN [PRESERVE] fromSource (expression,expression..)
 joinSource
 @init { gParent.msgs.push("join source"); }
 @after { gParent.msgs.pop(); }
@@ -99,13 +104,14 @@ joinSource
     | uniqueJoinToken^ uniqueJoinSource (COMMA! uniqueJoinSource)+
     ;
 
+格式:[PRESERVE] fromSource (expression,expression..)
 uniqueJoinSource
 @init { gParent.msgs.push("join source"); }
 @after { gParent.msgs.pop(); }
     : KW_PRESERVE? fromSource uniqueJoinExpr
     ;
 
-//(expression,expression,expression)
+格式:(expression,expression..)
 uniqueJoinExpr
 @init { gParent.msgs.push("unique join expression list"); }
 @after { gParent.msgs.pop(); }
@@ -113,13 +119,13 @@ uniqueJoinExpr
       -> ^(TOK_EXPLIST $e1*)
     ;
 
-//UNIQUEJOIN
+格式:UNIQUEJOIN
 uniqueJoinToken
 @init { gParent.msgs.push("unique join"); }
 @after { gParent.msgs.pop(); }
     : KW_UNIQUEJOIN -> TOK_UNIQUEJOIN;
 
-//JOIN 、INNER JOIN、CROSS JOIN、LEFT [OUTER] JOIN 、RIGHT [OUTER] JOIN 、FULL [OUTER] JOIN 、LEFT SEMI JOIN
+格式:JOIN | INNER JOIN |CROSS JOIN | LEFT [OUTER] JOIN | RIGHT [OUTER] JOIN | FULL [OUTER] JOIN | LEFT SEMI JOIN
 joinToken
 @init { gParent.msgs.push("join type specifier"); }
 @after { gParent.msgs.pop(); }
@@ -133,11 +139,7 @@ joinToken
     | KW_LEFT KW_SEMI KW_JOIN      -> TOK_LEFTSEMIJOIN
     ;
 
-//1.LATERAL VIEW OUTER function tableAlias [ as xxx | as xxx,xxx,xxx]
-//2.LATERAL VIEW function tableAlias [ as xxx | as xxx,xxx,xxx]
-//注意
-//1.tableAlias是任意字符串
-//2.可以设置多个别名
+格式:LATERAL VIEW [OUTER] function "tableAlias" [AS identifier,identifier..]
 lateralView
 @init {gParent.msgs.push("lateral view"); }
 @after {gParent.msgs.pop(); }
@@ -149,7 +151,8 @@ lateralView
 	-> ^(TOK_LATERAL_VIEW ^(TOK_SELECT ^(TOK_SELEXPR function identifier* tableAlias)))
 	;
 
-//任意字符串,表示别名
+表示任意字符串,可以表示table名称或者列属性名称或者别名
+格式:String
 tableAlias
 @init {gParent.msgs.push("table alias"); }
 @after {gParent.msgs.pop(); }
@@ -157,6 +160,11 @@ tableAlias
     identifier -> ^(TOK_TABALIAS identifier)
     ;
 
+属于from后面接的信息
+格式:
+a.tableName [(keyValueProperty,keyValueProperty,keyProperty,keyProperty)] [tableSample] [ [AS] Identifier ] lateralView lateralView ..直接查询一个表,支持抽样
+b.(queryStatementExpression) String lateralView lateralView .. 子查询
+c.partitionedTableFunction lateralView lateralView ..
 fromSource
 @init { gParent.msgs.push("from source"); }
 @after { gParent.msgs.pop(); }
@@ -164,8 +172,8 @@ fromSource
     ((Identifier LPAREN)=> partitionedTableFunction | tableSource | subQuerySource) (lateralView^)*
     ;
 
-//TABLESAMPLE(BUCKET 数字    OUT OF 数字  [ ON expression,expression ] )
-//对table进行抽样提取数据
+对table进行抽样提取数据
+格式:TABLESAMPLE(BUCKET 数字 OUT OF 数字  [ ON expression,expression.. ] )
 tableBucketSample
 @init { gParent.msgs.push("table bucket sample specification"); }
 @after { gParent.msgs.pop(); }
@@ -174,12 +182,12 @@ tableBucketSample
     -> ^(TOK_TABLEBUCKETSAMPLE $numerator $denominator $expr*)
     ;
 
-//对table进行抽样提取数据
-//1.TABLESAMPLE(数字    PERCENT)
-//2.TABLESAMPLE(数字    ROWS)
-//3.TABLESAMPLE(ByteLengthLiteral)
-//注意:
-//ByteLengthLiteral表示匹配数字+单位,即表示长度信息,即(Digit)+ ('b' | 'B' | 'k' | 'K' | 'm' | 'M' | 'g' | 'G')
+对table进行抽样提取数据
+格式:
+a.TABLESAMPLE (Number PERCENT | ROWS)
+b.TABLESAMPLE(ByteLengthLiteral)
+注意:
+ByteLengthLiteral表示匹配数字+单位,即表示长度信息,即(Digit)+ ('b' | 'B' | 'k' | 'K' | 'm' | 'M' | 'g' | 'G')
 splitSample
 @init { gParent.msgs.push("table split sample specification"); }
 @after { gParent.msgs.pop(); }
@@ -192,13 +200,13 @@ splitSample
     -> ^(TOK_TABLESPLITSAMPLE TOK_LENGTH $numerator)
     ;
 
-//对table进行抽样提取数据
-//1.TABLESAMPLE(数字    PERCENT)
-//2.TABLESAMPLE(数字    ROWS)
-//3.TABLESAMPLE(ByteLengthLiteral)
-//4.TABLESAMPLE(BUCKET 数字    OUT OF 数字  [ ON expression,expression ] )
-//注意:
-//ByteLengthLiteral表示匹配数字+单位,即表示长度信息,即(Digit)+ ('b' | 'B' | 'k' | 'K' | 'm' | 'M' | 'g' | 'G')
+对table进行抽样提取数据
+格式:
+a.TABLESAMPLE(BUCKET 数字 OUT OF 数字  [ ON expression,expression.. ] )
+b.TABLESAMPLE (Number PERCENT | ROWS)
+c.TABLESAMPLE(ByteLengthLiteral) 
+注意:
+ByteLengthLiteral表示匹配数字+单位,即表示长度信息,即(Digit)+ ('b' | 'B' | 'k' | 'K' | 'm' | 'M' | 'g' | 'G')
 tableSample
 @init { gParent.msgs.push("table sample specification"); }
 @after { gParent.msgs.pop(); }
@@ -207,14 +215,8 @@ tableSample
     splitSample
     ;
 
-//[dbName.] tableName [(key=value,key=value,key)] [tableSample] [ as Identifier ]
-//注意:
-//1.(此时认为解析成key=null,即不需要value属性值)
-//tableSample函数解析如下
-//1.TABLESAMPLE(数字    PERCENT)
-//2.TABLESAMPLE(数字    ROWS)
-//3.TABLESAMPLE(ByteLengthLiteral)
-//4.TABLESAMPLE(BUCKET 数字    OUT OF 数字  [ ON expression,expression ] )
+格式:
+tableName [(keyValueProperty,keyValueProperty,keyProperty,keyProperty)] [tableSample] [ [AS] Identifier ]
 tableSource
 @init { gParent.msgs.push("table source"); }
 @after { gParent.msgs.pop(); }
@@ -222,8 +224,9 @@ tableSource
     -> ^(TOK_TABREF $tabname $props? $ts? $alias?)
     ;
 
-//xxx.yyy 表示数据库.表
-//或者xx 仅仅表示表
+
+视图和数据库表命名规则
+格式:database.tableName | tableName
 tableName
 @init { gParent.msgs.push("table name"); }
 @after { gParent.msgs.pop(); }
@@ -235,8 +238,8 @@ tableName
     -> ^(TOK_TABNAME $tab)
     ;
 
-//identifier.identifier 表示数据库.视图名称
-//identifier表示视图名
+视图和数据库表命名规则
+格式:database.tableName | tableName
 viewName
 @init { gParent.msgs.push("view name"); }
 @after { gParent.msgs.pop(); }
@@ -245,8 +248,7 @@ viewName
     -> ^(TOK_TABNAME $db? $view)
     ;
 
-//(queryStatement UNION ALL queryStatement UNION ALL queryStatement) identifier
-//注意identifier表示最后子查询的别名
+格式:(queryStatementExpression) String
 subQuerySource
 @init { gParent.msgs.push("subquery source"); }
 @after { gParent.msgs.pop(); }
@@ -255,6 +257,12 @@ subQuerySource
     ;
 
 //---------------------- Rules for parsing PTF clauses -----------------------------
+格式:
+a.PARTITION by expression,expression.. [ORDER BY expression [ASC | DESC],expression [ASC | DESC]..]
+b.ORDER BY expression [ASC | DESC],expression [ASC | DESC]..
+c.DISTRIBUTE BY expression,expression.. [SORT BY expression [ASC | DESC],expression [ASC | DESC]..]
+d.SORT BY expression [ASC | DESC],expression [ASC | DESC]..
+e.CLUSTER BY (expression,expression..)
 partitioningSpec
 @init { gParent.msgs.push("partitioningSpec clause"); }
 @after { gParent.msgs.pop(); } 
@@ -266,6 +274,10 @@ partitioningSpec
    clusterByClause -> ^(TOK_PARTITIONINGSPEC clusterByClause)
    ;
 
+格式:
+a.(queryStatementExpression) String 子查询
+b.tableName [(keyValueProperty,keyValueProperty,keyProperty,keyProperty)] [tableSample] [ [AS] Identifier ] 仅仅查询一个表,并且支持抽样
+c.partitionedTableFunction 嵌套查询
 partitionTableFunctionSource
 @init { gParent.msgs.push("partitionTableFunctionSource clause"); }
 @after { gParent.msgs.pop(); } 
@@ -275,6 +287,7 @@ partitionTableFunctionSource
    partitionedTableFunction
    ;
 
+格式:Identifier (ON partitionTableFunctionSource [partitioningSpec] Identifier(expression ),Identifier(expression).. ) alias
 partitionedTableFunction
 @init { gParent.msgs.push("ptf clause"); }
 @after { gParent.msgs.pop(); } 
@@ -287,8 +300,7 @@ partitionedTableFunction
    ; 
 
 //----------------------- Rules for parsing whereClause -----------------------------
-// where a=b and ...
-//WHERE expression(仅此一个表达式,不允许有逗号分割多个表达式)
+格式:WHERE expression
 whereClause
 @init { gParent.msgs.push("where clause"); }
 @after { gParent.msgs.pop(); }
