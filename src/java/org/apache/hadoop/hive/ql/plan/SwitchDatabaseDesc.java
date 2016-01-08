@@ -21,8 +21,8 @@ package org.apache.hadoop.hive.ql.plan;
 import java.io.Serializable;
 
 /**
- * SwitchDatabaseDesc.
- *
+ * SwitchDatabaseDesc.表示切换数据库操作
+ * use + 字符串 
  */
 @Explain(displayName = "Switch Database")
 public class SwitchDatabaseDesc extends DDLDesc implements Serializable {

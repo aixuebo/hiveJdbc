@@ -798,11 +798,17 @@ public class Hive {
     }
   }
 
+  /**
+   * 查找指定table对应的一个索引
+   */
   public Index getIndex(String baseTableName, String indexName) throws HiveException {
     Table t = newTable(baseTableName);
     return this.getIndex(t.getDbName(), t.getTableName(), indexName);
   }
 
+  /**
+   * 查找指定table对应的一个索引
+   */
   public Index getIndex(String dbName, String baseTableName,
       String indexName) throws HiveException {
     try {
@@ -1551,6 +1557,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
     return new Partition(tbl, partition);
   }
 
+  //查找table的某一个分区
   public Partition getPartition(Table tbl, Map<String, String> partSpec,
       boolean forceCreate) throws HiveException {
     return getPartition(tbl, partSpec, forceCreate, null, true);
@@ -1699,6 +1706,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
    *          object for which partition is needed
    * @return list of partition objects
    * @throws HiveException
+   * 查找table的所有分区情况
    */
   public List<Partition> getPartitions(Table tbl) throws HiveException {
     if (tbl.isPartitioned()) {
@@ -1793,6 +1801,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
    *          object for which partition is needed. Must be partitioned.
    * @return list of partition objects
    * @throws HiveException
+   * 只允许查找DropTableDesc.stringPartitionColumns为false的情况所有分区集合
    */
   public List<Partition> getPartitions(Table tbl, Map<String, String> partialPartSpec)
   throws HiveException {
@@ -1888,6 +1897,8 @@ private void constructOneLBLocationMap(FileStatus fSta,
    * @throws MetaException
    * @throws NoSuchObjectException
    * @throws TException
+   * 在table中查找符合filter条件的partiton集合,filer条件可以允许>=等非=号的符号
+   * 参见DropTableDesc.stringPartitionColumns
    */
   public List<Partition> getPartitionsByFilter(Table tbl, String filter)
       throws HiveException, MetaException, NoSuchObjectException, TException {
@@ -2414,6 +2425,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
     }
   }
 
+  //获取数据库+表名下的所有索引对象
   public List<Index> getIndexes(String dbName, String tblName, short max) throws HiveException {
     List<Index> indexes = null;
     try {

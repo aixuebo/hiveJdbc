@@ -23,7 +23,8 @@ import java.util.Map;
 
 /**
  * CreateDatabaseDesc.
- *
+ * sql:CREATE DATABASE|SCHEMA [IF NOT Exists] "databaseName" [COMMENT String] [LOCATION String][WITH DBPROPERTIES (key=value,key=value)]
+ * 创建一个数据库
  */
 @Explain(displayName = "Create Database")
 public class CreateDatabaseDesc extends DDLDesc implements Serializable {

@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hive.ql.plan;
 
+/**
+   * 删除一个数据表的一个索引
+   * 格式:DROP INDEX [IF EXISTS] "indexName" ON tableName
+ */
 public class DropIndexDesc {
   
   private static final long serialVersionUID = 1L;

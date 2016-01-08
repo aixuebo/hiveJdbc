@@ -225,7 +225,7 @@ public class HiveConf extends Configuration {
     // less than this
     LOCALMODEMAXINPUTFILES("hive.exec.mode.local.auto.input.files.max", 4),
     // if true, DROP TABLE/VIEW does not fail if table/view doesn't exist and IF EXISTS is
-    // not specified
+    // not specified,true表示如果数据块表不存在的话,忽略抛异常,false表示要抛异常
     DROPIGNORESNONEXISTENT("hive.exec.drop.ignorenonexistent", true),
 
     // ignore the mapjoin hint
@@ -658,7 +658,7 @@ public class HiveConf extends Configuration {
     HIVE_HBASE_WAL_ENABLED("hive.hbase.wal.enabled", true),
 
     // For har files
-    HIVEARCHIVEENABLED("hive.archive.enabled", false),
+    HIVEARCHIVEENABLED("hive.archive.enabled", false),//是否允许ARCHIVE PARTITION命令归档partition的数据成hadoop的har文件
 
     //Enable/Disable gbToIdx rewrite rule
     HIVEOPTGBYUSINGINDEX("hive.optimize.index.groupby", false),

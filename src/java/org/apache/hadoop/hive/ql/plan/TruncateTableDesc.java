@@ -23,16 +23,19 @@ import java.util.Map;
 
 /**
  * Truncates managed table or partition
+ * 截断表内数据
+ * 从表或者表分区删除所有行，不指定分区，将截断表中的所有分区，也可以一次指定多个分区，截断多个分区。
+ * TRUNCATE TABLE tableName [PARTITION (name=value,name=value,name)] [COLUMNS (column1,column2...)]
  */
 @Explain(displayName = "Truncate Table or Partition")
 public class TruncateTableDesc extends DDLDesc {
 
   private static final long serialVersionUID = 1L;
 
-  private String tableName;
-  private Map<String, String> partSpec;
-  private List<Integer> columnIndexes;
-  private String inputDir;
+  private String tableName;//针对哪个表
+  private Map<String, String> partSpec;//针对哪些partition
+  private List<Integer> columnIndexes;//COLUMNS (column1,column2...) 语法中的属性在table中的属性序号一一对应关系
+  private String inputDir;//设置该partition的老路径,即为截断前的数据路径
   private String outputDir;
   private ListBucketingCtx lbCtx;
 

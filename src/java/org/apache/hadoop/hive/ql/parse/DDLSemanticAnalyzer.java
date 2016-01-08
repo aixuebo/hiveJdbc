@@ -139,6 +139,8 @@ import org.apache.hadoop.mapred.TextInputFormat;
  */
 public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
   private static final Log LOG = LogFactory.getLog(DDLSemanticAnalyzer.class);
+  
+  //属性所属类型映射
   private static final Map<Integer, String> TokenToTypeName = new HashMap<Integer, String>();
 
   private final Set<String> reservedPartitionValues;//预先保留的partition名字集合,这些名字的partition是不允许被命名的
@@ -175,6 +177,7 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
     case HiveParser.TOK_VARCHAR://记录varchar的字节长度
       PrimitiveCategory primitiveCategory = PrimitiveCategory.VARCHAR;
       typeName = TokenToTypeName.get(token);
+      //解析verchar节点的长度限制,返回VarcharTypeParams对象
       VarcharTypeParams varcharParams = ParseUtils.getVarcharParams(typeName, node);
       typeName = PrimitiveObjectInspectorUtils.getTypeEntryFromTypeSpecs(
           primitiveCategory, varcharParams).toString();
@@ -185,6 +188,7 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
     return typeName;
   }
 
+  //描述一个数据库表名字以及对应的partition信息集合
   static class TablePartition {
     String tableName;
     HashMap<String, String> partSpec = null;
@@ -226,18 +230,76 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
 
     switch (ast.getToken().getType()) {
     case HiveParser.TOK_ALTERTABLE_PARTITION: {
+    	/**
+    	 * 解析alterTblPartitionStatement
+		a.tableName [PARTITION (name=value,name=value,name)] alterTblPartitionStatementSuffix
+		b.String PARTITION COLUMN (columnNameType)
+其中:alterTblPartitionStatementSuffix
+一、alterStatementSuffixLocation
+SET LOCATION xxxx
+二、alterStatementSuffixFileFormat
+1.SET FILEFORMAT SEQUENCEFILE
+2.SET FILEFORMAT TEXTFILE
+3.SET FILEFORMAT RCFILE
+4.SET FILEFORMAT ORCFILE
+5.SET FILEFORMAT INPUTFORMAT string OUTPUTFORMAT string [INPUTDRIVER string OUTPUTDRIVER string]
+6.SET FILEFORMAT xxxx 属于TOK_FILEFORMAT_GENERIC类型自定义格式
+三、alterStatementSuffixProtectMode
+1.ENABLE OFFLINE
+2.ENABLE NO_DROP [CASCADE]
+3.ENABLE READONLY
+4.DISABLE OFFLINE
+5.DISABLE NO_DROP [CASCADE]
+6.DISABLE READONLY
+四、alterStatementSuffixMergeFiles
+CONCATENATE
+五、alterStatementSuffixSerdeProperties
+1.SET SERDE string [WITH SERDEPROPERTIES(key=value,key=value)]
+2.SET SERDEPROPERTIES (key=value,key=value)
+六、alterStatementSuffixRenamePart
+RENAME TO PARTITION (name=value,name=value,name)
+七、alterStatementSuffixBucketNum
+INTO number BUCKETS
+八、alterTblPartitionStatementSuffixSkewedLocation 
+SET SKEWED LOCATION (key=value,key=value)
+九、alterStatementSuffixClusterbySortby
+1.NOT CLUSTERED
+2.NOT SORTED
+3.CLUSTERED BY (column1,column2) [SORTED BY (column1 desc,column2 desc)] into Number BUCKETS
+    	 */
+    
+      /**
+       * 解析tableName [PARTITION (name=value,name=value,name)]
+       */
       ASTNode tablePart = (ASTNode) ast.getChild(0);
       TablePartition tblPart = new TablePartition(tablePart);
       String tableName = tblPart.tableName;
       HashMap<String, String> partSpec = tblPart.partSpec;
       ast = (ASTNode) ast.getChild(1);
       if (ast.getToken().getType() == HiveParser.TOK_ALTERTABLE_FILEFORMAT) {//设置文件格式
+    	 /**
+    	  * 设置文件格式
+1.SET FILEFORMAT SEQUENCEFILE
+2.SET FILEFORMAT TEXTFILE
+3.SET FILEFORMAT RCFILE
+4.SET FILEFORMAT ORCFILE
+5.SET FILEFORMAT INPUTFORMAT string OUTPUTFORMAT string [INPUTDRIVER string OUTPUTDRIVER string]
+6.SET FILEFORMAT xxxx 属于TOK_FILEFORMAT_GENERIC类型自定义格式
+    	  */
         analyzeAlterTableFileFormat(ast, tableName, partSpec);
       }else if (ast.getToken().getType() == HiveParser.TOK_ALTERTABLE_LOCATION) {
-        analyzeAlterTableLocation(ast, tableName, partSpec);
+        analyzeAlterTableLocation(ast, tableName, partSpec);//解析SET LOCATION xxxx
       }else if (ast.getToken().getType() == HiveParser.TOK_ALTERTABLE_SERIALIZER) {
+    	  /**
+设置存储的方式是csv、json、还是protobuffer等等吧
+格式 SET SERDE "serde_class_name" [WITH SERDEPROPERTIES(key=value,key=value)]
+    	   */
         analyzeAlterTableSerde(ast, tableName, partSpec);
       } else if (ast.getToken().getType() == HiveParser.TOK_ALTERTABLE_SERDEPROPERTIES) {
+    	  /**
+设置存储的方式是csv、json、还是protobuffer等等吧
+格式 SET SERDEPROPERTIES (key=value,key=value)
+    	   */
         analyzeAlterTableSerdeProps(ast, tableName, partSpec);
       } else if (ast.getToken().getType() == HiveParser.TOK_ALTERTABLE_RENAMEPART) {
         analyzeAlterTableRenamePart(ast, tableName, partSpec);
@@ -260,6 +322,7 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
       analyzeCreateIndex(ast);
       break;
     case HiveParser.TOK_DROPINDEX:
+      //DROP INDEX [IF EXISTS] "indexName" ON tableName
       analyzeDropIndex(ast);
       break;
     case HiveParser.TOK_DESCTABLE:
@@ -364,9 +427,11 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
       analyzeAlterTableProps(ast, false, true);
       break;
     case HiveParser.TOK_ALTERINDEX_REBUILD:
+      //"indexName" ON "tableName" [PARTITION (name=value,name=value,name)] REBUILD
       analyzeAlterIndexRebuild(ast);
       break;
     case HiveParser.TOK_ALTERINDEX_PROPERTIES:
+      //"indexName" ON "tableName" [PARTITION (name=value,name=value,name)] SET IDXPROPERTIES (key=value,key=value)
       analyzeAlterIndexProps(ast);
       break;
     case HiveParser.TOK_SHOWPARTITIONS:
@@ -436,13 +501,23 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
     }
   }
 
+  /**
+   * GRANT ROLE String,... TO principalSpecification时,第一个参数为true,表示将角色集合授权给某些user、group、role
+   * REVOKE ROLE String,... FROM principalSpecification时,第一个参数为false,表示将角色集合撤销一些,撤销的是:user、group、role
+   * 授权/撤回角色
+   */
   private void analyzeGrantRevokeRole(boolean grant, ASTNode ast) {
+	  
+	//解析USER | GROUP | ROLE String,USER | GROUP | ROLE String...集合
     List<PrincipalDesc> principalDesc = analyzePrincipalListDef(
         (ASTNode) ast.getChild(0));
+    
+    //解析String,String..角色集合
     List<String> roles = new ArrayList<String>();
     for (int i = 1; i < ast.getChildCount(); i++) {
       roles.add(unescapeIdentifier(ast.getChild(i).getText()));
     }
+    
     String roleOwnerName = "";
     if (SessionState.get() != null
         && SessionState.get().getAuthenticator() != null) {
@@ -581,12 +656,16 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
     return subject;
   }
 
+  /**
+   * 解析sql:USER | GROUP | ROLE String,USER | GROUP | ROLE String...
+   * 返回权限集合
+   */
   private List<PrincipalDesc> analyzePrincipalListDef(ASTNode node) {
     List<PrincipalDesc> principalList = new ArrayList<PrincipalDesc>();
 
     for (int i = 0; i < node.getChildCount(); i++) {
       ASTNode child = (ASTNode) node.getChild(i);
-      PrincipalType type = null;
+      PrincipalType type = null;//特权类型
       switch (child.getType()) {
       case HiveParser.TOK_USER:
         type = PrincipalType.USER;
@@ -598,7 +677,7 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
         type = PrincipalType.ROLE;
         break;
       }
-      String principalName = unescapeIdentifier(child.getChild(0).getText());
+      String principalName = unescapeIdentifier(child.getChild(0).getText());//特权名称
       PrincipalDesc principalDesc = new PrincipalDesc(principalName, type);
       principalList.add(principalDesc);
     }
@@ -627,14 +706,20 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
     return ret;
   }
 
+  /**
+   * CREATE ROLE "roleName" 创建一个角色
+   */
   private void analyzeCreateRole(ASTNode ast) {
-    String roleName = unescapeIdentifier(ast.getChild(0).getText());
+    String roleName = unescapeIdentifier(ast.getChild(0).getText());//角色名称
     RoleDDLDesc createRoleDesc = new RoleDDLDesc(roleName,
         RoleDDLDesc.RoleOperation.CREATE_ROLE);
     rootTasks.add(TaskFactory.get(new DDLWork(getInputs(), getOutputs(),
         createRoleDesc), conf));
   }
 
+  /**
+   * DROP ROLE "roleName" 删除一个角色
+   */
   private void analyzeDropRole(ASTNode ast) {
     String roleName = unescapeIdentifier(ast.getChild(0).getText());
     RoleDDLDesc createRoleDesc = new RoleDDLDesc(roleName,
@@ -643,6 +728,10 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
         createRoleDesc), conf));
   }
 
+  /**
+   * 展示某个user、group、role的具体权限
+   * 格式:SHOW ROLE GRANT USER | GROUP | ROLE String
+   */
   private void analyzeShowRoleGrant(ASTNode ast) {
     ASTNode child = (ASTNode) ast.getChild(0);
     PrincipalType principalType = PrincipalType.USER;
@@ -657,7 +746,7 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
       principalType = PrincipalType.ROLE;
       break;
     }
-    String principalName = unescapeIdentifier(child.getChild(0).getText());
+    String principalName = unescapeIdentifier(child.getChild(0).getText());//权限名称
     RoleDDLDesc createRoleDesc = new RoleDDLDesc(principalName, principalType,
         RoleDDLDesc.RoleOperation.SHOW_ROLE_GRANT, null);
     createRoleDesc.setResFile(ctx.getResFile().toString());
@@ -665,11 +754,16 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
         createRoleDesc), conf));
   }
 
+  /**
+   * 更改数据库的属性
+   * String SET DBPROPERTIES (key=value,key=value)
+   */
   private void analyzeAlterDatabase(ASTNode ast) throws SemanticException {
 
-    String dbName = unescapeIdentifier(ast.getChild(0).getText());
-    Map<String, String> dbProps = null;
+    String dbName = unescapeIdentifier(ast.getChild(0).getText());//数据库名字
+    Map<String, String> dbProps = null;//属性集合
 
+    //解析属性集合
     for (int i = 1; i < ast.getChildCount(); i++) {
       ASTNode childNode = (ASTNode) ast.getChild(i);
       switch (childNode.getToken().getType()) {
@@ -683,19 +777,29 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
 
     // currently alter database command can only change properties
     AlterDatabaseDesc alterDesc = new AlterDatabaseDesc(dbName, null, null, false);
+    //设置属性集合
     alterDesc.setDatabaseProperties(dbProps);
     rootTasks.add(TaskFactory.get(new DDLWork(getInputs(), getOutputs(), alterDesc),
         conf));
 
   }
 
+  /**
+tableName1 EXCHANGE PARTITION (name=value,name=value,name) WITH TABLE tableName2
+  将tableName1的某一个partition的数据交换到另外一个tableName2中
+  注意:此时两个数据库表结构一样、分区字段相同
+   */
   private void analyzeExchangePartition(ASTNode ast) throws SemanticException {
+	  //获取目标和数据源两个数据表
     Table sourceTable =  getTable(getUnescapedName((ASTNode)ast.getChild(0)));
     Table destTable = getTable(getUnescapedName((ASTNode)ast.getChild(2)));
 
-    // Get the partition specs
+    // Get the partition specs 获取指定partition分区,并且校验partition分区信息
     Map<String, String> partSpecs = getPartSpec((ASTNode) ast.getChild(1));
+    //校验分区名字不允许是在保留字中
     validatePartitionValues(partSpecs);
+    
+    //校验两个数据库表字段相同、分区字段相同
     boolean sameColumns = MetaStoreUtils.compareFieldColumns(
         sourceTable.getAllCols(), destTable.getAllCols());
     boolean samePartitions = MetaStoreUtils.compareFieldColumns(
@@ -703,6 +807,8 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
     if (!sameColumns || !samePartitions) {
       throw new SemanticException(ErrorMsg.TABLES_INCOMPATIBLE_SCHEMAS.getMsg());
     }
+    
+    //获取数据源表对应的partition集合
     List<Partition> partitions = getPartitions(sourceTable, partSpecs, true);
 
     // Verify that the partitions specified are continuous
@@ -712,6 +818,7 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
       throw new SemanticException(
           ErrorMsg.PARTITION_VALUE_NOT_CONTINUOUS.getMsg(partSpecs.toString()));
     }
+    //获取目标数据库表的分区集合
     List<Partition> destPartitions = null;
     try {
       destPartitions = getPartitions(destTable, partSpecs, true);
@@ -719,6 +826,8 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
       // We should expect a semantic exception being throw as this partition
       // should not be present.
     }
+    
+    
     if (destPartitions != null) {
       // If any destination partition is present then throw a Semantic Exception.
       throw new SemanticException(ErrorMsg.PARTITION_EXISTS.getMsg(destPartitions.toString()));
@@ -730,20 +839,21 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
   }
 
   /**
-   * @param partitionKeys the list of partition keys of the table
-   * @param partSpecs the partition specs given by the user
+   * @param partitionKeys the list of partition keys of the table 数据库表中的所有分区字段集合
+   * @param partSpecs the partition specs given by the user 用户需要的分区字段集合
    * @return true if no subpartition value is specified without a partition's
    *         value being specified else it returns false
    */
   private boolean isPartitionValueContinuous(List<FieldSchema> partitionKeys,
       Map<String, String> partSpecs) {
-    boolean partitionMissing = false;
+    boolean partitionMissing = false;//是否缺失分区字段
+    //循环数据库表中所有的字段集合
     for (FieldSchema partitionKey: partitionKeys) {
       if (!partSpecs.containsKey(partitionKey.getName())) {
         partitionMissing = true;
       } else {
         if (partitionMissing) {
-          // A subpartition value exists after a missing partition
+          // A subpartition value exists after a missing partition 表示当缺失的partition之后的分区中,存在正确的partition
           // The partition value specified are not continuous, return false
           return false;
         }
@@ -752,12 +862,16 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
     return true;
   }
 
+  /**
+   * CREATE DATABASE|SCHEMA [IF NOT Exists] "databaseName" [COMMENT String] [LOCATION String][WITH DBPROPERTIES (key=value,key=value)]
+   * 创建一个数据库
+   */
   private void analyzeCreateDatabase(ASTNode ast) throws SemanticException {
-    String dbName = unescapeIdentifier(ast.getChild(0).getText());
-    boolean ifNotExists = false;
-    String dbComment = null;
-    String dbLocation = null;
-    Map<String, String> dbProps = null;
+    String dbName = unescapeIdentifier(ast.getChild(0).getText());//数据库名
+    boolean ifNotExists = false;//是否进行校验 IF NOT Exists
+    String dbComment = null;//备注
+    String dbLocation = null;//数据库存储路径
+    Map<String, String> dbProps = null;//Map类型的数据库属性信息
 
     for (int i = 1; i < ast.getChildCount(); i++) {
       ASTNode childNode = (ASTNode) ast.getChild(i);
@@ -781,7 +895,7 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
 
     CreateDatabaseDesc createDatabaseDesc =
         new CreateDatabaseDesc(dbName, dbComment, dbLocation, ifNotExists);
-    if (dbProps != null) {
+    if (dbProps != null) {//设置数据库的Map属性信息
       createDatabaseDesc.setDatabaseProperties(dbProps);
     }
 
@@ -789,6 +903,10 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
         createDatabaseDesc), conf));
   }
 
+  /**
+   * DROP (DATABASE|SCHEMA) [IF EXISTS] database_name [RESTRICT|CASCADE];
+   * 删除一个数据库
+   */
   private void analyzeDropDatabase(ASTNode ast) throws SemanticException {
     String dbName = unescapeIdentifier(ast.getChild(0).getText());
     boolean ifExists = false;
@@ -806,21 +924,29 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
     rootTasks.add(TaskFactory.get(new DDLWork(getInputs(), getOutputs(), dropDatabaseDesc), conf));
   }
 
+  /**
+   * use + 字符串 
+   * 表示切换数据库操作
+   */
   private void analyzeSwitchDatabase(ASTNode ast) {
-    String dbName = unescapeIdentifier(ast.getChild(0).getText());
+    String dbName = unescapeIdentifier(ast.getChild(0).getText());//数据库名字
     SwitchDatabaseDesc switchDatabaseDesc = new SwitchDatabaseDesc(dbName);
     rootTasks.add(TaskFactory.get(new DDLWork(getInputs(), getOutputs(),
         switchDatabaseDesc), conf));
   }
 
-
-
+  /**
+   * DROP TABLE [IF EXISTS] tableName
+   * 删除一个表操作
+   * @expectView true表示该表是一个视图表,而不是实体表
+   */
   private void analyzeDropTable(ASTNode ast, boolean expectView)
       throws SemanticException {
     String tableName = getUnescapedName((ASTNode) ast.getChild(0));
     boolean ifExists = (ast.getFirstChildWithType(HiveParser.TOK_IFEXISTS) != null);
     // we want to signal an error if the table/view doesn't exist and we're
     // configured not to fail silently
+    //如果数据块表不存在的话,是否抛异常
     boolean throwException =
         !ifExists && !HiveConf.getBoolVar(conf, ConfVars.DROPIGNORESNONEXISTENT);
     Table tab = getTable(tableName, throwException);
@@ -835,25 +961,36 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
         dropTblDesc), conf));
   }
 
+  /**
+   * 截断表内数据
+   * 从表或者表分区删除所有行，不指定分区，将截断表中的所有分区，也可以一次指定多个分区，截断多个分区。
+   * TRUNCATE TABLE tableName [PARTITION (name=value,name=value,name)] [COLUMNS (column1,column2...)]
+   */
   private void analyzeTruncateTable(ASTNode ast) throws SemanticException {
-    ASTNode root = (ASTNode) ast.getChild(0); // TOK_TABLE_PARTITION
-    String tableName = getUnescapedName((ASTNode) root.getChild(0));
+    ASTNode root = (ASTNode) ast.getChild(0);
+    String tableName = getUnescapedName((ASTNode) root.getChild(0));//表名
 
     Table table = getTable(tableName, true);
-    if (table.getTableType() != TableType.MANAGED_TABLE) {
+    if (table.getTableType() != TableType.MANAGED_TABLE) {//只能是内部表才允许截断表操作
       throw new SemanticException(ErrorMsg.TRUNCATE_FOR_NON_MANAGED_TABLE.format(tableName));
     }
     if (table.isNonNative()) {
       throw new SemanticException(ErrorMsg.TRUNCATE_FOR_NON_NATIVE_TABLE.format(tableName)); //TODO
     }
+    
+    //语法有问题,table没有分区,但是却sql中设置了PARTITION (name=value,name=value,name),因此异常
     if (!table.isPartitioned() && root.getChildCount() > 1) {
       throw new SemanticException(ErrorMsg.PARTSPEC_FOR_NON_PARTITIONED_TABLE.format(tableName));
     }
+    
+    //解析PARTITION (name=value,name=value,name),查找到对应的某个partition对象
     Map<String, String> partSpec = getPartSpec((ASTNode) root.getChild(1));
-    if (partSpec == null) {
-      if (!table.isPartitioned()) {
+    
+    //获取所有的partition数据
+    if (partSpec == null) {//没有要查找某个分区
+      if (!table.isPartitioned()) {//table没有分区,则设置全部表
         outputs.add(new WriteEntity(table));
-      } else {
+      } else {//table有分区,则设置所有table的分区
         for (Partition partition : getPartitions(table, null, false)) {
           outputs.add(new WriteEntity(partition));
         }
@@ -875,12 +1012,14 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
     Task<? extends Serializable> truncateTask = TaskFactory.get(ddlWork, conf);
 
     // Is this a truncate column command
+    //解析sql:COLUMNS (column1,column2...)
     List<String> columnNames = null;
     if (ast.getChildCount() == 2) {
       try {
+    	//解析所有的属性名集合
         columnNames = getColumnNames((ASTNode)ast.getChild(1));
 
-        // Throw an error if the table is indexed
+        // Throw an error if the table is indexed 带有索引的表是不允许在TRUNCATE命令中执行COLUMNS (column1,column2...)命令的
         List<Index> indexes = db.getIndexes(table.getDbName(), tableName, (short)1);
         if (indexes != null && indexes.size() > 0) {
           throw new SemanticException(ErrorMsg.TRUNCATE_COLUMN_INDEXED_TABLE.getMsg());
@@ -940,26 +1079,32 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
           throw new SemanticException(ErrorMsg.TRUNCATE_COLUMN_ARCHIVED.getMsg());
         }
 
+        /**
+         * 针对命令中的每一个属性,找到其在table中属性的索引位置,该集合与命令中的属性是一对一关系
+         * 并且在查找过程中进行一些校验
+         */
         Set<Integer> columnIndexes = new HashSet<Integer>();
-        for (String columnName : columnNames) {
+        for (String columnName : columnNames) {//循环命令中的属性
           boolean found = false;
-          for (int columnIndex = 0; columnIndex < cols.size(); columnIndex++) {
-            if (columnName.equalsIgnoreCase(cols.get(columnIndex).getName())) {
+          for (int columnIndex = 0; columnIndex < cols.size(); columnIndex++) {//循环该表的所有属性
+            if (columnName.equalsIgnoreCase(cols.get(columnIndex).getName())) {//命令中的属性与表在属性一致
               columnIndexes.add(columnIndex);
               found = true;
               break;
             }
           }
           // Throw an exception if the user is trying to truncate a column which doesn't exist
-          if (!found) {
+          if (!found) {//如果没有在table中找到指定属性,则抛异常
             throw new SemanticException(ErrorMsg.INVALID_COLUMN.getMsg(columnName));
           }
           // Throw an exception if the table/partition is bucketed on one of the columns
+          //truncate时,column中属性不允许是bucketCol中的属性
           for (String bucketCol : bucketCols) {
             if (bucketCol.equalsIgnoreCase(columnName)) {
               throw new SemanticException(ErrorMsg.TRUNCATE_BUCKETED_COLUMN.getMsg(columnName));
             }
           }
+          
           if (isListBucketed) {
             for (String listBucketCol : listBucketColNames) {
               if (listBucketCol.equalsIgnoreCase(columnName)) {
@@ -968,10 +1113,13 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
               }
             }
           }
+          
         }
 
+        //设置COLUMNS (column1,column2...) 语法中的属性在table中的属性序号一一对应关系
         truncateTblDesc.setColumnIndexes(new ArrayList<Integer>(columnIndexes));
 
+        //该partition的老路径
         truncateTblDesc.setInputDir(oldTblPartLoc.toString());
         addInputsOutputsAlterTable(tableName, partSpec);
 
@@ -1024,30 +1172,6 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
   }
 
   /**
-createIndexStatement
-@init { msgs.push("create index statement");}
-@after {msgs.pop();}
-    : KW_CREATE KW_INDEX indexName=identifier
-      KW_ON KW_TABLE tab=tableName LPAREN indexedCols=columnNameList RPAREN
-      KW_AS typeName=StringLiteral
-      autoRebuild?
-      indexPropertiesPrefixed?
-      indexTblName?
-      tableRowFormat?
-      tableFileFormat?
-      tableLocation?
-      tablePropertiesPrefixed?
-      indexComment?
-    ->^(TOK_CREATEINDEX $indexName $typeName $tab $indexedCols
-        autoRebuild?
-        indexPropertiesPrefixed?
-        indexTblName?
-        tableRowFormat?
-        tableFileFormat?
-        tableLocation?
-        tablePropertiesPrefixed?
-        indexComment?)
-    ;
 创建索引
 CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
 其他的是可选项
@@ -1083,6 +1207,7 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
     String tableName = getUnescapedName((ASTNode) ast.getChild(2));//对哪个表建立索引
     List<String> indexedCols = getColumnNames((ASTNode) ast.getChild(3));//对哪些列建立索引
 
+    //获取索引的类型
     IndexType indexType = HiveIndex.getIndexType(typeName);
     if (indexType != null) {
       typeName = indexType.getHandlerClsName();
@@ -1165,6 +1290,10 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
     rootTasks.add(createIndex);
   }
 
+  /**
+   * 删除一个数据表的一个索引
+   * 格式:DROP INDEX [IF EXISTS] "indexName" ON tableName
+   */
   private void analyzeDropIndex(ASTNode ast) throws SemanticException {
     String indexName = unescapeIdentifier(ast.getChild(0).getText());
     String tableName = getUnescapedName((ASTNode) ast.getChild(1));
@@ -1175,6 +1304,7 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
         !ifExists && !HiveConf.getBoolVar(conf, ConfVars.DROPIGNORESNONEXISTENT);
     if (throwException) {
       try {
+    	//查找指定table对应的一个索引
         Index idx = db.getIndex(tableName, indexName);
       } catch (HiveException e) {
         throw new SemanticException(ErrorMsg.INVALID_INDEX.getMsg(indexName));
@@ -1186,6 +1316,9 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
         dropIdxDesc), conf));
   }
 
+  /**
+   * 修改index的属性信息 "indexName" ON "tableName" [PARTITION (name=value,name=value,name)] REBUILD
+   */
   private void analyzeAlterIndexRebuild(ASTNode ast) throws SemanticException {
     String baseTableName = unescapeIdentifier(ast.getChild(0).getText());
     String indexName = unescapeIdentifier(ast.getChild(1).getText());
@@ -1194,6 +1327,8 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
     if (part != null) {
       partSpec = extractPartitionSpecs(part);
     }
+    
+    //添加任务
     List<Task<?>> indexBuilder = getIndexBuilderMapRed(baseTableName, indexName, partSpec);
     rootTasks.addAll(indexBuilder);
 
@@ -1210,6 +1345,10 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
     }
   }
 
+  /**
+   * 修改index的属性信息
+   * "indexName" ON "tableName" [PARTITION (name=value,name=value,name)] SET IDXPROPERTIES (key=value,key=value)
+   */
   private void analyzeAlterIndexProps(ASTNode ast)
       throws SemanticException {
 
@@ -1228,12 +1367,16 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
     rootTasks.add(TaskFactory.get(new DDLWork(alterIdxDesc), conf));
   }
 
+  /**
+   * 修改index的属性信息 "indexName" ON "tableName" [PARTITION (name=value,name=value,name)] REBUILD
+   * 被analyzeAlterIndexRebuild该方法调用
+   */
   private List<Task<?>> getIndexBuilderMapRed(String baseTableName, String indexName,
       HashMap<String, String> partSpec) throws SemanticException {
     try {
       String dbName = SessionState.get().getCurrentDatabase();
-      Index index = db.getIndex(dbName, baseTableName, indexName);
-      Table indexTbl = getTable(index.getIndexTableName());
+      Index index = db.getIndex(dbName, baseTableName, indexName);//找到对应的索引对象
+      Table indexTbl = getTable(index.getIndexTableName());//找到索引对应的表
       String baseTblName = index.getOrigTableName();
       Table baseTbl = getTable(baseTblName);
 
@@ -1299,10 +1442,16 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
     validateAlterTableType(tbl, op, false);
   }
 
+  /**
+   * 对表或者视图校验是否允许该alter的类型操作
+   * @param tbl 真实的table对象
+   * @param op 要进行的alter操作
+   * @param expectView,期望该数据库是否是视图
+   */
   private void validateAlterTableType(Table tbl, AlterTableTypes op, boolean expectView)
       throws SemanticException {
-    if (tbl.isView()) {
-      if (!expectView) {
+    if (tbl.isView()) {//真实的table对象是视图
+      if (!expectView) {//必须是视图,因为table是视图属性
         throw new SemanticException(ErrorMsg.ALTER_COMMAND_FOR_VIEWS.getMsg());
       }
 
@@ -1316,10 +1465,10 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
         // allow this form
         break;
       default:
-        throw new SemanticException(ErrorMsg.ALTER_VIEW_DISALLOWED_OP.getMsg(op.toString()));
+        throw new SemanticException(ErrorMsg.ALTER_VIEW_DISALLOWED_OP.getMsg(op.toString()));//视图不允许有该操作
       }
     } else {
-      if (expectView) {
+      if (expectView) {//是表,不是视图
         throw new SemanticException(ErrorMsg.ALTER_COMMAND_FOR_TABLES.getMsg());
       }
     }
@@ -1352,6 +1501,9 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
         alterTblDesc), conf));
   }
 
+  /**
+设置存储的方式是csv、json、还是protobuffer等等吧,格式 SET SERDEPROPERTIES (key=value,key=value)
+   */
   private void analyzeAlterTableSerdeProps(ASTNode ast, String tableName,
       HashMap<String, String> partSpec)
       throws SemanticException {
@@ -1368,13 +1520,17 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
         alterTblDesc), conf));
   }
 
+  /**
+设置存储的方式是csv、json、还是protobuffer等等吧
+格式 SET SERDE "serde_class_name" [WITH SERDEPROPERTIES(key=value,key=value)]
+   */
   private void analyzeAlterTableSerde(ASTNode ast, String tableName,
       HashMap<String, String> partSpec)
       throws SemanticException {
 
-    String serdeName = unescapeSQLString(ast.getChild(0).getText());
+    String serdeName = unescapeSQLString(ast.getChild(0).getText());//类名字
     AlterTableDesc alterTblDesc = new AlterTableDesc(AlterTableTypes.ADDSERDE);
-    if (ast.getChildCount() > 1) {
+    if (ast.getChildCount() > 1) {//属性信息
       HashMap<String, String> mapProp = getProps((ASTNode) (ast.getChild(1))
           .getChild(0));
       alterTblDesc.setProps(mapProp);
@@ -1388,7 +1544,15 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
         alterTblDesc), conf));
   }
 
-  //设置文件格式
+  /**
+设置文件格式
+1.SET FILEFORMAT SEQUENCEFILE
+2.SET FILEFORMAT TEXTFILE
+3.SET FILEFORMAT RCFILE
+4.SET FILEFORMAT ORCFILE
+5.SET FILEFORMAT INPUTFORMAT string OUTPUTFORMAT string [INPUTDRIVER string OUTPUTDRIVER string]
+6.SET FILEFORMAT xxxx 属于TOK_FILEFORMAT_GENERIC类型自定义格式   *
+   */
   private void analyzeAlterTableFileFormat(ASTNode ast, String tableName,
       HashMap<String, String> partSpec)
       throws SemanticException {
@@ -1439,7 +1603,7 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
       outputFormat = ORCFILE_OUTPUT;
       serde = ORCFILE_SERDE;
       break;
-    case HiveParser.TOK_FILEFORMAT_GENERIC:
+    case HiveParser.TOK_FILEFORMAT_GENERIC://自定义,目前不支持,需要自己实现该方法,继承DDLSemanticAnalyzer类即可
       handleGenericFileFormat(child);
       break;
     }
@@ -1457,6 +1621,9 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
     addInputsOutputsAlterTable(tableName, partSpec, null);
   }
 
+  /**
+   * 当为某个table下的某个partition创建了一个更改命令Alter命令后,调用该方法
+   */
   private void addInputsOutputsAlterTable(String tableName, Map<String, String> partSpec,
       AlterTableDesc desc) throws SemanticException {
     Table tab = getTable(tableName, true);
@@ -1498,11 +1665,16 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
     }
   }
 
+  /**
+   * 解析SET LOCATION xxxx,即HDFS上存储的路径
+   * 为某个table的某个partitions分配HDFS上路径 
+   */
   private void analyzeAlterTableLocation(ASTNode ast, String tableName,
       HashMap<String, String> partSpec) throws SemanticException {
-
+	//获取HDFS路径
     String newLocation = unescapeSQLString(ast.getChild(0).getText());
 
+    //创建描述本次更改操作的内容
     AlterTableDesc alterTblDesc = new AlterTableDesc(tableName, newLocation, partSpec);
 
     addInputsOutputsAlterTable(tableName, partSpec, alterTblDesc);
@@ -1747,6 +1919,7 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
      * @param ast
      *          The AST from which the qualified name has to be extracted
      * @return String
+     * 将节点的所有子节点使用.分隔开
      */
     static public String getFullyQualifiedName(ASTNode ast) {
       if (ast.getChildCount() == 0) {
@@ -2072,8 +2245,9 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
     setFetchTask(createFetchTask(descDbDesc.getSchema()));
   }
 
-  //解析table的partion,原始格式是partionName=value,partionName=value
+  //解析table的partion
   //eg:date=20150831,task=share
+  //sql:PARTITION (name=value,name=value,name)
   private static HashMap<String, String> getPartSpec(ASTNode partspec)
       throws SemanticException {
     if (partspec == null) {
@@ -2521,10 +2695,14 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
         alterBucketNum), conf));
   }
 
+  /**
+   * 修改表的属性 String ADD|REPLACE COLUMNS (columnNameTypeList)
+   */
   private void analyzeAlterTableModifyCols(ASTNode ast,
       AlterTableTypes alterType) throws SemanticException {
     String tblName = getUnescapedName((ASTNode) ast.getChild(0));
     List<FieldSchema> newCols = getColumns((ASTNode) ast.getChild(1));
+    
     AlterTableDesc alterTblDesc = new AlterTableDesc(tblName, newCols,
         alterType);
 
@@ -2533,17 +2711,27 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
         alterTblDesc), conf));
   }
 
+  /**
+删除一个数据库表的某些partition
+String DROP [IF Exists] PARTITION(key 符号 value,key 符号 value),PARTITION( key 符号 value,key 符号 value) [IGNORE PROTECTION]
+注意:符号 = 、 == 、 <>、 != 、 <= 、< 、 < 、 >=
+@param expectView,true表示是一个视图,false表示是一个实体表
+   */
   private void analyzeAlterTableDropParts(ASTNode ast, boolean expectView)
       throws SemanticException {
 
     String tblName = getUnescapedName((ASTNode) ast.getChild(0));
     // get table metadata
+    //解析PARTITION(key 符号 value,key 符号 value),PARTITION( key 符号 value,key 符号 value)
     List<PartitionSpec> partSpecs = getFullPartitionSpecs(ast);
-    Table tab = getTable(tblName, true);
+    Table tab = getTable(tblName, true);//获取数据库表对象
+    
+    //校验
     validateAlterTableType(tab, AlterTableTypes.DROPPARTITION, expectView);
     inputs.add(new ReadEntity(tab));
 
     // Find out if all partition columns are strings. This is needed for JDO
+    //校验是否所有的partition属性都是String类型的,false表示有不是String类型的
     boolean stringPartitionColumns = true;
     List<FieldSchema> partCols = tab.getPartCols();
 
@@ -2555,15 +2743,17 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
     }
 
     // Only equality is supported for non-string partition columns
-    if (!stringPartitionColumns) {
+    //删除某一个表的某些分区的时候,如果分区的属性类型不是String的,只允许进行=号操作删除,不允许进行非等号的操作,例如>=等操作
+    if (!stringPartitionColumns) {//说明不是String类型的partition属性
       for (PartitionSpec partSpec : partSpecs) {
-        if (partSpec.isNonEqualityOperator()) {
+        if (partSpec.isNonEqualityOperator()) {//true表示所有的操作中有非=号操作,false表示所有的属性都是=号操作
           throw new SemanticException(
               ErrorMsg.DROP_PARTITION_NON_STRING_PARTCOLS_NONEQUALITY.getMsg());
         }
       }
     }
 
+    //获取IGNORE PROTECTION属性
     boolean ignoreProtection = (ast.getFirstChildWithType(HiveParser.TOK_IGNOREPROTECTION) != null);
     if (partSpecs != null) {
       boolean ifExists = (ast.getFirstChildWithType(HiveParser.TOK_IFEXISTS) != null);
@@ -2571,9 +2761,11 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
       // configured not to fail silently
       boolean throwException =
           !ifExists && !HiveConf.getBoolVar(conf, ConfVars.DROPIGNORESNONEXISTENT);
+      //为某一个数据库表删除一些partition分区的时候,调用该方法
       addTableDropPartsOutputs(tblName, partSpecs, throwException,
                                 stringPartitionColumns, ignoreProtection);
     }
+    //生成任务对象
     DropTableDesc dropTblDesc =
         new DropTableDesc(tblName, partSpecs, expectView, stringPartitionColumns, ignoreProtection);
 
@@ -2646,6 +2838,8 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
    *
    * @throws SemanticException
    *           Parsing failed
+   * 为视图和table添加partition分区
+   * String ADD [IF NOT Exists] PARTITION (name=value,name=value,name) [LOCATION String] PARTITION (name=value,name=value,name) [LOCATION String]..
    */
   private void analyzeAlterTableAddParts(CommonTree ast, boolean expectView)
       throws SemanticException {
@@ -2659,18 +2853,23 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
     validateAlterTableType(tab, AlterTableTypes.ADDPARTITION, expectView);
     inputs.add(new ReadEntity(tab));
 
+    //表示解析PARTITION (name=value,name=value,name) [LOCATION String] PARTITION (name=value,name=value,name) [LOCATION String]..之后的集合
     List<AddPartitionDesc> partitionDescs = new ArrayList<AddPartitionDesc>();
 
     int numCh = ast.getChildCount();
     int start = ifNotExists ? 2 : 1;
 
-    String currentLocation = null;
-    Map<String, String> currentPart = null;
+    /**
+     * 解析PARTITION (name=value,name=value,name) [LOCATION String] PARTITION (name=value,name=value,name) [LOCATION String]..
+     */
+    String currentLocation = null;//存储路径
+    Map<String, String> currentPart = null;//添加的分区
     for (int num = start; num < numCh; num++) {
       ASTNode child = (ASTNode) ast.getChild(num);
       switch (child.getToken().getType()) {
-      case HiveParser.TOK_PARTSPEC:
-        if (currentPart != null) {
+      case HiveParser.TOK_PARTSPEC://解析PARTITION (name=value,name=value,name)
+        if (currentPart != null) {//说明已经存在一个currentPart了,因此处理上一个currentPart分区数据
+          //getPartitionForOutput
           Partition partition = getPartitionForOutput(tab, currentPart);
           if (partition == null || !ifNotExists) {
             AddPartitionDesc addPartitionDesc = new AddPartitionDesc(
@@ -2680,11 +2879,12 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
           }
           currentLocation = null;
         }
-        currentPart = getPartSpec(child);
+        currentPart = getPartSpec(child);//解析PARTITION (name=value,name=value,name)返回Map
+        //校验该分区是否在table中符合条件
         validatePartSpec(tab, currentPart, (ASTNode)child, conf);
         break;
       case HiveParser.TOK_PARTITIONLOCATION:
-        // if location specified, set in partition
+        // if location specified, set in partition 解析LOCATION String
         currentLocation = unescapeSQLString(child.getChild(0).getText());
         break;
       default:
@@ -2692,7 +2892,7 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
       }
     }
 
-    // add the last one
+    // add the last one 将最后一个处理一下
     if (currentPart != null) {
       Partition partition = getPartitionForOutput(tab, currentPart);
       if (partition == null || !ifNotExists) {
@@ -2703,11 +2903,19 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
       }
     }
 
+    //没有分区被添加,则直接返回
     if (partitionDescs.isEmpty()) {
       // nothing to do
       return;
     }
 
+    /**
+   * 校验该table的分区
+   * 参数分区是否合法
+   * 1.table本身没有分区,参数有分区,则非法
+   * 2.分区字段总数不一致,非法
+   * 3.必须每一个分区字段参数中都存在
+     */
     for (AddPartitionDesc addPartitionDesc : partitionDescs) {
       try {
         tab.isValidSpec(addPartitionDesc.getPartSpec());
@@ -2718,6 +2926,11 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
           addPartitionDesc), conf));
     }
 
+    /**
+     * 如果是视图,要去执行一个sql
+     * select * from biao where (key=value and key=value) or (key=value and key=value) ..
+     * 注意:每一个PARTITION (name=value,name=value,name)对应一组(key=value and key=value)
+     */
     if (isView) {
       // Compile internal query to capture underlying table partition
       // dependencies
@@ -2731,6 +2944,13 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
         try {
           // Note that isValidSpec throws an exception (it never
           // actually returns false).
+            /**
+        	   * 校验该table的分区
+        	   * 参数分区是否合法
+        	   * 1.table本身没有分区,参数有分区,则非法
+        	   * 2.分区字段总数不一致,非法
+        	   * 3.必须每一个分区字段参数中都存在
+        	     */
           tab.isValidSpec(partitionDesc.getPartSpec());
         } catch (HiveException ex) {
           throw new SemanticException(ErrorMsg.INVALID_PARTITION_SPEC.getMsg(ex.getMessage()));
@@ -2765,12 +2985,15 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
     }
   }
 
+  //查找table中指定的分区
   private Partition getPartitionForOutput(Table tab, Map<String, String> currentPart)
     throws SemanticException {
+	//校验分区名字不允许是在保留字中
     validatePartitionValues(currentPart);
     try {
+      //查找指定table对应的分区
       Partition partition = db.getPartition(tab, currentPart, false);
-      if (partition != null) {
+      if (partition != null) {//将分区添加到输出中
         outputs.add(new WriteEntity(partition));
       }
       return partition;
@@ -2789,11 +3012,13 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
    *          The parsed command tree.
    * @throws SemanticException
    *           Parsin failed
+   * 重新写回关于table的partition下的元数据信息
+   * String TOUCH PARTITION (name=value,name=value,name) PARTITION (name=value,name=value,name)..
    */
   private void analyzeAlterTableTouch(CommonTree ast)
       throws SemanticException {
 
-    String tblName = getUnescapedName((ASTNode)ast.getChild(0));
+    String tblName = getUnescapedName((ASTNode)ast.getChild(0));//表名字
     Table tab = getTable(tblName, true);
     validateAlterTableType(tab, AlterTableTypes.TOUCH);
     inputs.add(new ReadEntity(tab));
@@ -2820,13 +3045,20 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
     }
   }
 
+  /**
+   * String UNARCHIVE PARTITION (name=value,name=value,name) PARTITION (name=value,name=value,name)... 第二个参数为true
+   * String ARCHIVE PARTITION (name=value,name=value,name) PARTITION (name=value,name=value,name)...第二个参数为false
+   * Hive中的归档移动分区中的文件到Hadoop归档中（HAR），该语句只会减少文件的数量，但不提供压缩。
+   */
   private void analyzeAlterTableArchive(CommonTree ast, boolean isUnArchive)
       throws SemanticException {
 
+	  //不支持ARCHIVE PARTITION命令归档partition的数据成hadoop的har文件,抛异常
     if (!conf.getBoolVar(HiveConf.ConfVars.HIVEARCHIVEENABLED)) {
       throw new SemanticException(ErrorMsg.ARCHIVE_METHODS_DISABLED.getMsg());
-
     }
+    
+    //针对哪个数据库表的哪些分区进行归档
     String tblName = getUnescapedName((ASTNode) ast.getChild(0));
     // partition name to value
     List<Map<String, String>> partSpecs = getPartitionSpecs(ast);
@@ -2836,27 +3068,31 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
     validateAlterTableType(tab, AlterTableTypes.ARCHIVE);
     inputs.add(new ReadEntity(tab));
 
+    //ARCHIVE PARTITION命令归档partition的数据成hadoop的har文件,必须要有一个partition,不能大于1
     if (partSpecs.size() > 1) {
       throw new SemanticException(isUnArchive ?
           ErrorMsg.UNARCHIVE_ON_MULI_PARTS.getMsg() :
           ErrorMsg.ARCHIVE_ON_MULI_PARTS.getMsg());
     }
+    
+    //ARCHIVE PARTITION命令归档partition的数据成hadoop的har文件,必须要有一个partition
     if (partSpecs.size() == 0) {
       throw new SemanticException(ErrorMsg.ARCHIVE_ON_TABLE.getMsg());
     }
 
+    //获取该分区的属性集合,并且进行校验,等待校验的数据,例如ds='2008-04-08', min='30',如果规则是ds, hr, min,则校验分区失败
     Map<String, String> partSpec = partSpecs.get(0);
     try {
       isValidPrefixSpec(tab, partSpec);
     } catch (HiveException e) {
       throw new SemanticException(e.getMessage(), e);
     }
+    
     AlterTableSimpleDesc archiveDesc = new AlterTableSimpleDesc(
         SessionState.get().getCurrentDatabase(), tblName, partSpec,
         (isUnArchive ? AlterTableTypes.UNARCHIVE : AlterTableTypes.ARCHIVE));
     rootTasks.add(TaskFactory.get(new DDLWork(getInputs(), getOutputs(),
         archiveDesc), conf));
-
   }
 
   /**
@@ -2892,6 +3128,7 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
    *          Tree to extract partitions from.
    * @return A list of partition name to value mappings.
    * @throws SemanticException
+   * 解析PARTITION (name=value,name=value,name) PARTITION (name=value,name=value,name)..
    */
   private List<Map<String, String>> getPartitionSpecs(CommonTree ast)
       throws SemanticException {
@@ -2917,6 +3154,9 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
    * @return A list of PartitionSpec objects which contain the mapping from
    *         key to operator and value.
    * @throws SemanticException
+   * 解析 PARTITION(key 符号 value,key 符号 value),PARTITION( key 符号 value,key 符号 value) [IGNORE PROTECTION]
+   * 注意:符号 = 、 == 、 <>、 != 、 <= 、< 、 < 、 >= 
+   * 即通过范围匹配要删除的数据库表的属性范围
    */
   private List<PartitionSpec> getFullPartitionSpecs(CommonTree ast)
       throws SemanticException {
@@ -2930,12 +3170,11 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
         for (int i = 0; i < partSpecTree.getChildCount(); ++i) {
           CommonTree partSpecSingleKey = (CommonTree) partSpecTree.getChild(i);
           assert (partSpecSingleKey.getType() == HiveParser.TOK_PARTVAL);
-          String key = partSpecSingleKey.getChild(0).getText().toLowerCase();
-          String operator = partSpecSingleKey.getChild(1).getText();
-          String val = partSpecSingleKey.getChild(2).getText();
+          String key = partSpecSingleKey.getChild(0).getText().toLowerCase();//解析key
+          String operator = partSpecSingleKey.getChild(1).getText();//解析操作符号
+          String val = partSpecSingleKey.getChild(2).getText();//解析value
           partSpec.addPredicate(key, operator, val);
         }
-
         partSpecList.add(partSpec);
       }
     }
@@ -2949,6 +3188,7 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
    * with these reserved values. The check that this function is more
    * restrictive than the actual limitation, but it's simpler. Should be okay
    * since the reserved names are fairly long and uncommon.
+   * 校验分区名字不允许是在保留字中
    */
   private void validatePartitionValues(Map<String, String> partSpec)
       throws SemanticException {
@@ -3029,6 +3269,16 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
    * Add the table partitions to be modified in the output, so that it is available for the
    * pre-execution hook. If the partition does not exist, throw an error if
    * throwIfNonExistent is true, otherwise ignore it.
+   * 为某一个数据库表删除一些partition分区的时候,调用该方法
+   * tblName 表示要删除的数据库表
+   * partSpecs 要对哪些分区进行删除,条件可能是>=等操作
+   * throwIfNonExistent true表示没有找到删除的目标分区时,抛异常
+   * stringPartitionColumns 删除某一个表的某些分区的时候,如果分区的属性类型不是String的,只允许进行=号操作删除,不允许进行非等号的操作,例如>=等操作
+   *   校验是否所有的partition属性都是String类型的,false表示有不是String类型的,true表示所有的都是String类型的partiton名称
+   * ignoreProtection,true表示设置了IGNORE PROTECTION属性
+   * 
+   * String DROP [IF Exists] PARTITION(key 符号 value,key 符号 value),PARTITION( key 符号 value,key 符号 value) [IGNORE PROTECTION]
+注意:符号 = 、 == 、 <>、 != 、 <= 、< 、 < 、 >=
    */
   private void addTableDropPartsOutputs(String tblName, List<PartitionSpec> partSpecs,
       boolean throwIfNonExistent, boolean stringPartitionColumns, boolean ignoreProtection)
@@ -3037,30 +3287,36 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
 
     Iterator<PartitionSpec> i;
     int index;
+    //寻找满足过滤条件的partition分区集合,进行删除
     for (i = partSpecs.iterator(), index = 1; i.hasNext(); ++index) {
       PartitionSpec partSpec = i.next();
       List<Partition> parts = null;
       if (stringPartitionColumns) {
         try {
+        	//在table中查找符合filter条件的partiton集合,filer条件可以允许>=等非=号的符号
           parts = db.getPartitionsByFilter(tab, partSpec.toString());
         } catch (Exception e) {
           throw new SemanticException(ErrorMsg.INVALID_PARTITION.getMsg(partSpec.toString()), e);
         }
-      }
-      else {
+      } else {
         try {
+        	//只允许查找=号的partition
           parts = db.getPartitions(tab, partSpec.getPartSpecWithoutOperator());
         } catch (Exception e) {
           throw new SemanticException(ErrorMsg.INVALID_PARTITION.getMsg(partSpec.toString()), e);
         }
       }
 
+      //表示没有找到删除的目标分区时,抛异常
       if (parts.isEmpty()) {
         if (throwIfNonExistent) {
           throw new SemanticException(ErrorMsg.INVALID_PARTITION.getMsg(partSpec.toString()));
         }
       }
+      
+      //删除指定partition
       for (Partition p : parts) {
+    	//当partition不可删除,并且ignoreProtection=false,则抛异常,说明该分区不允许删除,则程序停止进行
         if (!ignoreProtection && !p.canDrop()) {
           throw new SemanticException(
             ErrorMsg.DROP_COMMAND_NOT_ALLOWED_FOR_PARTITION.getMsg(p.getCompleteName()));
@@ -3365,6 +3621,7 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
     }
   }
 
+  //查找table的某一个分区
   private Partition getPartition(Table table, Map<String, String> partSpec, boolean throwException)
       throws SemanticException {
     try {
@@ -3378,6 +3635,7 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
     }
   }
 
+  //查找table的所有分区情况
   private List<Partition> getPartitions(Table table, Map<String, String> partSpec,
       boolean throwException) throws SemanticException {
     try {

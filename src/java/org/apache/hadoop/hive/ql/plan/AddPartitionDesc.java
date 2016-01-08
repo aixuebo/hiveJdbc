@@ -27,6 +27,9 @@ import org.apache.hadoop.hive.metastore.api.Order;
 
 /**
  * Contains the information needed to add a partition.
+ * 准备添加为一个表或者视图添加一个partition的实体类
+ * 为视图和table添加partition分区
+ * String ADD [IF NOT Exists] PARTITION (name=value,name=value,name) [LOCATION String]
  */
 public class AddPartitionDesc extends DDLDesc implements Serializable {
 
@@ -34,10 +37,10 @@ public class AddPartitionDesc extends DDLDesc implements Serializable {
 
   String tableName;//该分区属于哪个表
   String dbName;//该分区属于哪个数据库
-  String location;
-  boolean ifNotExists;
-  boolean expectView;
-  LinkedHashMap<String, String> partSpec;
+  String location;//该partition分区的数据所在HDFS路径
+  boolean ifNotExists;//true表示该分区不存在的时候才允许添加
+  boolean expectView;//true表示操作的table是视图,false表示是实体表
+  LinkedHashMap<String, String> partSpec;//该partition分区的所有属性集合
   Map<String, String> partParams;
   String inputFormat = null;
   String outputFormat = null;

@@ -7,10 +7,9 @@
 package org.apache.hadoop.hive.metastore.api;
 
 
-import java.util.Map;
-import java.util.HashMap;
-import org.apache.thrift.TEnum;
-
+/**
+ * 权限类型
+ */
 public enum PrincipalType implements org.apache.thrift.TEnum {
   USER(1),
   ROLE(2),

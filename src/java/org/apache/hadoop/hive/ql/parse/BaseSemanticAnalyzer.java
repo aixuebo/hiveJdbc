@@ -82,7 +82,7 @@ import org.apache.hadoop.mapred.TextInputFormat;
 public abstract class BaseSemanticAnalyzer {
   protected final Hive db;
   protected final HiveConf conf;
-  protected List<Task<? extends Serializable>> rootTasks;
+  protected List<Task<? extends Serializable>> rootTasks;//解析后的任务集合
   protected FetchTask fetchTask;
   protected final Log LOG;
   protected final LogHelper console;
@@ -614,6 +614,11 @@ public abstract class BaseSemanticAnalyzer {
     return getColumns(ast, true);
   }
 
+  /**
+   * 自定义,目前不支持,需要自己实现该方法,继承DDLSemanticAnalyzer类即可
+   * @param node
+   * @throws SemanticException
+   */
   protected void handleGenericFileFormat(ASTNode node) throws SemanticException{
 
   ASTNode child = (ASTNode)node.getChild(0);
@@ -656,6 +661,7 @@ public abstract class BaseSemanticAnalyzer {
   }
 
   //仅仅获取数据库属性名称,并且输出都是小写的name
+  //解析sql:COLUMNS (column1,column2...)
   protected List<String> getColumnNames(ASTNode ast) {
     List<String> colList = new ArrayList<String>();
     int numCh = ast.getChildCount();

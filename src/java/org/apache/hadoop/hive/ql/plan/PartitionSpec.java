@@ -24,14 +24,15 @@ import java.util.Map;
 
 /**
  * PartitionSpec
- *
+ * 代表一个数据表对分区表的操作
  */
 @Explain(displayName = "Partition specification")
 public class PartitionSpec {
 
+  //对分区的描述,比如要删除某些分区的时候,可能是log_day>20151212
   private class PredicateSpec {
-    private String operator;
-    private String value;
+    private String operator;//表示>
+    private String value;//表示20151212
 
     public PredicateSpec() {
     }
@@ -59,10 +60,15 @@ public class PartitionSpec {
 
     @Override
     public String toString() {
+      //如果是不等于,则统一为<>输出,即如果输入是!=,也会转换成<>
       return (((this.operator.equals("!="))? "<>": this.operator) + " " + this.value);
     }
   }
 
+  /**
+   * 因为一个数据表的分区有若干个属性决定,因此这个是Map形式,例如log_day,hour_day
+   * key表示针对什么分区属性进行操作,value表示如何对该分区属性进行过滤
+   */
   private final Map<String, PredicateSpec> partSpec;
 
   public PartitionSpec() {
@@ -108,16 +114,17 @@ public class PartitionSpec {
   // The operator is only useful if it can be passed as a filter to the metastore.
   // For compatibility with other non-string partition columns, this function
   // returns the key, value mapping assuming that the operator is equality.
+  //对所有的value都去除单引号和双引号,其实相当于clone操作
   public Map<String, String> getPartSpecWithoutOperator() {
     Map<String, String> partSpec = new LinkedHashMap<String, String>();
     for (Map.Entry<String, PredicateSpec> entry: this.partSpec.entrySet()) {
       partSpec.put(entry.getKey(), PlanUtils.stripQuotes(entry.getValue().getValue()));
     }
-
     return partSpec;
   }
 
   // Again, for the same reason as the above function - getPartSpecWithoutOperator
+  //true表示所有的操作中有非=号操作,false表示所有的属性都是=号操作
   public boolean isNonEqualityOperator() {
     Iterator<PredicateSpec> iter = partSpec.values().iterator();
     while (iter.hasNext()) {

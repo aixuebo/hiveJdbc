@@ -13,7 +13,7 @@ LATERAL VIEW explode(vIds) visitor AS vId
 WHERE cId = 2
 
 
-
+alterTblPartitionStatementSuffix
 一、alterStatementSuffixLocation
 SET LOCATION xxxx
 二、alterStatementSuffixFileFormat
@@ -22,7 +22,7 @@ SET LOCATION xxxx
 3.SET FILEFORMAT RCFILE
 4.SET FILEFORMAT ORCFILE
 5.SET FILEFORMAT INPUTFORMAT string OUTPUTFORMAT string [INPUTDRIVER string OUTPUTDRIVER string]
-6.SET FILEFORMAT xxxx 属于TOK_FILEFORMAT_GENERIC类型自定义格式
+6.SET FILEFORMAT xxxx 属于TOK_FILEFORMAT_GENERIC类型自定义格式,自定义,目前不支持,需要自己实现该方法,继承DDLSemanticAnalyzer类即可
 三、alterStatementSuffixProtectMode
 1.ENABLE OFFLINE
 2.ENABLE NO_DROP [CASCADE]
@@ -32,8 +32,8 @@ SET LOCATION xxxx
 6.DISABLE READONLY
 四、alterStatementSuffixMergeFiles
 CONCATENATE
-五、alterStatementSuffixSerdeProperties
-1.SET SERDE string [WITH SERDEPROPERTIES(key=value,key=value)]
+五、alterStatementSuffixSerdeProperties 设置存储的方式是csv、json、还是protobuffer等等吧
+1.SET SERDE "serde_class_name" [WITH SERDEPROPERTIES(key=value,key=value)]
 2.SET SERDEPROPERTIES (key=value,key=value)
 六、alterStatementSuffixRenamePart
 RENAME TO PARTITION (name=value,name=value,name)
@@ -257,7 +257,8 @@ b.INSERT OVERWRITE DIRECTORY "path" [IF NOT Exists]
 c.INSERT OVERWRITE TABLE tableName [ PARTITION (name=value,name=value,name) ] [IF NOT Exists]
 d.INSERT INTO TABLE tableName [ PARTITION (name=value,name=value,name) ]
 注意:path必须是单引号或者双引号包裹
-15.truncateTableStatement
+15.truncateTableStatement 截断表内数据
+从表或者表分区删除所有行，不指定分区，将截断表中的所有分区，也可以一次指定多个分区，截断多个分区。
 格式:TRUNCATE TABLE tableName [PARTITION (name=value,name=value,name)] [COLUMNS (column1,column2...)]
 16.explainStatement
 格式:EXPLAIN [EXTENDED|FORMATTED|DEPENDENCY|LOGICAL] execStatement
@@ -300,11 +301,14 @@ DROP TEMPORARY MACRO [IF Exists] String
 2.alterDatabaseStatementSuffix 和 alterDatabaseSuffixProperties 设置属性
 格式:String SET DBPROPERTIES (key=value,key=value)
 3.alterStatementSuffixArchive
-格式:String ARCHIVE PARTITION (name=value,name=value,name)
+格式:String ARCHIVE PARTITION (name=value,name=value,name) PARTITION (name=value,name=value,name)...
+Hive中的归档移动分区中的文件到Hadoop归档中（HAR），该语句只会减少文件的数量，但不提供压缩。
 4.alterStatementSuffixUnArchive
-格式:String UNARCHIVE PARTITION (name=value,name=value,name)
-5.alterStatementSuffixTouch
-格式:String TOUCH PARTITION (name=value,name=value,name)
+格式:String UNARCHIVE PARTITION (name=value,name=value,name) PARTITION (name=value,name=value,name)...
+Hive中的归档移动分区中的文件到Hadoop归档中（HAR），该语句只会减少文件的数量，但不提供压缩。
+5.alterStatementSuffixTouch 重新写回关于table的partition下的元数据信息
+格式:String TOUCH PARTITION (name=value,name=value,name) PARTITION (name=value,name=value,name)..
+
 6.alterStatementSuffixDropPartitions 删除一些partition
 格式:String DROP [IF Exists] PARTITION(key 符号 value,key 符号 value),PARTITION( key 符号 value,key 符号 value) [IGNORE PROTECTION]
 注意:符号 = 、 == 、 <>、 != 、 <= 、< 、 < 、 >=
@@ -314,9 +318,9 @@ a.String SET TBLPROPERTIES (keyValueProperty,keyValueProperty)
 b.String UNSET TBLPROPERTIES [IF Exists](keyValueProperty,keyValueProperty)
 8.alterStatementSuffixAddPartitionsElement
 格式:PARTITION (name=value,name=value,name) [LOCATION String]
-9.alterStatementSuffixAddPartitions
-格式:String ADD [IF NOT Exists] alterStatementSuffixAddPartitionsElement+
-10.alterStatementSuffixAddCol
+9.alterStatementSuffixAddPartitions 为视图和table添加partition分区
+格式:String ADD [IF NOT Exists] PARTITION (name=value,name=value,name) [LOCATION String] PARTITION (name=value,name=value,name) [LOCATION String]..
+10.alterStatementSuffixAddCol 修改表的属性
 格式:String ADD|REPLACE COLUMNS (columnNameTypeList)
 11.alterStatementSuffixRenameCol
 格式:String CHANGE [COLUMN] "oldName" "newName" type [COMMENT String] [FIRST|AFTER String]
@@ -334,7 +338,7 @@ e.String DROP [IF Exists] PARTITION(key 符号 value,key 符号 value),PARTITION( ke
 表示删除一些partition
 f.tableName AS selectStatement
 
-14.alterIndexStatementSuffix
+14.alterIndexStatementSuffix 修改index的属性信息
 格式:
 a."indexName" ON "tableName" [PARTITION (name=value,name=value,name)] REBUILD
 b."indexName" ON "tableName" [PARTITION (name=value,name=value,name)] SET IDXPROPERTIES (key=value,key=value)
@@ -359,7 +363,9 @@ l.String PARTITION COLUMN (columnNameType)
 m.String tableSkewed
 n.String NOT SKEWED
 o.String NOT STORED AS DIRECTORIES
-p.tableName EXCHANGE PARTITION (name=value,name=value,name) WITH TABLE tableName
+p.tableName1 EXCHANGE PARTITION (name=value,name=value,name) WITH TABLE tableName2
+  将tableName1的某一个partition的数据交换到另外一个tableName2中
+  注意:此时两个数据库表结构一样、分区字段相同
 
 16.alterTblPartitionStatement
 格式:
@@ -388,9 +394,9 @@ d.ALTER DATABASE alterDatabaseStatementSuffix
   格式:LOCK TABLE tableName [PARTITION (name=value,name=value,name)] (SHARED | EXCLUSIVE)
 2.unlockStatement
   格式:UNLOCK TABLE tableName [PARTITION (name=value,name=value,name)]
-3.createRoleStatement
+3.createRoleStatement 创建角色
   格式:CREATE ROLE "roleName"
-4.dropRoleStatement
+4.dropRoleStatement 删除角色
   格式:DROP ROLE "roleName"
 5.privilegeObject
   格式:ON TABLE|DATABASE String [PARTITION (name=value,name=value,name)]
@@ -398,9 +404,9 @@ d.ALTER DATABASE alterDatabaseStatementSuffix
   格式:privlegeDef,...
 7.privlegeDef
   格式:ALL | ALTER | UPDATE | CREATE | DROP | INDEX | LOCK | SELECT | SHOW_DATABASE [(column1,column2...)]
-8.privilegeType
+8.privilegeType 权限类型
   格式: ALL | ALTER | UPDATE | CREATE | DROP | INDEX | LOCK | SELECT | SHOW_DATABASE
-9.principalSpecification
+9.principalSpecification 建立一个权限单位,例如user maming 表示创建一个用户:maming
   格式: USER | GROUP | ROLE String,USER | GROUP | ROLE String...
 10.metastoreCheck
   格式: MSCK [REPAIR] [TABLE tableName PARTITION (name=value,name=value,name),PARTITION (name=value,name=value,name)...]
@@ -410,11 +416,11 @@ d.ALTER DATABASE alterDatabaseStatementSuffix
   格式:GRANT privilegeList [privilegeObject] TO principalSpecification [WITH GRANT OPTION]
 13.revokePrivileges
   格式:REVOKE privilegeList [privilegeObject] FROM principalSpecification
-14.grantRole
+14.grantRole 表示将角色集合授权给某些user、group、role
   格式:GRANT ROLE String,... TO principalSpecification
-15.revokeRole
+15.revokeRole 表示将角色集合撤销一些,撤销的是:user、group、role
   格式:REVOKE ROLE String,... FROM principalSpecification
-16.showRoleGrants
+16.showRoleGrants 展示某个user、group、role的具体权限
   格式:SHOW ROLE GRANT USER | GROUP | ROLE String
 17.showGrants
   格式:SHOW GRANT USER | GROUP | ROLE String [privilegeIncludeColObject]

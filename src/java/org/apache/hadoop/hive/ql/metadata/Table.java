@@ -346,13 +346,20 @@ public class Table implements Serializable {
     return outputFormatClass;
   }
 
+  /**
+   * 校验该table的分区
+   * 参数分区是否合法
+   * 1.table本身没有分区,参数有分区,则非法
+   * 2.分区字段总数不一致,非法
+   * 3.必须每一个分区字段参数中都存在
+   */
   final public boolean isValidSpec(Map<String, String> spec)
       throws HiveException {
 
     // TODO - types need to be checked.
     List<FieldSchema> partCols = tTable.getPartitionKeys();
-    if (partCols == null || (partCols.size() == 0)) {
-      if (spec != null) {
+    if (partCols == null || (partCols.size() == 0)) {//table本身没有分区
+      if (spec != null) {//参数有分区,则非法
         throw new HiveException(
             "table is not partitioned but partition spec exists: " + spec);
       } else {
@@ -360,7 +367,7 @@ public class Table implements Serializable {
       }
     }
 
-    if ((spec == null) || (spec.size() != partCols.size())) {
+    if ((spec == null) || (spec.size() != partCols.size())) {//分区字段总数不一致,非法
       throw new HiveException(
           "table is partitioned but partition spec is not specified or"
           + " does not fully match table partitioning: "
@@ -368,7 +375,7 @@ public class Table implements Serializable {
     }
 
     for (FieldSchema field : partCols) {
-      if (spec.get(field.getName()) == null) {
+      if (spec.get(field.getName()) == null) {//必须每一个分区字段参数中都存在
         throw new HiveException(field.getName()
             + " not found in table's partition spec: " + spec);
       }

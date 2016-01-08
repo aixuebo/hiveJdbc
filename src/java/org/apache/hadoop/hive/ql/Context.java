@@ -346,6 +346,7 @@ public class Context {
    * Get a tmp path on local host to store intermediate data.
    *
    * @return next available tmp path on local fs
+   * 设置本地一个临时文件目录,存储临时数据
    */
   public String getLocalTmpFileURI() {
     return getLocalScratchDir(true) + Path.SEPARATOR + LOCAL_PREFIX +

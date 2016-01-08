@@ -22,6 +22,11 @@ import java.util.Map;
 
 import org.apache.hadoop.hive.ql.metadata.Table;
 
+/**
+tableName1 EXCHANGE PARTITION (name=value,name=value,name) WITH TABLE tableName2
+  将tableName1的某一个partition的数据交换到另外一个tableName2中
+  注意:此时两个数据库表结构一样、分区字段相同
+ */
 public class AlterTableExchangePartition extends DDLDesc {
 
   // The source table
@@ -30,7 +35,7 @@ public class AlterTableExchangePartition extends DDLDesc {
   // The destination table
   private Table destinationTable;
 
-  // The partition that has to be exchanged
+  // The partition that has to be exchanged 交换的分区集合
   private Map<String, String> partitionSpecs;
 
   public AlterTableExchangePartition(Table sourceTable, Table destinationTable,

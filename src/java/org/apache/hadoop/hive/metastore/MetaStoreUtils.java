@@ -1236,6 +1236,7 @@ public class MetaStoreUtils {
    * @param schema2: The second schema to be compared
    * @return true if the two schemas are the same else false
    *         for comparing a field we ignore the comment it has
+   * 比较两个属性集合必须相同        
    */
   public static boolean compareFieldColumns(List<FieldSchema> schema1, List<FieldSchema> schema2) {
     if (schema1.size() != schema2.size()) {

@@ -19,34 +19,30 @@
 package org.apache.hadoop.hive.ql.plan;
 
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.Map;
-import java.util.List;
-
-import org.apache.hadoop.hive.metastore.api.FieldSchema;
-import org.apache.hadoop.hive.metastore.api.Order;
-import org.apache.hadoop.hive.ql.exec.Utilities;
 
 /**
  * AlterIndexDesc.
- *
+ * 修改index的属性信息 "indexName" ON "tableName" [PARTITION (name=value,name=value,name)] SET IDXPROPERTIES (key=value,key=value),该属于ADDPROPS
+ * "indexName" ON "tableName" [PARTITION (name=value,name=value,name)] REBUILD
  */
 @Explain(displayName = "Alter Index")
 public class AlterIndexDesc extends DDLDesc implements Serializable {
   private static final long serialVersionUID = 1L;
-  private String indexName;
-  private String baseTable;
-  private String dbName;
-  private Map<String, String> partSpec; // partition specification of partitions touched
-  private Map<String, String> props;
+  private String indexName;//索引名称
+  private String baseTable;//该索引所属的表
+  private String dbName;//该表所属数据库
+  private Map<String, String> partSpec; // partition specification of partitions touched 要修改哪个分区的索引属性信息
+  private Map<String, String> props;//所有最终修改的属性集合信息
 
   /**
    * alterIndexTypes.
    *
    */
   public static enum AlterIndexTypes {
-    UPDATETIMESTAMP,
-    ADDPROPS};
+    UPDATETIMESTAMP,//更新时间戳
+    ADDPROPS//更新索引的属性信息
+    };
 
   AlterIndexTypes op;
 

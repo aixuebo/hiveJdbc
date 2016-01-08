@@ -22,23 +22,30 @@ import java.io.Serializable;
 
 import org.apache.hadoop.hive.metastore.api.PrincipalType;
 
+/**
+ * 如何定义一个角色
+ * CREATE ROLE "roleName" 创建一个角色
+ * DROP ROLE "roleName" 删除一个角色
+ * SHOW ROLE GRANT USER | GROUP | ROLE String 展示某个user、group、role的具体权限
+ */
 @Explain(displayName = "Create Role")
 public class RoleDDLDesc extends DDLDesc implements Serializable {
 
   private static final long serialVersionUID = 1L;
 
-  private String name;
+  private String name;//角色名称
   
-  private PrincipalType principalType;
+  private PrincipalType principalType;//与name对应的权限对象
   
   private boolean group;
 
-  private RoleOperation operation;
+  private RoleOperation operation;//类型,是创建角色、删除角色、展示角色
   
-  private String resFile;
+  private String resFile;//设置本地一个临时文件目录,存储临时数据
   
   private String roleOwnerName;
 
+  //类型,是创建角色、删除角色、展示角色
   public static enum RoleOperation {
     DROP_ROLE("drop_role"), CREATE_ROLE("create_role"), SHOW_ROLE_GRANT("show_roles");
     private String operationName;

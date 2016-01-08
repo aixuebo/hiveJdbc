@@ -809,6 +809,8 @@ createTableStatement 创建表
         )
     ;
 
+截断表内数据
+从表或者表分区删除所有行，不指定分区，将截断表中的所有分区，也可以一次指定多个分区，截断多个分区。
 格式:TRUNCATE TABLE tableName [PARTITION (name=value,name=value,name)] [COLUMNS (column1,column2...)]
 truncateTableStatement
 @init { msgs.push("truncate table statement"); }
@@ -1018,6 +1020,7 @@ alterViewStatementSuffix
     ;
 
 
+修改index的属性信息
 格式:
 a."indexName" ON "tableName" [PARTITION (name=value,name=value,name)] REBUILD
 b."indexName" ON "tableName" [PARTITION (name=value,name=value,name)] SET IDXPROPERTIES (key=value,key=value)
@@ -1063,6 +1066,7 @@ alterStatementSuffixRename
     -> ^(TOK_ALTERTABLE_RENAME $oldName $newName)
     ;
 
+修改表的属性
 格式:String ADD|REPLACE COLUMNS (columnNameTypeList)
 alterStatementSuffixAddCol
 @init { msgs.push("add column statement"); }
@@ -1089,7 +1093,8 @@ alterStatementChangeColPosition
     -> ^(TOK_ALTERTABLE_CHANGECOL_AFTER_POSITION $afterCol)
     ;
 
-格式:String ADD [IF NOT Exists] alterStatementSuffixAddPartitionsElement+
+为视图和table添加partition分区
+格式:String ADD [IF NOT Exists] PARTITION (name=value,name=value,name) [LOCATION String] PARTITION (name=value,name=value,name) [LOCATION String]..
 alterStatementSuffixAddPartitions
 @init { msgs.push("add partition statement"); }
 @after { msgs.pop(); }
@@ -1102,7 +1107,7 @@ alterStatementSuffixAddPartitionsElement
     : partitionSpec partitionLocation?
     ;
 
-格式:String TOUCH PARTITION (name=value,name=value,name)
+格式:String TOUCH PARTITION (name=value,name=value,name) PARTITION (name=value,name=value,name)..
 alterStatementSuffixTouch
 @init { msgs.push("touch statement"); }
 @after { msgs.pop(); }
@@ -1110,7 +1115,7 @@ alterStatementSuffixTouch
     -> ^(TOK_ALTERTABLE_TOUCH identifier (partitionSpec)*)
     ;
 
-格式:String ARCHIVE PARTITION (name=value,name=value,name)
+格式:String ARCHIVE PARTITION (name=value,name=value,name) PARTITION (name=value,name=value,name)。。。
 alterStatementSuffixArchive
 @init { msgs.push("archive statement"); }
 @after { msgs.pop(); }
@@ -1118,7 +1123,7 @@ alterStatementSuffixArchive
     -> ^(TOK_ALTERTABLE_ARCHIVE identifier (partitionSpec)*)
     ;
 
-格式:String UNARCHIVE PARTITION (name=value,name=value,name)
+格式:String UNARCHIVE PARTITION (name=value,name=value,name) PARTITION (name=value,name=value,name)。。。
 alterStatementSuffixUnArchive
 @init { msgs.push("unarchive statement"); }
 @after { msgs.pop(); }
@@ -1169,10 +1174,10 @@ alterViewSuffixProperties
     -> ^(TOK_DROPVIEW_PROPERTIES $name tableProperties ifExists?)
     ;
 
-格式
-1.SET SERDE string [WITH SERDEPROPERTIES(key=value,key=value)]
+设置存储的方式是csv、json、还是protobuffer等等吧
+格式 
+1.SET SERDE "serde_class_name" [WITH SERDEPROPERTIES(key=value,key=value)]
 2.SET SERDEPROPERTIES (key=value,key=value)
-
 alterStatementSuffixSerdeProperties
 @init { msgs.push("alter serdes statement"); }
 @after { msgs.pop(); }
@@ -1249,13 +1254,13 @@ alterTblPartitionStatementSuffix
   | alterStatementSuffixClusterbySortby
   ;
 
-//设置文件格式
+设置文件格式
 1.SET FILEFORMAT SEQUENCEFILE
 2.SET FILEFORMAT TEXTFILE
 3.SET FILEFORMAT RCFILE
 4.SET FILEFORMAT ORCFILE
 5.SET FILEFORMAT INPUTFORMAT string OUTPUTFORMAT string [INPUTDRIVER string OUTPUTDRIVER string]
-6.SET FILEFORMAT xxxx 属于TOK_FILEFORMAT_GENERIC类型自定义格式
+6.SET FILEFORMAT xxxx 属于TOK_FILEFORMAT_GENERIC类型自定义格式,自定义,目前不支持,需要自己实现该方法,继承DDLSemanticAnalyzer类即可
 alterStatementSuffixFileFormat
 @init {msgs.push("alter fileformat statement"); }
 @after {msgs.pop();}
@@ -1575,6 +1580,8 @@ revokeRole
     -> ^(TOK_REVOKE_ROLE principalSpecification identifier+)
     ;
 
+展示某个user、group、role的具体权限
+ 格式:SHOW ROLE GRANT USER | GROUP | ROLE String
 showRoleGrants
 @init {msgs.push("show role grants");}
 @after {msgs.pop();}

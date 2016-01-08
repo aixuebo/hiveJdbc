@@ -26,21 +26,21 @@ import org.apache.hadoop.hive.ql.parse.AlterTablePartMergeFilesDesc;
 
 /**
  * DDLWork.
- *
+ * 记录所有的可以使用的操作
  */
 public class DDLWork implements Serializable {
   private static final long serialVersionUID = 1L;
   private CreateIndexDesc createIndexDesc;
   private AlterIndexDesc alterIndexDesc;
-  private DropIndexDesc dropIdxDesc;
-  private CreateDatabaseDesc createDatabaseDesc;
-  private SwitchDatabaseDesc switchDatabaseDesc;
-  private DropDatabaseDesc dropDatabaseDesc;
+  private DropIndexDesc dropIdxDesc;//删除一个索引
+  private CreateDatabaseDesc createDatabaseDesc;//创建一个数据库操作
+  private SwitchDatabaseDesc switchDatabaseDesc;//切换数据库操作
+  private DropDatabaseDesc dropDatabaseDesc;//删除一个数据库操作
   private CreateTableDesc createTblDesc;
   private CreateTableLikeDesc createTblLikeDesc;
   private CreateViewDesc createVwDesc;
-  private DropTableDesc dropTblDesc;
-  private AlterTableDesc alterTblDesc;
+  private DropTableDesc dropTblDesc;//删除一个数据表操作,也可能仅仅删除该表的某一些分区
+  private AlterTableDesc alterTblDesc;//做一个alter更改表数据的操作
   private AlterIndexDesc alterIdxDesc;
   private ShowDatabasesDesc showDatabasesDesc;
   private ShowTablesDesc showTblsDesc;
@@ -54,19 +54,19 @@ public class DDLWork implements Serializable {
   private ShowPartitionsDesc showPartsDesc;
   private ShowCreateTableDesc showCreateTblDesc;
   private DescTableDesc descTblDesc;
-  private AddPartitionDesc addPartitionDesc;
+  private AddPartitionDesc addPartitionDesc;//为视图和table添加partition分区
   private RenamePartitionDesc renamePartitionDesc;
-  private AlterTableSimpleDesc alterTblSimpleDesc;
+  private AlterTableSimpleDesc alterTblSimpleDesc;//针对table和partition的一些操作
   private MsckDesc msckDesc;
   private ShowTableStatusDesc showTblStatusDesc;
   private ShowIndexesDesc showIndexesDesc;
   private DescDatabaseDesc descDbDesc;
-  private AlterDatabaseDesc alterDbDesc;
+  private AlterDatabaseDesc alterDbDesc;//更改数据库的信息
   private AlterTableAlterPartDesc alterTableAlterPartDesc;
-  private TruncateTableDesc truncateTblDesc;
-  private AlterTableExchangePartition alterTableExchangePartition;
+  private TruncateTableDesc truncateTblDesc;//创建截断表内数据,从表或者表分区删除所有行，不指定分区，将截断表中的所有分区，也可以一次指定多个分区，截断多个分区。
+  private AlterTableExchangePartition alterTableExchangePartition;//将tableName1的某一个partition的数据交换到另外一个tableName2中
 
-  private RoleDDLDesc roleDDLDesc;
+  private RoleDDLDesc roleDDLDesc;//角色相关
   private GrantDesc grantDesc;
   private ShowGrantDesc showGrantDesc;
   private RevokeDesc revokeDesc;
@@ -105,6 +105,7 @@ public class DDLWork implements Serializable {
   /**
    * @param createDatabaseDesc
    *          Create Database descriptor
+   * 创建一个数据库操作         
    */
   public DDLWork(HashSet<ReadEntity> inputs, HashSet<WriteEntity> outputs,
       CreateDatabaseDesc createDatabaseDesc) {
@@ -123,12 +124,21 @@ public class DDLWork implements Serializable {
     this.descDbDesc = descDatabaseDesc;
   }
 
+  /**
+   * 更改数据库的信息
+   */
   public DDLWork(HashSet<ReadEntity> inputs, HashSet<WriteEntity> outputs,
       AlterDatabaseDesc alterDbDesc) {
     this(inputs, outputs);
     this.alterDbDesc = alterDbDesc;
   }
 
+  /**
+   * 创建截断表内数据,从表或者表分区删除所有行，不指定分区，将截断表中的所有分区，也可以一次指定多个分区，截断多个分区。
+   * @param inputs
+   * @param outputs
+   * @param truncateTblDesc
+   */
   public DDLWork(HashSet<ReadEntity> inputs, HashSet<WriteEntity> outputs,
       TruncateTableDesc truncateTblDesc) {
     this(inputs, outputs);
@@ -142,6 +152,7 @@ public class DDLWork implements Serializable {
   /**
    * @param dropDatabaseDesc
    *          Drop Database descriptor
+   * 删除一个数据库操作         
    */
   public DDLWork(HashSet<ReadEntity> inputs, HashSet<WriteEntity> outputs,
       DropDatabaseDesc dropDatabaseDesc) {
@@ -152,6 +163,7 @@ public class DDLWork implements Serializable {
   /**
    * @param switchDatabaseDesc
    *          Switch Database descriptor
+   * 切换数据库操作
    */
   public DDLWork(HashSet<ReadEntity> inputs, HashSet<WriteEntity> outputs,
       SwitchDatabaseDesc switchDatabaseDesc) {
@@ -162,6 +174,7 @@ public class DDLWork implements Serializable {
   /**
    * @param alterTblDesc
    *          alter table descriptor
+   * 做一个alter更改表数据的操作        
    */
   public DDLWork(HashSet<ReadEntity> inputs, HashSet<WriteEntity> outputs,
       AlterTableDesc alterTblDesc) {
@@ -215,6 +228,7 @@ public class DDLWork implements Serializable {
   /**
    * @param dropTblDesc
    *          drop table descriptor
+   * 删除一个数据表操作,也可能仅仅删除该表的某一些分区
    */
   public DDLWork(HashSet<ReadEntity> inputs, HashSet<WriteEntity> outputs,
       DropTableDesc dropTblDesc) {
@@ -336,6 +350,7 @@ public class DDLWork implements Serializable {
   /**
    * @param addPartitionDesc
    *          information about the partitions we want to add.
+   * 为视图和table添加partition分区
    */
   public DDLWork(HashSet<ReadEntity> inputs, HashSet<WriteEntity> outputs,
       AddPartitionDesc addPartitionDesc) {
@@ -450,6 +465,9 @@ public class DDLWork implements Serializable {
     this.alterTableAlterPartDesc = alterPartDesc;
   }
 
+  /**
+   * 将tableName1的某一个partition的数据交换到另外一个tableName2中
+   */
   public DDLWork(HashSet<ReadEntity> inputs, HashSet<WriteEntity> outputs,
       AlterTableExchangePartition alterTableExchangePartition) {
     this(inputs, outputs);

@@ -23,18 +23,27 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * DropTableDesc.
- *
+ * DropTableDesc.删除一个表操作
+ * DROP TABLE [IF EXISTS] tableName
+ * String DROP [IF Exists] PARTITION(key 符号 value,key 符号 value),PARTITION( key 符号 value,key 符号 value) [IGNORE PROTECTION]
  */
 @Explain(displayName = "Drop Table")
 public class DropTableDesc extends DDLDesc implements Serializable {
   private static final long serialVersionUID = 1L;
 
-  String tableName;
-  ArrayList<PartitionSpec> partSpecs;
-  boolean expectView;
+  String tableName;//删除的表名
+  ArrayList<PartitionSpec> partSpecs;//删除那些分区集合,每一个PartitionSpec表示一个分区
+  boolean expectView;//true表示该表是一个视图表,而不是实体表
   boolean ifExists;
+  
+  /**
+   * true表示IGNORE PROTECTION被设置了,不用起到保护作用,默认是false
+   * 当partition不可删除,并且ignoreProtection=false,则抛异常,说明该分区不允许删除,则程序停止进行
+   */
   boolean ignoreProtection;
+  
+  //校验是否所有的partition属性都是String类型的,false表示有不是String类型的,true表示所有的都是String类型的partiton名称
+  //删除某一个表的某些分区的时候,如果分区的属性类型不是String的,只允许进行=号操作删除,不允许进行非等号的操作,例如>=等操作
   boolean stringPartitionColumns; // This is due to JDO not working very well with
                                   // non-string partition columns.
                                   // We need a different codepath for them

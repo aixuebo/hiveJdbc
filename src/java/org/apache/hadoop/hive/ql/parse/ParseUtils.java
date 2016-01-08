@@ -139,9 +139,16 @@ public final class ParseUtils {
     return ret;
   }
 
+  /**
+   * 解析verchar类型后面设置的字节长度,即verchar(12)
+   * @param typeName
+   * @param node
+   * @return
+   * @throws SemanticException
+   */
   public static VarcharTypeParams getVarcharParams(String typeName, ASTNode node)
       throws SemanticException {
-    if (node.getChildCount() != 1) {
+    if (node.getChildCount() != 1) {//必须要有长度参数
       throw new SemanticException("Bad params for type " + typeName);
     }
 

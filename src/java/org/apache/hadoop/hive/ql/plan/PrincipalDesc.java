@@ -22,6 +22,10 @@ import java.io.Serializable;
 
 import org.apache.hadoop.hive.metastore.api.PrincipalType;
 
+/**
+ * 解析sql:USER | GROUP | ROLE String
+ * 例如:user maming 表示创建一个maming的用户级别权限
+ */
 @Explain(displayName = "Principal")
 public class PrincipalDesc implements Serializable, Cloneable {
 

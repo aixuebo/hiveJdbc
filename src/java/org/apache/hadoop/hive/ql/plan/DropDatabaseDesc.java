@@ -21,8 +21,8 @@ package org.apache.hadoop.hive.ql.plan;
 import java.io.Serializable;
 
 /**
- * DropDatabaseDesc.
- *
+ * DropDatabaseDesc.删除一个数据库
+ * DROP (DATABASE|SCHEMA) [IF EXISTS] database_name [RESTRICT|CASCADE];
  */
 @Explain(displayName = "Drop Database")
 public class DropDatabaseDesc extends DDLDesc implements Serializable {
@@ -30,7 +30,7 @@ public class DropDatabaseDesc extends DDLDesc implements Serializable {
 
   String databaseName;
   boolean ifExists;
-  boolean cascade;
+  boolean cascade;//true表示设置了CASCADE,false表示没有设置或者设置了RESTRICT
 
   public DropDatabaseDesc(String databaseName, boolean ifExists) {
     this(databaseName, ifExists, false);

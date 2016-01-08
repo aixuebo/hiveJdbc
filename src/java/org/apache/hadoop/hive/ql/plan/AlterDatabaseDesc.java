@@ -23,18 +23,18 @@ import java.util.Map;
 
 /**
  * AlterDatabaseDesc.
- *
+ * String SET DBPROPERTIES (key=value,key=value) 更改数据库的属性
  */
 @Explain(displayName = "Create Database")
 public class AlterDatabaseDesc extends DDLDesc implements Serializable {
 
   private static final long serialVersionUID = 1L;
 
-  String databaseName;
+  String databaseName;//数据库名
   String locationUri;
   String comment;
   boolean ifNotExists;
-  Map<String, String> dbProperties;
+  Map<String, String> dbProperties;//修改数据库属性集合
 
   /**
    * For serialization only.

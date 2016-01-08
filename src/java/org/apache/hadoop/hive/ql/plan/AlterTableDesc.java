@@ -33,7 +33,14 @@ import org.apache.hadoop.hive.ql.parse.SemanticException;
 
 /**
  * AlterTableDesc.
- *
+ * 描述更改表操作的信息
+ * 
+ * 修改表的属性 String ADD|REPLACE COLUMNS (columnNameTypeList)
+ * 为某个table的某个partitions分配HDFS上路径 ,SET LOCATION xxxx
+ * 
+ * 设置存储的方式是csv、json、还是protobuffer等等吧
+格式 SET SERDE "serde_class_name" [WITH SERDEPROPERTIES(key=value,key=value)]
+格式 SET SERDEPROPERTIES (key=value,key=value)
  */
 @Explain(displayName = "Alter Table")
 public class AlterTableDesc extends DDLDesc implements Serializable {
@@ -41,13 +48,22 @@ public class AlterTableDesc extends DDLDesc implements Serializable {
 
   /**
    * alterTableTypes.
-   *
+   * 更改的类型
    */
   public static enum AlterTableTypes {
-    RENAME, ADDCOLS, REPLACECOLS, ADDPROPS, DROPPROPS, ADDSERDE, ADDSERDEPROPS,
+    RENAME, 
+    ADDCOLS,//修改表的属性 String ADD (columnNameTypeList) 
+    REPLACECOLS,//修改表的属性 String REPLACE COLUMNS (columnNameTypeList)
+    ADDPROPS, DROPPROPS, ADDSERDE, 
+    ADDSERDEPROPS,//设置存储的方式是csv、json、还是protobuffer等等吧,格式 SET SERDEPROPERTIES (key=value,key=value)
     ADDFILEFORMAT, ADDCLUSTERSORTCOLUMN, RENAMECOLUMN, ADDPARTITION,
-    TOUCH, ARCHIVE, UNARCHIVE, ALTERPROTECTMODE, ALTERPARTITIONPROTECTMODE,
-    ALTERLOCATION, DROPPARTITION, RENAMEPARTITION, ADDSKEWEDBY, ALTERSKEWEDLOCATION,
+    TOUCH,//重新写回关于table的partition下的元数据信息
+    ARCHIVE,//Hive中的归档移动分区中的文件到Hadoop归档中（HAR），该语句只会减少文件的数量，但不提供压缩。 
+    UNARCHIVE,//Hive中的归档移动分区中的文件到Hadoop归档中（HAR），该语句只会减少文件的数量，但不提供压缩。 
+    ALTERPROTECTMODE, ALTERPARTITIONPROTECTMODE,
+    ALTERLOCATION,//为table下的某个partition分配一个新的HDFS路径
+    DROPPARTITION,//删除数据库表的某些分区
+    RENAMEPARTITION, ADDSKEWEDBY, ALTERSKEWEDLOCATION,
     ALTERBUCKETNUM, ALTERPARTITION
   }
 
@@ -56,15 +72,22 @@ public class AlterTableDesc extends DDLDesc implements Serializable {
   }
 
 
-  AlterTableTypes op;
-  String oldName;
-  String newName;
-  ArrayList<FieldSchema> newCols;
-  String serdeName;
+  AlterTableTypes op;//更改的类型
+  String oldName;//更改表前名字
+  String newName;//更改表后的名字
+  ArrayList<FieldSchema> newCols;//修改表的属性 String ADD|REPLACE COLUMNS (columnNameTypeList)中用于解释新的属性集合
+  
+  /**
+   * 格式 SET SERDE "serde_class_name" [WITH SERDEPROPERTIES(key=value,key=value)]中的key=value,key=value
+   * 格式 SET SERDEPROPERTIES (key=value,key=value) 中的key=value,key=value
+   */
   HashMap<String, String> props;
-  String inputFormat;
-  String outputFormat;
+  
+  String serdeName;//格式 SET SERDE "serde_class_name" [WITH SERDEPROPERTIES(key=value,key=value)]中的serde_class_name
+  String inputFormat;//文件写入的形式
+  String outputFormat;//文件读出的形式
   String storageHandler;
+  
   int numberBuckets;
   ArrayList<String> bucketColumns;
   ArrayList<Order> sortColumns;
@@ -76,8 +99,8 @@ public class AlterTableDesc extends DDLDesc implements Serializable {
   boolean first;
   String afterCol;
   boolean expectView;
-  HashMap<String, String> partSpec;
-  private String newLocation;
+  HashMap<String, String> partSpec;//确定一个partition,HashMap<String, String> partSpec 是因为确定某个partition可能来源于多个属性,例如log_date log_hour
+  private String newLocation;//更改HDFS的路径 
   boolean protectModeEnable;
   ProtectModeType protectModeType;
   Map<List<String>, String> skewedLocations;
@@ -197,6 +220,13 @@ public class AlterTableDesc extends DDLDesc implements Serializable {
     this.partSpec = partSpec;
   }
 
+  /**
+   * 为tableName下的某个partition分区分配HDFS路径
+   * HashMap<String, String> partSpec 是因为确定某个partition可能来源于多个属性,例如log_date log_hour
+   * @param tableName
+   * @param newLocation 新分配的HDFS路径
+   * @param partSpec
+   */
   public AlterTableDesc(String tableName, String newLocation,
       HashMap<String, String> partSpec) {
     op = AlterTableTypes.ALTERLOCATION;

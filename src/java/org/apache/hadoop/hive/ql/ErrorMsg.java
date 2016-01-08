@@ -54,7 +54,7 @@ public enum ErrorMsg {
   GENERIC_ERROR(40000, "Exception while processing"),
 
   INVALID_TABLE(10001, "Table not found", "42S02"),
-  INVALID_COLUMN(10002, "Invalid column reference"),
+  INVALID_COLUMN(10002, "Invalid column reference"),//如果没有在table中找到指定属性,则抛异常
   INVALID_INDEX(10003, "Invalid index"),
   INVALID_TABLE_OR_COLUMN(10004, "Invalid table alias or column reference"),
   AMBIGUOUS_TABLE_OR_COLUMN(10005, "Ambiguous table alias or column reference"),
@@ -185,11 +185,11 @@ public enum ErrorMsg {
   OVERWRITE_ARCHIVED_PART(10106, "Cannot overwrite an archived partition. " +
       "Unarchive before running this command"),
   ARCHIVE_METHODS_DISABLED(10107, "Archiving methods are currently disabled. " +
-      "Please see the Hive wiki for more information about enabling archiving"),
-  ARCHIVE_ON_MULI_PARTS(10108, "ARCHIVE can only be run on a single partition"),
-  UNARCHIVE_ON_MULI_PARTS(10109, "ARCHIVE can only be run on a single partition"),
-  ARCHIVE_ON_TABLE(10110, "ARCHIVE can only be run on partitions"),
-  RESERVED_PART_VAL(10111, "Partition value contains a reserved substring"),
+      "Please see the Hive wiki for more information about enabling archiving"),//不支持ARCHIVE PARTITION命令归档partition的数据成hadoop的har文件,抛异常
+  ARCHIVE_ON_MULI_PARTS(10108, "ARCHIVE can only be run on a single partition"),//ARCHIVE PARTITION命令归档partition的数据成hadoop的har文件,必须要有一个partition,不能大于1
+  UNARCHIVE_ON_MULI_PARTS(10109, "ARCHIVE can only be run on a single partition"),//ARCHIVE PARTITION命令归档partition的数据成hadoop的har文件,必须要有一个partition,不能大于1
+  ARCHIVE_ON_TABLE(10110, "ARCHIVE can only be run on partitions"),//ARCHIVE PARTITION命令归档partition的数据成hadoop的har文件,必须要有一个partition
+  RESERVED_PART_VAL(10111, "Partition value contains a reserved substring"),//校验分区名字不允许是在保留字中
   HOLD_DDLTIME_ON_NONEXIST_PARTITIONS(10112, "HOLD_DDLTIME hint cannot be applied to dynamic " +
                                       "partitions or non-existent partitions"),
   OFFLINE_TABLE_OR_PARTITION(10113, "Query against an offline table or partition"),
@@ -216,11 +216,12 @@ public enum ErrorMsg {
   INSERT_INTO_DYNAMICPARTITION_IFNOTEXISTS(10127,
       "Dynamic partitions do not support IF NOT EXISTS. Specified partitions with value :"),
   UDAF_INVALID_LOCATION(10128, "Not yet supported place for UDAF"),
+  //删除某一个表的某些分区的时候,如果分区的属性类型不是String的,只允许进行=号操作删除,不允许进行非等号的操作,例如>=等操作
   DROP_PARTITION_NON_STRING_PARTCOLS_NONEQUALITY(10129,
     "Drop partitions for a non string partition columns is not allowed using non-equality"),
   ALTER_COMMAND_FOR_VIEWS(10131, "To alter a view you need to use the ALTER VIEW command."),
-  ALTER_COMMAND_FOR_TABLES(10132, "To alter a base table you need to use the ALTER TABLE command."),
-  ALTER_VIEW_DISALLOWED_OP(10133, "Cannot use this form of ALTER on a view"),
+  ALTER_COMMAND_FOR_TABLES(10132, "To alter a base table you need to use the ALTER TABLE command."),//是表,不是视图操作,但是期望确实视图,有问题
+  ALTER_VIEW_DISALLOWED_OP(10133, "Cannot use this form of ALTER on a view"),//视图不允许有该操作
   ALTER_TABLE_NON_NATIVE(10134, "ALTER TABLE cannot be used for a non-native table"),
   SORTMERGE_MAPJOIN_FAILED(10135,
       "Sort merge bucketed join could not be performed. " +
@@ -248,8 +249,9 @@ public enum ErrorMsg {
   SHOW_CREATETABLE_INDEX(10144, "SHOW CREATE TABLE does not support tables of type INDEX_TABLE."),
   ALTER_BUCKETNUM_NONBUCKETIZED_TBL(10145, "Table is not bucketized."),
 
-  TRUNCATE_FOR_NON_MANAGED_TABLE(10146, "Cannot truncate non-managed table {0}.", true),
+  TRUNCATE_FOR_NON_MANAGED_TABLE(10146, "Cannot truncate non-managed table {0}.", true),//只能是内部表才允许截断表操作TRUNCATE
   TRUNCATE_FOR_NON_NATIVE_TABLE(10147, "Cannot truncate non-native table {0}.", true),
+  //语法有问题,table没有分区,但是却sql中设置了PARTITION (name=value,name=value,name),因此异常
   PARTSPEC_FOR_NON_PARTITIONED_TABLE(10148, "Partition spec for non partitioned table {0}.", true),
 
   LOAD_INTO_STORED_AS_DIR(10195, "A stored-as-directories table cannot be used as target for LOAD"),
@@ -345,13 +347,13 @@ public enum ErrorMsg {
   PARTITION_VALUE_NOT_CONTINUOUS(10234, "Parition values specifed are not continuous." +
             " A subpartition value is specified without specififying the parent partition's value"),
   TABLES_INCOMPATIBLE_SCHEMAS(10235, "Tables have incompatible schemas and their partitions " +
-            " cannot be exchanged."),
+            " cannot be exchanged."),//EXCHANGE PARTITION操作的时候,两个数据库表的分区字段以及属性都要相同
 
-  TRUNCATE_COLUMN_INDEXED_TABLE(10236, "Can not truncate columns from table with indexes"),
+  TRUNCATE_COLUMN_INDEXED_TABLE(10236, "Can not truncate columns from table with indexes"),//带有索引的表是不允许在TRUNCATE命令中执行COLUMNS (column1,column2...)命令的
   TRUNCATE_COLUMN_NOT_RC(10237, "Only RCFileFormat supports column truncation."),
   TRUNCATE_COLUMN_ARCHIVED(10238, "Column truncation cannot be performed on archived partitions."),
   TRUNCATE_BUCKETED_COLUMN(10239,
-      "A column on which a partition/table is bucketed cannot be truncated."),
+      "A column on which a partition/table is bucketed cannot be truncated."),//truncate时,column中属性不允许是bucketCol中的属性
   TRUNCATE_LIST_BUCKETED_COLUMN(10240,
       "A column on which a partition/table is list bucketed cannot be truncated."),
 
@@ -403,7 +405,7 @@ public enum ErrorMsg {
     "gathering column statistics through ANALYZE statement"),
   COLUMNSTATSCOLLECTOR_PARSE_ERROR(30009, "Encountered parse error while parsing rewritten query"),
   COLUMNSTATSCOLLECTOR_IO_ERROR(30010, "Encountered I/O exception while parsing rewritten query"),
-  DROP_COMMAND_NOT_ALLOWED_FOR_PARTITION(30011, "Partition protected from being dropped"),
+  DROP_COMMAND_NOT_ALLOWED_FOR_PARTITION(30011, "Partition protected from being dropped"),//当partition不可删除,并且ignoreProtection=false,则抛异常,说明该分区不允许删除,则程序停止进行
     ;
 
   private int errorCode;

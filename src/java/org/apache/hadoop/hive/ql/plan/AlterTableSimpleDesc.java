@@ -25,13 +25,19 @@ import org.apache.hadoop.hive.ql.plan.AlterTableDesc.AlterTableTypes;
 
 /**
  * Contains information needed to modify a partition or a table
+ * 重新写回关于table的partition下的元数据信息
+ * String TOUCH PARTITION (name=value,name=value,name) PARTITION (name=value,name=value,name)..
+ * 
+ * Hive中的归档移动分区中的文件到Hadoop归档中（HAR），该语句只会减少文件的数量，但不提供压缩。
+ * String UNARCHIVE PARTITION (name=value,name=value,name) PARTITION (name=value,name=value,name)... 第二个参数为true
+ * String ARCHIVE PARTITION (name=value,name=value,name) PARTITION (name=value,name=value,name)...第二个参数为false
  */
 public class AlterTableSimpleDesc extends DDLDesc {
   private String tableName;
   private String dbName;
   private LinkedHashMap<String, String> partSpec;
 
-  AlterTableTypes type;
+  AlterTableTypes type;//touch、UNARCHIVE、ARCHIVE
 
   public AlterTableSimpleDesc() {
   }
