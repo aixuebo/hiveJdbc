@@ -35,15 +35,16 @@ CONCATENATE
 五、alterStatementSuffixSerdeProperties 设置存储的方式是csv、json、还是protobuffer等等吧
 1.SET SERDE "serde_class_name" [WITH SERDEPROPERTIES(key=value,key=value)]
 2.SET SERDEPROPERTIES (key=value,key=value)
-六、alterStatementSuffixRenamePart
+六、alterStatementSuffixRenamePart 为table修改新的partition属性
 RENAME TO PARTITION (name=value,name=value,name)
 七、alterStatementSuffixBucketNum
 INTO number BUCKETS
 八、alterTblPartitionStatementSuffixSkewedLocation 
-SET SKEWED LOCATION (key=value,key=value)
+a.SET SKEWED LOCATION (key=value,key=value)
+b.SET SKEWED LOCATION ((key1,key2)=value,(key1,key2)=value)
 九、alterStatementSuffixClusterbySortby
-1.NOT CLUSTERED
-2.NOT SORTED
+1.NOT CLUSTERED 表示没有CLUSTERED BY 操作
+2.NOT SORTED 表示没有SORTED BY 操作
 3.CLUSTERED BY (column1,column2) [SORTED BY (column1 desc,column2 desc)] into Number BUCKETS
 
 
@@ -217,7 +218,8 @@ j.SHOW [FORMATTED](INDEX|INDEXES) ON tableName (FROM | IN) db_name ]
 9.descPartTypeExpr
   格式:.($ELEM$ | $KEY$ | $VALUE$ | xxx ) [PARTITION (name=value,name=value,name)]
 10.descStatement 描述详细信息
-a.DESCRIBE | DESC [FORMATTED | EXTENDED | PRETTY] .($ELEM$ | $KEY$ | $VALUE$ | xxx ) [PARTITION (name=value,name=value,name)]
+a.DESCRIBE | DESC [FORMATTED | EXTENDED | PRETTY] .($ELEM$ | $KEY$ | $VALUE$ | xxx ) [PARTITION (name=value,name=value,name)] 描述表信息
+注意xxx可能的格式是database.table.column or database.table or database
 b.DESCRIBE | DESC FUNCTION [EXTENDED] descFuncNames
 c.DESCRIBE | DESC DATABASE [EXTENDED] "dbName"
 11.analyzeStatement 分析执行语句
@@ -327,7 +329,7 @@ b.String UNSET TBLPROPERTIES [IF Exists](keyValueProperty,keyValueProperty)
 注意:type表示字段类型
 12.alterStatementChangeColPosition
 格式:FIRST|AFTER String
-13.alterViewStatementSuffix
+13.alterViewStatementSuffix 设置视图/表的属性
 格式:
 a.String SET TBLPROPERTIES (keyValueProperty,keyValueProperty)
 b.String UNSET TBLPROPERTIES [IF Exists](keyValueProperty,keyValueProperty)

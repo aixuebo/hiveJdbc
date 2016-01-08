@@ -41,6 +41,35 @@ import org.apache.hadoop.hive.ql.parse.SemanticException;
  * 设置存储的方式是csv、json、还是protobuffer等等吧
 格式 SET SERDE "serde_class_name" [WITH SERDEPROPERTIES(key=value,key=value)]
 格式 SET SERDEPROPERTIES (key=value,key=value)
+
+设置/取消视图的属性
+格式:
+a.String SET TBLPROPERTIES (keyValueProperty,keyValueProperty)
+b.String UNSET TBLPROPERTIES [IF Exists](keyValueProperty,keyValueProperty)
+
+analyzeAlterTableProtectMode设置protect模式以及类型,但是该类没有sql被启动,因此暂时不会对系统有影响
+
+alterStatementSuffixClusterbySortby格式:
+1.NOT CLUSTERED 表示没有CLUSTERED BY 操作
+2.NOT SORTED 表示没有SORTED BY 操作
+3.CLUSTERED BY (column1,column2) [SORTED BY (column1 desc,column2 desc)] into Number BUCKETS,属于ADDCLUSTERSORTCOLUMN类型
+
+alterTblPartitionStatementSuffixSkewedLocation
+a.SET SKEWED LOCATION (key=value,key=value) 是ALTERSKEWEDLOCATION类型
+b.SET SKEWED LOCATION ((key1,key2)=value,(key1,key2)=value) 是ALTERSKEWEDLOCATION类型
+
+
+tableSkewed 属于ADDSKEWEDBY类型
+SKEWED BY (属性字符串,属性字符串) on (属性值集合xxx,xxx) [STORED AS DIRECTORIES]
+或者SKEWED BY (属性字符串,属性字符串) on (多组属性值集合 (xxx,xxx),(xxx,xxx),(xxx,xxx) ) [STORED AS DIRECTORIES]
+create table T (c1 string, c2 string) skewed by (c1) on ('x1') 表示在c1属性的值为x1的时候可能会数据发生偏移,因此在join的时候要先预估一下是否一个表的c1=x1的值能否很少,并且存储在内存中,如果是,则可以进行优化
+create table T (c1 string, c2 string) skewed by (c1,c2) on (('x11','x21'),('x12','x22')) 表示在c1,c2属性的值为(x11,x21),或者(x21,x22)的时候可能会数据发生偏移,因此在join的时候要先预估一下是否一个表的(x11,x21),或者(x21,x22)的值能否很少,并且存储在内存中,如果是,则可以进行优化
+
+alterStatementSuffixSkewedby 属于ADDSKEWEDBY类型
+"tableName" NOT SKEWED
+
+ alterStatementSuffixBucketNum
+ INTO number BUCKETS
  */
 @Explain(displayName = "Alter Table")
 public class AlterTableDesc extends DDLDesc implements Serializable {
@@ -56,14 +85,18 @@ public class AlterTableDesc extends DDLDesc implements Serializable {
     REPLACECOLS,//修改表的属性 String REPLACE COLUMNS (columnNameTypeList)
     ADDPROPS, DROPPROPS, ADDSERDE, 
     ADDSERDEPROPS,//设置存储的方式是csv、json、还是protobuffer等等吧,格式 SET SERDEPROPERTIES (key=value,key=value)
-    ADDFILEFORMAT, ADDCLUSTERSORTCOLUMN, RENAMECOLUMN, ADDPARTITION,
+    ADDFILEFORMAT, 
+    ADDCLUSTERSORTCOLUMN, //alterStatementSuffixClusterbySortby
+    RENAMECOLUMN, ADDPARTITION,
     TOUCH,//重新写回关于table的partition下的元数据信息
     ARCHIVE,//Hive中的归档移动分区中的文件到Hadoop归档中（HAR），该语句只会减少文件的数量，但不提供压缩。 
     UNARCHIVE,//Hive中的归档移动分区中的文件到Hadoop归档中（HAR），该语句只会减少文件的数量，但不提供压缩。 
     ALTERPROTECTMODE, ALTERPARTITIONPROTECTMODE,
     ALTERLOCATION,//为table下的某个partition分配一个新的HDFS路径
     DROPPARTITION,//删除数据库表的某些分区
-    RENAMEPARTITION, ADDSKEWEDBY, ALTERSKEWEDLOCATION,
+    RENAMEPARTITION,//RENAME TO PARTITION (name=value,name=value,name) 
+    ADDSKEWEDBY, //tableSkewed
+    ALTERSKEWEDLOCATION,//alterTblPartitionStatementSuffixSkewedLocation
     ALTERBUCKETNUM, ALTERPARTITION
   }
 
@@ -80,6 +113,8 @@ public class AlterTableDesc extends DDLDesc implements Serializable {
   /**
    * 格式 SET SERDE "serde_class_name" [WITH SERDEPROPERTIES(key=value,key=value)]中的key=value,key=value
    * 格式 SET SERDEPROPERTIES (key=value,key=value) 中的key=value,key=value
+   * 格式 String SET TBLPROPERTIES (keyValueProperty,keyValueProperty)
+             格式 String UNSET TBLPROPERTIES [IF Exists](keyValueProperty,keyValueProperty)
    */
   HashMap<String, String> props;
   
@@ -88,29 +123,31 @@ public class AlterTableDesc extends DDLDesc implements Serializable {
   String outputFormat;//文件读出的形式
   String storageHandler;
   
-  int numberBuckets;
-  ArrayList<String> bucketColumns;
-  ArrayList<Order> sortColumns;
-
+  //CLUSTERED BY (column1,column2) [SORTED BY (column1 desc,column2 desc)] into Number BUCKETS
+  //NOT CLUSTERED表示没有CLUSTERED BY 操作
+  int numberBuckets;//into Number BUCKETS
+  ArrayList<String> bucketColumns;//CLUSTERED BY (column1,column2)
+  ArrayList<Order> sortColumns;//SORTED BY (column1 desc,column2 desc)
+  boolean isTurnOffSorting = false;//alterStatementSuffixClusterbySortby格式: 解析NOT SORTED 表示没有SORTED BY 操作
+  
   String oldColName;
   String newColName;
   String newColType;
   String newColComment;
   boolean first;
   String afterCol;
-  boolean expectView;
+  boolean expectView;//true 表示操作的表示视图
   HashMap<String, String> partSpec;//确定一个partition,HashMap<String, String> partSpec 是因为确定某个partition可能来源于多个属性,例如log_date log_hour
   private String newLocation;//更改HDFS的路径 
-  boolean protectModeEnable;
-  ProtectModeType protectModeType;
-  Map<List<String>, String> skewedLocations;
-  boolean isTurnOffSkewed = false;
-  boolean isStoredAsSubDirectories = false;
-  List<String> skewedColNames;
-  List<List<String>> skewedColValues;
+  boolean protectModeEnable;//参见analyzeAlterTableProtectMode中设置prodect模式是否启动/关闭
+  ProtectModeType protectModeType;//analyzeAlterTableProtectMode中设置prodect模式
+  Map<List<String>, String> skewedLocations;//alterTblPartitionStatementSuffixSkewedLocation中设置解析后的内容
+  boolean isTurnOffSkewed = false;//解析SKEWED BY (属性字符串,属性字符串)时候默认是false,但是解析alterStatementSuffixSkewedby String NOT SKEWED时候为true
+  boolean isStoredAsSubDirectories = false;//解析SKEWED BY (属性字符串,属性字符串)中的 [STORED AS DIRECTORIES]
+  List<String> skewedColNames;//解析SKEWED BY (属性字符串,属性字符串) on (多组属性值集合 (xxx,xxx),(xxx,xxx),(xxx,xxx) ) 中SKEWED BY (属性字符串,属性字符串) 
+  List<List<String>> skewedColValues;//解析SKEWED BY (属性字符串,属性字符串) on (多组属性值集合 (xxx,xxx),(xxx,xxx),(xxx,xxx) ) 中on (多组属性值集合 (xxx,xxx),(xxx,xxx),(xxx,xxx) )
   Table table;
   boolean isDropIfExists = false;
-  boolean isTurnOffSorting = false;
 
   public AlterTableDesc() {
   }
@@ -203,6 +240,11 @@ public class AlterTableDesc extends DDLDesc implements Serializable {
     this.partSpec = partSpec;
   }
 
+  /**
+   * alterStatementSuffixClusterbySortby格式:
+解析CLUSTERED BY (column1,column2) [SORTED BY (column1 desc,column2 desc)] into Number BUCKETS
+解析NOT CLUSTERED 表示没有CLUSTERED BY 操作
+   */
   public AlterTableDesc(String tableName, int numBuckets,
       List<String> bucketCols, List<Order> sortCols, HashMap<String, String> partSpec) {
     oldName = tableName;
@@ -213,6 +255,10 @@ public class AlterTableDesc extends DDLDesc implements Serializable {
     this.partSpec = partSpec;
   }
 
+  /**
+   * alterStatementSuffixClusterbySortby格式:
+解析NOT SORTED 表示没有SORTED BY 操作
+   */
   public AlterTableDesc(String tableName, boolean sortingOff, HashMap<String, String> partSpec) {
     oldName = tableName;
     op = AlterTableTypes.ADDCLUSTERSORTCOLUMN;
@@ -243,6 +289,7 @@ public class AlterTableDesc extends DDLDesc implements Serializable {
     this.partSpec = partSpec;
   }
 
+  //解析tableSkewed
   public AlterTableDesc(String tableName, boolean turnOffSkewed,
       List<String> skewedColNames, List<List<String>> skewedColValues) {
     oldName = tableName;

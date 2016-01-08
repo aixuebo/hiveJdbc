@@ -53,7 +53,7 @@ public class FetchWork implements Serializable {
   /**
    * Serialization Null Format for the serde used to fetch data.
    */
-  private String serializationNullFormat = "NULL";
+  private String serializationNullFormat = "NULL";//遇到null的时候输出什么内容
 
   public FetchWork() {
   }

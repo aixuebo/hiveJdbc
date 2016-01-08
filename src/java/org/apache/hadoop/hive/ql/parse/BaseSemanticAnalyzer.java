@@ -676,6 +676,7 @@ public abstract class BaseSemanticAnalyzer {
   /**
    * 返回数据库属性组装成的Order对象,用于order by子句中使用
    * 每一个Order对象包含属性name的小写,以及该属性的排序规则,倒序还是正序
+   * 解析SORTED BY (column1 desc,column2 desc) 
    */
   protected List<Order> getColumnNamesOrder(ASTNode ast) {
     List<Order> colList = new ArrayList<Order>();
@@ -979,6 +980,7 @@ public abstract class BaseSemanticAnalyzer {
 
   /**
    * 获取分区信息,最终返回到map中,key是分区字段,value是分区值
+   * 解析PARTITION (name=value,name=value,name)
    */
   protected HashMap<String, String> extractPartitionSpecs(Tree partspec)
       throws SemanticException {
@@ -1122,6 +1124,7 @@ public abstract class BaseSemanticAnalyzer {
    * @param node
    * @return
    * @throws SemanticException
+   * 解析SKEWED BY (属性字符串,属性字符串) on (多组属性值集合 (xxx,xxx),(xxx,xxx),(xxx,xxx) ) 中on之后的部分
    */
   protected List<String> getSkewedValuesFromASTNode(Node node) throws SemanticException {
     List<String> result = null;
@@ -1149,6 +1152,13 @@ public abstract class BaseSemanticAnalyzer {
    * @return
    * @throws SemanticException
    * 获取要优化数据偏移的属性集合.Skewed by语句
+   * 
+tableSkewed
+SKEWED BY (属性字符串,属性字符串) on (属性值集合xxx,xxx) [STORED AS DIRECTORIES]
+或者SKEWED BY (属性字符串,属性字符串) on (多组属性值集合 (xxx,xxx),(xxx,xxx),(xxx,xxx) ) [STORED AS DIRECTORIES]
+create table T (c1 string, c2 string) skewed by (c1) on ('x1') 表示在c1属性的值为x1的时候可能会数据发生偏移,因此在join的时候要先预估一下是否一个表的c1=x1的值能否很少,并且存储在内存中,如果是,则可以进行优化
+create table T (c1 string, c2 string) skewed by (c1,c2) on (('x11','x21'),('x12','x22')) 表示在c1,c2属性的值为(x11,x21),或者(x21,x22)的时候可能会数据发生偏移,因此在join的时候要先预估一下是否一个表的(x11,x21),或者(x21,x22)的值能否很少,并且存储在内存中,如果是,则可以进行优化
+返回SKEWED BY (属性字符串,属性字符串)解析后的属性集合
    */
   protected List<String> analyzeSkewedTablDDLColNames(List<String> skewedColNames, ASTNode child)
       throws SemanticException {
@@ -1175,6 +1185,14 @@ public abstract class BaseSemanticAnalyzer {
    * @param child
    * @throws SemanticException
    * 为Skewed by on解析,skewedValues的每一个元素都要匹配skewed by后面的属性个数
+   * 
+tableSkewed
+SKEWED BY (属性字符串,属性字符串) on (属性值集合xxx,xxx) [STORED AS DIRECTORIES]
+或者SKEWED BY (属性字符串,属性字符串) on (多组属性值集合 (xxx,xxx),(xxx,xxx),(xxx,xxx) ) [STORED AS DIRECTORIES]
+create table T (c1 string, c2 string) skewed by (c1) on ('x1') 表示在c1属性的值为x1的时候可能会数据发生偏移,因此在join的时候要先预估一下是否一个表的c1=x1的值能否很少,并且存储在内存中,如果是,则可以进行优化
+create table T (c1 string, c2 string) skewed by (c1,c2) on (('x11','x21'),('x12','x22')) 表示在c1,c2属性的值为(x11,x21),或者(x21,x22)的时候可能会数据发生偏移,因此在join的时候要先预估一下是否一个表的(x11,x21),或者(x21,x22)的值能否很少,并且存储在内存中,如果是,则可以进行优化
+
+返回on (属性值集合xxx,xxx)或者on (多组属性值集合 (xxx,xxx),(xxx,xxx),(xxx,xxx) )解析后的value值
    */
   protected void analyzeDDLSkewedValues(List<List<String>> skewedValues, ASTNode child)
       throws SemanticException {
@@ -1212,7 +1230,7 @@ public abstract class BaseSemanticAnalyzer {
    *
    * @param child
    * @return
-   * STORED AS DIRECTORIES 是否被设计了
+   * 解析 STORED AS DIRECTORIES 是否被设计了
    */
   protected boolean analyzeStoredAdDirs(ASTNode child) {
     boolean storedAsDirs = false;

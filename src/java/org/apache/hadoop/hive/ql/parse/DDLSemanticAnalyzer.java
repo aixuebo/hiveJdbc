@@ -139,7 +139,6 @@ import org.apache.hadoop.mapred.TextInputFormat;
  */
 public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
   private static final Log LOG = LogFactory.getLog(DDLSemanticAnalyzer.class);
-  
   //属性所属类型映射
   private static final Map<Integer, String> TokenToTypeName = new HashMap<Integer, String>();
 
@@ -302,12 +301,30 @@ SET SKEWED LOCATION (key=value,key=value)
     	   */
         analyzeAlterTableSerdeProps(ast, tableName, partSpec);
       } else if (ast.getToken().getType() == HiveParser.TOK_ALTERTABLE_RENAMEPART) {
-        analyzeAlterTableRenamePart(ast, tableName, partSpec);
+        /**
+         * alterStatementSuffixRenamePart
+         * RENAME TO PARTITION (name=value,name=value,name)
+         */
+    	  analyzeAlterTableRenamePart(ast, tableName, partSpec);
       } else if (ast.getToken().getType() == HiveParser.TOK_ALTERTBLPART_SKEWED_LOCATION) {
+    	/**
+    	 * a.SET SKEWED LOCATION (key=value,key=value)
+b.SET SKEWED LOCATION ((key1,key2)=value,(key1,key2)=value)
+    	 */
         analyzeAlterTableSkewedLocation(ast, tableName, partSpec);
       } else if (ast.getToken().getType() == HiveParser.TOK_TABLEBUCKETS) {
+    	  /**
+alterStatementSuffixBucketNum
+ INTO number BUCKETS
+    	   */
         analyzeAlterTableBucketNum(ast, tableName, partSpec);
       } else if (ast.getToken().getType() == HiveParser.TOK_ALTERTABLE_CLUSTER_SORT) {
+    	  /**
+    	   * alterStatementSuffixClusterbySortby格式:
+1.NOT CLUSTERED
+2.NOT SORTED
+3.CLUSTERED BY (column1,column2) [SORTED BY (column1 desc,column2 desc)] into Number BUCKETS
+    	   */
         analyzeAlterTableClusterSort(ast, tableName, partSpec);
       }
       break;
@@ -326,6 +343,7 @@ SET SKEWED LOCATION (key=value,key=value)
       analyzeDropIndex(ast);
       break;
     case HiveParser.TOK_DESCTABLE:
+      //DESCRIBE | DESC [FORMATTED | EXTENDED | PRETTY] .($ELEM$ | $KEY$ | $VALUE$ | xxx ) [PARTITION (name=value,name=value,name)] 描述表
       ctx.setResFile(new Path(ctx.getLocalTmpFileURI()));
       analyzeDescribeTable(ast);
       break;
@@ -373,9 +391,11 @@ SET SKEWED LOCATION (key=value,key=value)
       analyzeDropTable(ast, true);
       break;
     case HiveParser.TOK_ALTERVIEW_PROPERTIES:
+    	//String SET TBLPROPERTIES (keyValueProperty,keyValueProperty) 设置视图的属性
       analyzeAlterTableProps(ast, true, false);
       break;
     case HiveParser.TOK_DROPVIEW_PROPERTIES:
+    	//String UNSET TBLPROPERTIES [IF Exists](keyValueProperty,keyValueProperty)设置视图的属性
       analyzeAlterTableProps(ast, true, true);
       break;
     case HiveParser.TOK_ALTERVIEW_ADDPARTS:
@@ -421,9 +441,11 @@ SET SKEWED LOCATION (key=value,key=value)
       analyzeAlterTableDropParts(ast, false);
       break;
     case HiveParser.TOK_ALTERTABLE_PROPERTIES:
+    	//String SET TBLPROPERTIES (keyValueProperty,keyValueProperty) 设置数据表的属性信息
       analyzeAlterTableProps(ast, false, false);
       break;
     case HiveParser.TOK_DROPTABLE_PROPERTIES:
+    	//String UNSET TBLPROPERTIES [IF Exists](keyValueProperty,keyValueProperty) 取消数据表的属性信息
       analyzeAlterTableProps(ast, false, true);
       break;
     case HiveParser.TOK_ALTERINDEX_REBUILD:
@@ -435,6 +457,7 @@ SET SKEWED LOCATION (key=value,key=value)
       analyzeAlterIndexProps(ast);
       break;
     case HiveParser.TOK_SHOWPARTITIONS:
+    	//SHOW PARTITIONS xxx PARTITION (name=value,name=value,name)
       ctx.setResFile(new Path(ctx.getLocalTmpFileURI()));
       analyzeShowPartitions(ast);
       break;
@@ -491,6 +514,12 @@ SET SKEWED LOCATION (key=value,key=value)
       analyzeRevoke(ast);
       break;
     case HiveParser.TOK_ALTERTABLE_SKEWED:
+    	/**
+alterStatementSuffixSkewedby
+a.String tableSkewed
+b.String NOT SKEWED
+c.String NOT STORED AS DIRECTORIES
+    	 */
       analyzeAltertableSkewedby(ast);
       break;
    case HiveParser.TOK_EXCHANGEPARTITION:
@@ -1477,6 +1506,14 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
     }
   }
 
+  /**
+   * 设置/取消视图或者表的属性
+格式:
+a.String SET TBLPROPERTIES (keyValueProperty,keyValueProperty)
+b.String UNSET TBLPROPERTIES [IF Exists](keyValueProperty,keyValueProperty)
+@param expectView true表示操作视图
+@param isUnset true表示取消操作,false表示设置操作
+   */
   private void analyzeAlterTableProps(ASTNode ast, boolean expectView, boolean isUnset)
       throws SemanticException {
 
@@ -1682,6 +1719,9 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
         alterTblDesc), conf));
   }
 
+  /**
+   * analyzeAlterTableProtectMode设置protect模式以及类型,但是该类没有sql被启动,因此暂时不会对系统有影响
+   */
   private void analyzeAlterTableProtectMode(ASTNode ast, String tableName,
       HashMap<String, String> partSpec)
       throws SemanticException {
@@ -1859,6 +1899,12 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
     }
   }
 
+  /**
+alterStatementSuffixClusterbySortby格式:
+1.NOT CLUSTERED 表示没有CLUSTERED BY 操作
+2.NOT SORTED 表示没有SORTED BY 操作
+3.CLUSTERED BY (column1,column2) [SORTED BY (column1 desc,column2 desc)] into Number BUCKETS
+   */
   private void analyzeAlterTableClusterSort(ASTNode ast, String tableName,
       HashMap<String, String> partSpec) throws SemanticException {
     addInputsOutputsAlterTable(tableName, partSpec);
@@ -1876,16 +1922,20 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
       break;
     case HiveParser.TOK_TABLEBUCKETS:
       ASTNode buckets = (ASTNode) ast.getChild(0);
+      //解析CLUSTERED BY (column1,column2)
       List<String> bucketCols = getColumnNames((ASTNode) buckets.getChild(0));
+      //解析SORTED BY (column1 desc,column2 desc) 
       List<Order> sortCols = new ArrayList<Order>();
+      //解析into Number BUCKETS
       int numBuckets = -1;
-      if (buckets.getChildCount() == 2) {
+      if (buckets.getChildCount() == 2) {//仅仅有into Number BUCKETS
         numBuckets = (Integer.valueOf(buckets.getChild(1).getText())).intValue();
-      } else {
+      } else {//SORT BY和into Number BUCKETS都被设置了
         sortCols = getColumnNamesOrder((ASTNode) buckets.getChild(1));
         numBuckets = (Integer.valueOf(buckets.getChild(2).getText())).intValue();
       }
       if (numBuckets <= 0) {
+    	//CLUSTERED BY (column1,column2) [SORTED BY (column1 desc,column2 desc)] into Number BUCKETS语法中必须存在into Number BUCKETS语句,并且Number一定要大于1 
         throw new SemanticException(ErrorMsg.INVALID_BUCKET_NUMBER.getMsg());
       }
 
@@ -1938,6 +1988,13 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
 
     // assume the first component of DOT delimited name is tableName
     // get the attemptTableName
+    /**
+     * 
+     * @param db 数据库查询对象
+     * @param qualifiedName database.table.column or database.table or database
+     * @param isColumn
+     * @return
+     */
     static public String getAttemptTableName(Hive db, String qualifiedName, boolean isColumn) {
       // check whether the name starts with table
       // DESCRIBE table
@@ -1968,14 +2025,16 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
       return null;
     }
 
-    // get Database Name
+    // get Database Name 获取数据库名字
     static public String getDBName(Hive db, ASTNode ast) {
       String dbName = null;
+      //database.table.column or database.table or database
       String fullyQualifiedName = getFullyQualifiedName(ast);
 
       // if database.table or database.table.column or table.column
       // first try the first component of the DOT separated name
       if (ast.getChildCount() >= 2) {
+    	//获取数据库名字
         dbName = fullyQualifiedName.substring(0,
           fullyQualifiedName.indexOf('.') == -1 ?
           fullyQualifiedName.length() :
@@ -1983,7 +2042,7 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
         try {
           // if the database name is not valid
           // it is table.column
-          // return null as dbName
+          // return null as dbName 校验数据库是否存在
           if (!db.databaseExists(dbName)) {
             return null;
           }
@@ -1998,10 +2057,11 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
       return dbName;
     }
 
-    // get Table Name
+    // get Table Name 获取表名字
     static public String getTableName(Hive db, ASTNode ast)
       throws SemanticException {
       String tableName = null;
+      //database.table.column or database.table or database
       String fullyQualifiedName = getFullyQualifiedName(ast);
 
       // assume the first component of DOT delimited name is tableName
@@ -2012,6 +2072,7 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
 
       // if the name does not start with table
       // it should start with database
+      // DESCRIBE database.table.column
       // DESCRIBE database.table
       // DESCRIBE database.table column
       if (fullyQualifiedName.split(delimiter).length == 3) {
@@ -2039,6 +2100,15 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
     }
 
     // get column path
+    /**
+     * 
+     * @param db
+     * @param parentAst
+     * @param ast 解析DESCRIBE | DESC .($ELEM$ | $KEY$ | $VALUE$ | xxx )
+     * @param tableName 格式:database.table.column or database.table or database
+     * @param partSpec
+     * @return
+     */
     static public String getColPath(
       Hive db,
       ASTNode parentAst,
@@ -2077,7 +2147,7 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
       return tableName;
     }
 
-    // get partition metadata
+    // get partition metadata 解析 [PARTITION (name=value,name=value,name)] 并且进行了校验
     static public Map<String, String> getPartitionSpec(Hive db, ASTNode ast, String tableName)
       throws SemanticException {
       // if ast has two children
@@ -2142,16 +2212,16 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
    * @param tablename
    *          tablename
    * @param schema
-   *          thrift ddl
+   *          thrift ddl 例如partition#string表示String类型的partition字段
    */
   private FetchTask createFetchTask(String schema) {
     Properties prop = new Properties();
 
-    prop.setProperty(serdeConstants.SERIALIZATION_FORMAT, "9");
-    prop.setProperty(serdeConstants.SERIALIZATION_NULL_FORMAT, " ");
+    prop.setProperty(serdeConstants.SERIALIZATION_FORMAT, "9");//拆分每一个属性的配置,field.delim的默认值,默认是9,即\t
+    prop.setProperty(serdeConstants.SERIALIZATION_NULL_FORMAT, " ");//当null的时候输出空格
     String[] colTypes = schema.split("#");
-    prop.setProperty("columns", colTypes[0]);
-    prop.setProperty("columns.types", colTypes[1]);
+    prop.setProperty("columns", colTypes[0]);//列名字
+    prop.setProperty("columns.types", colTypes[1]);//列类型
 
     FetchWork fetch = new FetchWork(ctx.getResFile().toString(), new TableDesc(
         LazySimpleSerDe.class, TextInputFormat.class,
@@ -2160,6 +2230,9 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
     return (FetchTask) TaskFactory.get(fetch, conf);
   }
 
+  /**
+   * 校验数据库
+   */
   private void validateDatabase(String databaseName) throws SemanticException {
     try {
       if (!db.databaseExists(databaseName)) {
@@ -2170,6 +2243,10 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
     }
   }
 
+  /**
+   * 
+   * 校验数据库表以及分区
+   */
   private void validateTable(String tableName, Map<String, String> partSpec)
       throws SemanticException {
     Table tab = getTable(tableName);
@@ -2178,16 +2255,26 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
     }
   }
 
+  /**
+   * 描述表
+   * DESCRIBE | DESC [FORMATTED | EXTENDED | PRETTY] .($ELEM$ | $KEY$ | $VALUE$ | xxx ) [PARTITION (name=value,name=value,name)]
+   */
   private void analyzeDescribeTable(ASTNode ast) throws SemanticException {
     ASTNode tableTypeExpr = (ASTNode) ast.getChild(0);
 
+    //database.table.column or database.table or database
     String qualifiedName =
       QualifiedNameUtil.getFullyQualifiedName((ASTNode) tableTypeExpr.getChild(0));
+    
+    //表名字
     String tableName =
       QualifiedNameUtil.getTableName(db, (ASTNode)(tableTypeExpr.getChild(0)));
+    
+    //数据库名字
     String dbName =
       QualifiedNameUtil.getDBName(db, (ASTNode)(tableTypeExpr.getChild(0)));
 
+    //解析[PARTITION (name=value,name=value,name)]
     Map<String, String> partSpec =
       QualifiedNameUtil.getPartitionSpec(db, tableTypeExpr, tableName);
 
@@ -2196,6 +2283,8 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
 
     // if database is not the one currently using
     // validate database
+    
+    //对数据库和数据表进行校验
     if (dbName != null) {
       validateDatabase(dbName);
     }
@@ -2206,6 +2295,7 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
     DescTableDesc descTblDesc = new DescTableDesc(
       ctx.getResFile(), tableName, partSpec, colPath);
 
+    //解析[FORMATTED | EXTENDED | PRETTY]
     if (ast.getChildCount() == 2) {
       int descOptions = ast.getChild(1).getType();
       descTblDesc.setFormatted(descOptions == HiveParser.KW_FORMATTED);
@@ -2266,13 +2356,18 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
     return partSpec;
   }
 
+  /**
+   * 展示某个表的某个partition信息
+   * SHOW PARTITIONS xxx PARTITION (name=value,name=value,name)
+   */
   private void analyzeShowPartitions(ASTNode ast) throws SemanticException {
     ShowPartitionsDesc showPartsDesc;
     String tableName = getUnescapedName((ASTNode) ast.getChild(0));
+    //虽然这个结果看允许多个partition分区被在sql中,但是最终代码获取了仅仅1个分区,即该sql只能有一个分区语句被展现
     List<Map<String, String>> partSpecs = getPartitionSpecs(ast);
     // We only can have a single partition spec
     assert (partSpecs.size() <= 1);
-    Map<String, String> partSpec = null;
+    Map<String, String> partSpec = null;//最终要show的分区
     if (partSpecs.size() > 0) {
       partSpec = partSpecs.get(0);
     }
@@ -2659,26 +2754,41 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
         alterTblDesc), conf));
   }
 
+  /**
+   * alterStatementSuffixRenamePart 为table修改新的partition属性
+   * RENAME TO PARTITION (name=value,name=value,name)
+   * 
+   * @param tblName 表示为哪个表进行重新修改分区属性 
+   * @param oldPartSpec 老版本的分区属性集合
+   */
   private void analyzeAlterTableRenamePart(ASTNode ast, String tblName,
-      HashMap<String, String> oldPartSpec) throws SemanticException {
+      HashMap<String, String> oldPartSpec) throws SemanticException{
+	  //获取新的分区属性集合信息
     Map<String, String> newPartSpec = extractPartitionSpecs((ASTNode) ast.getChild(0));
     if (newPartSpec == null) {
       throw new SemanticException("RENAME PARTITION Missing Destination" + ast);
     }
+    //获取数据库表对象
     Table tab = getTable(tblName, true);
     validateAlterTableType(tab, AlterTableTypes.RENAMEPARTITION);
     inputs.add(new ReadEntity(tab));
 
+    //新老版本的分区信息
     List<Map<String, String>> partSpecs = new ArrayList<Map<String, String>>();
     partSpecs.add(oldPartSpec);
     partSpecs.add(newPartSpec);
     addTablePartsOutputs(tblName, partSpecs);
+    
     RenamePartitionDesc renamePartitionDesc = new RenamePartitionDesc(
         SessionState.get().getCurrentDatabase(), tblName, oldPartSpec, newPartSpec);
     rootTasks.add(TaskFactory.get(new DDLWork(getInputs(), getOutputs(),
         renamePartitionDesc), conf));
   }
 
+  /**
+ alterStatementSuffixBucketNum
+ INTO number BUCKETS
+   */
   private void analyzeAlterTableBucketNum(ASTNode ast, String tblName,
       HashMap<String, String> partSpec) throws SemanticException {
     Table tab = getTable(tblName, true);
@@ -2688,6 +2798,7 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
     validateAlterTableType(tab, AlterTableTypes.ALTERBUCKETNUM);
     inputs.add(new ReadEntity(tab));
 
+    //解析 INTO number BUCKETS
     int bucketNum = Integer.parseInt(ast.getChild(0).getText());
     AlterTableDesc alterBucketNum = new AlterTableDesc(tblName, partSpec, bucketNum);
 
@@ -3332,6 +3443,11 @@ String DROP [IF Exists] PARTITION(key 符号 value,key 符号 value),PARTITION( key 
    * @param ast
    *          node
    * @throws SemanticException
+   * 
+alterStatementSuffixSkewedby
+a.String tableSkewed
+b.String NOT SKEWED
+c.String NOT STORED AS DIRECTORIES
    */
   private void analyzeAltertableSkewedby(ASTNode ast) throws SemanticException {
     /**
@@ -3348,7 +3464,7 @@ String DROP [IF Exists] PARTITION(key 符号 value,key 符号 value),PARTITION( key 
 
     validateAlterTableType(tab, AlterTableTypes.ADDSKEWEDBY);
 
-    if (ast.getChildCount() == 1) {
+    if (ast.getChildCount() == 1) {//仅仅解析alterStatementSuffixSkewedby String NOT SKEWED
       /* Convert a skewed table to non-skewed table. */
       AlterTableDesc alterTblDesc = new AlterTableDesc(tableName, true,
           new ArrayList<String>(), new ArrayList<List<String>>());
@@ -3358,9 +3474,16 @@ String DROP [IF Exists] PARTITION(key 符号 value,key 符号 value),PARTITION( key 
     } else {
       switch (((ASTNode) ast.getChild(1)).getToken().getType()) {
       case HiveParser.TOK_TABLESKEWED:
+    	/**
+SKEWED BY (属性字符串,属性字符串) on (属性值集合xxx,xxx) [STORED AS DIRECTORIES]
+或者SKEWED BY (属性字符串,属性字符串) on (多组属性值集合 (xxx,xxx),(xxx,xxx),(xxx,xxx) ) [STORED AS DIRECTORIES]
+create table T (c1 string, c2 string) skewed by (c1) on ('x1') 表示在c1属性的值为x1的时候可能会数据发生偏移,因此在join的时候要先预估一下是否一个表的c1=x1的值能否很少,并且存储在内存中,如果是,则可以进行优化
+create table T (c1 string, c2 string) skewed by (c1,c2) on (('x11','x21'),('x12','x22')) 表示在c1,c2属性的值为(x11,x21),或者(x21,x22)的时候可能会数据发生偏移,因此在join的时候要先预估一下是否一个表的(x11,x21),或者(x21,x22)的值能否很少,并且存储在内存中,如果是,则可以进行优化
+    	 */
         handleAlterTableSkewedBy(ast, tableName, tab);
         break;
       case HiveParser.TOK_STOREDASDIRS:
+    	  //解析STORED AS DIRECTORIES
         handleAlterTableDisableStoredAsDirs(tableName, tab);
         break;
       default:
@@ -3375,6 +3498,7 @@ String DROP [IF Exists] PARTITION(key 符号 value,key 符号 value),PARTITION( key 
    * @param tableName
    * @param tab
    * @throws SemanticException
+   * 解析STORED AS DIRECTORIES
    */
   private void handleAlterTableDisableStoredAsDirs(String tableName, Table tab)
       throws SemanticException {
@@ -3397,6 +3521,12 @@ String DROP [IF Exists] PARTITION(key 符号 value,key 符号 value),PARTITION( key 
    * @param tableName
    * @param tab
    * @throws SemanticException
+   *
+tableSkewed
+SKEWED BY (属性字符串,属性字符串) on (属性值集合xxx,xxx) [STORED AS DIRECTORIES]
+或者SKEWED BY (属性字符串,属性字符串) on (多组属性值集合 (xxx,xxx),(xxx,xxx),(xxx,xxx) ) [STORED AS DIRECTORIES]
+create table T (c1 string, c2 string) skewed by (c1) on ('x1') 表示在c1属性的值为x1的时候可能会数据发生偏移,因此在join的时候要先预估一下是否一个表的c1=x1的值能否很少,并且存储在内存中,如果是,则可以进行优化
+create table T (c1 string, c2 string) skewed by (c1,c2) on (('x11','x21'),('x12','x22')) 表示在c1,c2属性的值为(x11,x21),或者(x21,x22)的时候可能会数据发生偏移,因此在join的时候要先预估一下是否一个表的(x11,x21),或者(x21,x22)的值能否很少,并且存储在内存中,如果是,则可以进行优化
    */
   private void handleAlterTableSkewedBy(ASTNode ast, String tableName, Table tab)
       throws SemanticException {
@@ -3404,10 +3534,13 @@ String DROP [IF Exists] PARTITION(key 符号 value,key 符号 value),PARTITION( key 
     List<List<String>> skewedValues = new ArrayList<List<String>>();
     /* skewed column names. */
     ASTNode skewedNode = (ASTNode) ast.getChild(1);
+    //返回SKEWED BY (属性字符串,属性字符串)解析后的属性集合
     skewedColNames = analyzeSkewedTablDDLColNames(skewedColNames, skewedNode);
-    /* skewed value. */
+    /* skewed value. 
+     * 返回on (属性值集合xxx,xxx)或者on (多组属性值集合 (xxx,xxx),(xxx,xxx),(xxx,xxx) )解析后的value值 
+     **/
     analyzeDDLSkewedValues(skewedValues, skewedNode);
-    // stored as directories
+    // stored as directories 解析[STORED AS DIRECTORIES]
     boolean storedAsDirs = analyzeStoredAdDirs(skewedNode);
 
 
@@ -3475,6 +3608,10 @@ String DROP [IF Exists] PARTITION(key 符号 value,key 符号 value),PARTITION( key 
    * @param tableName
    * @param partSpec
    * @throws SemanticException
+   * 
+alterTblPartitionStatementSuffixSkewedLocation
+a.SET SKEWED LOCATION (key=value,key=value)
+b.SET SKEWED LOCATION ((key1,key2)=value,(key1,key2)=value)
    */
   private void analyzeAlterTableSkewedLocation(ASTNode ast, String tableName,
       HashMap<String, String> partSpec) throws SemanticException {

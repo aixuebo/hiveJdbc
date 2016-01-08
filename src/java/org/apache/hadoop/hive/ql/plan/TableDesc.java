@@ -27,18 +27,27 @@ import java.util.Properties;
 import org.apache.hadoop.hive.ql.io.HiveFileFormatUtils;
 import org.apache.hadoop.hive.ql.io.HiveOutputFormat;
 import org.apache.hadoop.hive.ql.io.HivePassThroughOutputFormat;
+import org.apache.hadoop.hive.serde.serdeConstants;
 import org.apache.hadoop.hive.serde2.Deserializer;
 import org.apache.hadoop.mapred.InputFormat;
 
 /**
  * TableDesc.
- *
+ * 描述一个table
+ * DDLSemanticAnalyzer.createFetchTask方法调用产生的该TableDesc对象
  */
 public class TableDesc implements Serializable, Cloneable {
   private static final long serialVersionUID = 1L;
   private Class<? extends Deserializer> deserializerClass;
   private Class<? extends InputFormat> inputFileFormatClass;
   private Class<? extends HiveOutputFormat> outputFileFormatClass;
+  /**
+    prop.setProperty(serdeConstants.SERIALIZATION_FORMAT, "9");//拆分每一个属性的配置,field.delim的默认值,默认是9,即\t
+    prop.setProperty(serdeConstants.SERIALIZATION_NULL_FORMAT, " ");//当null的时候输出空格
+    String[] colTypes = schema.split("#");例如partition#string表示String类型的partition字段
+    prop.setProperty("columns", colTypes[0]);//列名字
+    prop.setProperty("columns.types", colTypes[1]);//列类型
+   */
   private java.util.Properties properties;
   private String serdeClassName;
   private Map<String, String> jobProperties;

@@ -23,16 +23,18 @@ import java.util.Map;
 
 /**
  * Contains the information needed to rename a partition.
+ * alterStatementSuffixRenamePart 为table修改新的partition属性
+ * RENAME TO PARTITION (name=value,name=value,name)
  */
 public class RenamePartitionDesc extends DDLDesc implements Serializable {
 
   private static final long serialVersionUID = 1L;
 
-  String tableName;
-  String dbName;
+  String tableName;//等待修改的是哪个表
+  String dbName;//等待修改的是哪个数据库
   String location;
-  LinkedHashMap<String, String> oldPartSpec;
-  LinkedHashMap<String, String> newPartSpec;
+  LinkedHashMap<String, String> oldPartSpec;//老版本的partition分区属性集合
+  LinkedHashMap<String, String> newPartSpec;//新版本的partition分区属性集合
 
   /**
    * For serialization only.

@@ -25,28 +25,26 @@ import org.apache.hadoop.fs.Path;
 
 /**
  * DescTableDesc.
- *
+ * √Ë ˆ±Ì
+ * DESCRIBE | DESC [FORMATTED | EXTENDED | PRETTY] .($ELEM$ | $KEY$ | $VALUE$ | xxx ) [PARTITION (name=value,name=value,name)]
  */
 @Explain(displayName = "Describe Table")
 public class DescTableDesc extends DDLDesc implements Serializable {
-  public void setPartSpec(Map<String, String> partSpec) {
-    this.partSpec = partSpec;
-  }
 
   private static final long serialVersionUID = 1L;
 
   String tableName;
-  Map<String, String> partSpec;
+  Map<String, String> partSpec;//[PARTITION (name=value,name=value,name)]
   String resFile;
 
   String colPath;
-  boolean isExt;
-  boolean isFormatted;
+  boolean isExt;//EXTENDED
+  boolean isFormatted;//FORMATTED
 
   /** Show pretty output?  This has more human-readable formatting than
    * isFormatted mode.
    */
-  private boolean isPretty;
+  private boolean isPretty;//PRETTY
 
   /**
    * table name for the result of describe table.
@@ -90,7 +88,11 @@ public class DescTableDesc extends DDLDesc implements Serializable {
   public boolean isExt() {
     return isExt;
   }
-
+  
+  public void setPartSpec(Map<String, String> partSpec) {
+	    this.partSpec = partSpec;
+  }
+  
   /**
    * @param isExt
    *          the isExt to set

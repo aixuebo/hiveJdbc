@@ -28,6 +28,7 @@ public class Test1 {
 	@Test
 	public void test2(){
 
+		System.out.println((byte)'\t');
 	}
 	  
 	  

@@ -24,8 +24,8 @@ import java.util.Map;
 import org.apache.hadoop.fs.Path;
 
 /**
- * ShowPartitionsDesc.
- *
+ * ShowPartitionsDesc.展示某个表的某个partition信息
+ * SHOW PARTITIONS xxx PARTITION (name=value,name=value,name)
  */
 @Explain(displayName = "Show Partitions")
 public class ShowPartitionsDesc extends DDLDesc implements Serializable {
@@ -41,6 +41,7 @@ public class ShowPartitionsDesc extends DDLDesc implements Serializable {
   private static final String table = "showpartitions";
   /**
    * thrift ddl for the result of show tables.
+   * 表示String类型的partition字段
    */
   private static final String schema = "partition#string";
 

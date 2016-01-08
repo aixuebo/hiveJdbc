@@ -1269,8 +1269,8 @@ alterStatementSuffixFileFormat
 	;
 
 格式:
-1.NOT CLUSTERED
-2.NOT SORTED
+1.NOT CLUSTERED 表示没有CLUSTERED BY 操作
+2.NOT SORTED 表示没有SORTED BY 操作
 3.CLUSTERED BY (column1,column2) [SORTED BY (column1 desc,column2 desc)] into Number BUCKETS
 alterStatementSuffixClusterbySortby
 @init {msgs.push("alter partition cluster by sort by statement");}
@@ -1280,7 +1280,9 @@ alterStatementSuffixClusterbySortby
   | tableBuckets -> ^(TOK_ALTERTABLE_CLUSTER_SORT tableBuckets)
   ;
 
-格式:SET SKEWED LOCATION (key=value,key=value)
+格式:
+a.SET SKEWED LOCATION (key=value,key=value)
+b.SET SKEWED LOCATION ((key1,key2)=value,(key1,key2)=value)
 alterTblPartitionStatementSuffixSkewedLocation
 @init {msgs.push("alter partition skewed location");}
 @after {msgs.pop();}
@@ -1364,6 +1366,7 @@ alterStatementSuffixProtectMode
     -> ^(TOK_ALTERTABLE_ALTERPARTS_PROTECTMODE alterProtectMode)
     ;
 
+为table修改新的partition属性
 格式:
 RENAME TO PARTITION (name=value,name=value,name)
 alterStatementSuffixRenamePart
@@ -1466,7 +1469,8 @@ descPartTypeExpr
     ;
 
 格式:
-a.DESCRIBE | DESC [FORMATTED | EXTENDED | PRETTY] .($ELEM$ | $KEY$ | $VALUE$ | xxx ) [PARTITION (name=value,name=value,name)]
+a.DESCRIBE | DESC [FORMATTED | EXTENDED | PRETTY] .($ELEM$ | $KEY$ | $VALUE$ | xxx ) [PARTITION (name=value,name=value,name)] 描述表
+注意xxx可能的格式是database.table.column or database.table or database
 b.DESCRIBE | DESC FUNCTION [EXTENDED] descFuncNames
 c.DESCRIBE | DESC DATABASE [EXTENDED] "dbName"
 descStatement
@@ -1489,7 +1493,7 @@ a.SHOW DATABASES|SCHEMAS LIKE "xxx" 模糊查询,一定要带引号
 b.SHOW TABLES [(FROM | IN) tableName ] like "xxx"
 c.SHOW COLUMNS (FROM | IN) tableName [(FROM | IN) db_name ]
 d.SHOW FUNCTIONS xxx
-e.SHOW PARTITIONS xxx PARTITION (name=value,name=value,name)
+e.SHOW PARTITIONS xxx PARTITION (name=value,name=value,name) 展示某个表的某个partition信息
 f.SHOW CREATE TABLE tableName 
 g.SHOW TABLE EXTENDED [(FROM | IN) db_name ] like tableName [PARTITION (name=value,name=value,name)]
 h.SHOW TBLPROPERTIES tblName [(columnName)] 获取该表的某一个自定义属性内容
@@ -1789,10 +1793,10 @@ tableBuckets
     -> ^(TOK_TABLEBUCKETS $bucketCols $sortCols? $num)
     ;
 
-//SKEWED BY (属性字符串,属性字符串) on (属性值集合xxx,xxx) [STORED AS DIRECTORIES]
-//或者SKEWED BY (属性字符串,属性字符串) on (多组属性值集合 (xxx,xxx),(xxx,xxx),(xxx,xxx) ) [STORED AS DIRECTORIES]
-//create table T (c1 string, c2 string) skewed by (c1) on ('x1') 表示在c1属性的值为x1的时候可能会数据发生偏移,因此在join的时候要先预估一下是否一个表的c1=x1的值能否很少,并且存储在内存中,如果是,则可以进行优化
-//create table T (c1 string, c2 string) skewed by (c1,c2) on (('x11','x21'),('x12','x22')) 表示在c1,c2属性的值为(x11,x21),或者(x21,x22)的时候可能会数据发生偏移,因此在join的时候要先预估一下是否一个表的(x11,x21),或者(x21,x22)的值能否很少,并且存储在内存中,如果是,则可以进行优化
+SKEWED BY (属性字符串,属性字符串) on (属性值集合xxx,xxx) [STORED AS DIRECTORIES]
+或者SKEWED BY (属性字符串,属性字符串) on (多组属性值集合 (xxx,xxx),(xxx,xxx),(xxx,xxx) ) [STORED AS DIRECTORIES]
+create table T (c1 string, c2 string) skewed by (c1) on ('x1') 表示在c1属性的值为x1的时候可能会数据发生偏移,因此在join的时候要先预估一下是否一个表的c1=x1的值能否很少,并且存储在内存中,如果是,则可以进行优化
+create table T (c1 string, c2 string) skewed by (c1,c2) on (('x11','x21'),('x12','x22')) 表示在c1,c2属性的值为(x11,x21),或者(x21,x22)的时候可能会数据发生偏移,因此在join的时候要先预估一下是否一个表的(x11,x21),或者(x21,x22)的值能否很少,并且存储在内存中,如果是,则可以进行优化
 tableSkewed
 @init { msgs.push("table skewed specification"); }
 @after { msgs.pop(); }

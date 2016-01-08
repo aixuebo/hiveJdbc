@@ -51,11 +51,11 @@ public class DDLWork implements Serializable {
   private ShowFunctionsDesc showFuncsDesc;
   private ShowLocksDesc showLocksDesc;
   private DescFunctionDesc descFunctionDesc;
-  private ShowPartitionsDesc showPartsDesc;
+  private ShowPartitionsDesc showPartsDesc;//展示某个表的某个partition信息
   private ShowCreateTableDesc showCreateTblDesc;
-  private DescTableDesc descTblDesc;
+  private DescTableDesc descTblDesc;//desc table 描述表
   private AddPartitionDesc addPartitionDesc;//为视图和table添加partition分区
-  private RenamePartitionDesc renamePartitionDesc;
+  private RenamePartitionDesc renamePartitionDesc;//alterStatementSuffixRenamePart 为table修改新的partition属性
   private AlterTableSimpleDesc alterTblSimpleDesc;//针对table和partition的一些操作
   private MsckDesc msckDesc;
   private ShowTableStatusDesc showTblStatusDesc;
@@ -239,6 +239,7 @@ public class DDLWork implements Serializable {
 
   /**
    * @param descTblDesc
+   * 描述表
    */
   public DDLWork(HashSet<ReadEntity> inputs, HashSet<WriteEntity> outputs,
       DescTableDesc descTblDesc) {
@@ -329,6 +330,7 @@ public class DDLWork implements Serializable {
 
   /**
    * @param showPartsDesc
+   * 展示某个表的某个partition信息
    */
   public DDLWork(HashSet<ReadEntity> inputs, HashSet<WriteEntity> outputs,
       ShowPartitionsDesc showPartsDesc) {
@@ -362,6 +364,7 @@ public class DDLWork implements Serializable {
   /**
    * @param renamePartitionDesc
    *          information about the partitions we want to add.
+   * alterStatementSuffixRenamePart 为table修改新的partition属性
    */
   public DDLWork(HashSet<ReadEntity> inputs, HashSet<WriteEntity> outputs,
       RenamePartitionDesc renamePartitionDesc) {

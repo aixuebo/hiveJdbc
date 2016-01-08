@@ -90,6 +90,7 @@ public enum ErrorMsg {
   SELECT_DISTINCT_WITH_GROUPBY(10034, "SELECT DISTINCT and GROUP BY can not be in the same query"),
   COLUMN_REPEATED_IN_PARTITIONING_COLS(10035, "Column repeated in partitioning columns"),
   DUPLICATE_COLUMN_NAMES(10036, "Duplicate column name:"),
+  //CLUSTERED BY (column1,column2) [SORTED BY (column1 desc,column2 desc)] into Number BUCKETS语法中必须存在into Number BUCKETS语句,并且Number一定要大于1
   INVALID_BUCKET_NUMBER(10037, "Bucket number should be bigger than zero"),
   COLUMN_REPEATED_IN_CLUSTER_SORT(10038, "Same column cannot appear in CLUSTER BY and SORT BY"),
   SAMPLE_RESTRICTION(10039, "Cannot SAMPLE on more than two columns"),
