@@ -206,13 +206,13 @@ CREATE DATABASE|SCHEMA [IF NOT Exists] "databaseName" [COMMENT String] [LOCATION
 a.SHOW DATABASES|SCHEMAS LIKE "xxx" 模糊查询,一定要带引号
 b.SHOW TABLES [(FROM | IN) tableName ] like "xxx"
 c.SHOW COLUMNS (FROM | IN) tableName [(FROM | IN) db_name ]
-d.SHOW FUNCTIONS xxx
+d.SHOW FUNCTIONS [xxx]
 e.SHOW PARTITIONS xxx PARTITION (name=value,name=value,name)
 f.SHOW CREATE TABLE tableName 
 g.SHOW TABLE EXTENDED [(FROM | IN) db_name ] like tableName [PARTITION (name=value,name=value,name)]
 h.SHOW TBLPROPERTIES tblName [(columnName)] 获取该表的某一个自定义属性内容
 i.SHOW LOCKS xxx .($ELEM$ | $KEY$ | $VALUE$ | xxx ) .($ELEM$ | $KEY$ | $VALUE$ | xxx )详细看.没看太懂
-j.SHOW [FORMATTED](INDEX|INDEXES) ON tableName (FROM | IN) db_name ]
+j.SHOW [FORMATTED](INDEX|INDEXES) ON tableName (FROM | IN) db_name ] 注意:该hive版本目前好像没有解析(FROM | IN) db_name这句语法的代码
 8.descTabTypeExpr 和 partTypeExpr
   格式:.($ELEM$ | $KEY$ | $VALUE$ | xxx )
 9.descPartTypeExpr
@@ -324,9 +324,11 @@ b.String UNSET TBLPROPERTIES [IF Exists](keyValueProperty,keyValueProperty)
 格式:String ADD [IF NOT Exists] PARTITION (name=value,name=value,name) [LOCATION String] PARTITION (name=value,name=value,name) [LOCATION String]..
 10.alterStatementSuffixAddCol 修改表的属性
 格式:String ADD|REPLACE COLUMNS (columnNameTypeList)
-11.alterStatementSuffixRenameCol
+11.alterStatementSuffixRenameCol 更改表的属性名字
 格式:String CHANGE [COLUMN] "oldName" "newName" type [COMMENT String] [FIRST|AFTER String]
-注意:type表示字段类型
+注意:
+1.type表示字段类型
+2.FIRST或者AFTER String
 12.alterStatementChangeColPosition
 格式:FIRST|AFTER String
 13.alterViewStatementSuffix 设置视图/表的属性

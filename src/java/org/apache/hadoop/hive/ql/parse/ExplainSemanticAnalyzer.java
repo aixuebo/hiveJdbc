@@ -40,15 +40,21 @@ public class ExplainSemanticAnalyzer extends BaseSemanticAnalyzer {
     super(conf);
   }
 
+  /**
+   * EXPLAIN [EXTENDED|FORMATTED|DEPENDENCY|LOGICAL] execStatement
+   */
   @SuppressWarnings("unchecked")
   @Override
   public void analyzeInternal(ASTNode ast) throws SemanticException {
 
+	  /**
+	   * [EXTENDED|FORMATTED|DEPENDENCY|LOGICAL] 属性中只有一次sql只能设置一个值,因此只有一个是true
+	   */
     boolean extended = false;
     boolean formatted = false;
     boolean dependency = false;
     boolean logical = false;
-    if (ast.getChildCount() == 2) {
+    if (ast.getChildCount() == 2) {//说明设置了[EXTENDED|FORMATTED|DEPENDENCY|LOGICAL]属性
       int explainOptions = ast.getChild(1).getType();
       formatted = (explainOptions == HiveParser.KW_FORMATTED);
       extended = (explainOptions == HiveParser.KW_EXTENDED);
@@ -62,11 +68,11 @@ public class ExplainSemanticAnalyzer extends BaseSemanticAnalyzer {
     // Create a semantic analyzer for the query
     BaseSemanticAnalyzer sem = SemanticAnalyzerFactory.get(conf, (ASTNode) ast
         .getChild(0));
-    sem.analyze((ASTNode) ast.getChild(0), ctx);
+    sem.analyze((ASTNode) ast.getChild(0), ctx);//去分析execStatement查询语句的语法
     sem.validate();
 
     ctx.setResFile(new Path(ctx.getLocalTmpFileURI()));
-    List<Task<? extends Serializable>> tasks = sem.getRootTasks();
+    List<Task<? extends Serializable>> tasks = sem.getRootTasks();//所有的任务集合
     Task<? extends Serializable> fetchTask = sem.getFetchTask();
     if (tasks == null) {
       if (fetchTask != null) {

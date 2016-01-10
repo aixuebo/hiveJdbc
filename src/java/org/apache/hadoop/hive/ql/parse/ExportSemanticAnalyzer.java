@@ -39,7 +39,7 @@ import org.apache.hadoop.hive.ql.plan.CopyWork;
 
 /**
  * ExportSemanticAnalyzer.
- *
+ * 导出sql
  */
 public class ExportSemanticAnalyzer extends BaseSemanticAnalyzer {
 
@@ -47,19 +47,23 @@ public class ExportSemanticAnalyzer extends BaseSemanticAnalyzer {
     super(conf);
   }
 
+  /**
+   * EXPORT TABLE tableName [PARTITION (name=value,name=value,name)] TO "Path"
+   */
   @Override
   public void analyzeInternal(ASTNode ast) throws SemanticException {
-    Tree tableTree = ast.getChild(0);
-    Tree toTree = ast.getChild(1);
+    Tree tableTree = ast.getChild(0);//解析tableName [PARTITION (name=value,name=value,name)]对象
+    Tree toTree = ast.getChild(1);//解析TO "Path"
 
     // initialize export path
-    String tmpPath = stripQuotes(toTree.getText());
-    URI toURI = EximUtil.getValidatedURI(conf, tmpPath);
+    String tmpPath = stripQuotes(toTree.getText());//获取导出到HDFS的哪里
+    URI toURI = EximUtil.getValidatedURI(conf, tmpPath);//格式化导出的目录
 
     // initialize source table/partition
     tableSpec ts = new tableSpec(db, conf, (ASTNode) tableTree, false, true);
     EximUtil.validateTable(ts.tableHandle);
     try {
+      //确保导出的目标目录是空目录,并且可用
       FileSystem fs = FileSystem.get(toURI, conf);
       Path toPath = new Path(toURI.getScheme(), toURI.getAuthority(), toURI.getPath());
       try {
@@ -81,7 +85,7 @@ public class ExportSemanticAnalyzer extends BaseSemanticAnalyzer {
       throw new SemanticException(ErrorMsg.INVALID_PATH.getMsg(ast), e);
     }
 
-    List<Partition> partitions = null;
+    List<Partition> partitions = null;//该table数据源的所有分区集合
     try {
       partitions = null;
       if (ts.tableHandle.isPartitioned()) {
@@ -90,6 +94,7 @@ public class ExportSemanticAnalyzer extends BaseSemanticAnalyzer {
       String tmpfile = ctx.getLocalTmpFileURI();
       Path path = new Path(tmpfile, "_metadata");
       EximUtil.createExportDump(FileSystem.getLocal(conf), path, ts.tableHandle, partitions);
+      //创建copy任务,将数据源的数据导出到目标路径内
       Task<? extends Serializable> rTask = TaskFactory.get(new CopyWork(
           path.toString(), toURI.toString(), false), conf);
       rootTasks.add(rTask);

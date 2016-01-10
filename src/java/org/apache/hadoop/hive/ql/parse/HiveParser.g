@@ -1076,8 +1076,9 @@ alterStatementSuffixAddCol
     ->                 ^(TOK_ALTERTABLE_REPLACECOLS identifier columnNameTypeList)
     ;
 
-
+更改表的属性名字
 格式:String CHANGE [COLUMN] "oldName" "newName" type [COMMENT String] [FIRST|AFTER String]
+注意:FIRST或者AFTER String
 注意:type表示字段类型
 alterStatementSuffixRenameCol
 @init { msgs.push("rename column name"); }
@@ -1492,13 +1493,13 @@ analyzeStatement
 a.SHOW DATABASES|SCHEMAS LIKE "xxx" 模糊查询,一定要带引号
 b.SHOW TABLES [(FROM | IN) tableName ] like "xxx"
 c.SHOW COLUMNS (FROM | IN) tableName [(FROM | IN) db_name ]
-d.SHOW FUNCTIONS xxx
+d.SHOW FUNCTIONS [xxx]
 e.SHOW PARTITIONS xxx PARTITION (name=value,name=value,name) 展示某个表的某个partition信息
 f.SHOW CREATE TABLE tableName 
 g.SHOW TABLE EXTENDED [(FROM | IN) db_name ] like tableName [PARTITION (name=value,name=value,name)]
 h.SHOW TBLPROPERTIES tblName [(columnName)] 获取该表的某一个自定义属性内容
 i.SHOW LOCKS xxx .($ELEM$ | $KEY$ | $VALUE$ | xxx ) .($ELEM$ | $KEY$ | $VALUE$ | xxx )详细看.没看太懂
-j.SHOW [FORMATTED](INDEX|INDEXES) ON tableName (FROM | IN) db_name ]
+j.SHOW [FORMATTED](INDEX|INDEXES) ON tableName (FROM | IN) db_name ] 注意:该hive版本目前好像没有解析(FROM | IN) db_name这句语法的代码
 showStatement
 @init { msgs.push("show statement"); }
 @after { msgs.pop(); }

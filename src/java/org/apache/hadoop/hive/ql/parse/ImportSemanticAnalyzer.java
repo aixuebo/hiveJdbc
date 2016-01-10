@@ -61,7 +61,7 @@ import org.apache.hadoop.hive.serde.serdeConstants;
 
 /**
  * ImportSemanticAnalyzer.
- *
+ * µº»Îsql
  */
 public class ImportSemanticAnalyzer extends BaseSemanticAnalyzer {
 
@@ -77,6 +77,7 @@ public class ImportSemanticAnalyzer extends BaseSemanticAnalyzer {
     return tableExists;
   }
 
+  //IMPORT [EXTERNAL] TABLE [tableName [PARTITION (name=value,name=value,name)]] FROM "PATH" [LOCATION xxx]
   @Override
   public void analyzeInternal(ASTNode ast) throws SemanticException {
     try {
