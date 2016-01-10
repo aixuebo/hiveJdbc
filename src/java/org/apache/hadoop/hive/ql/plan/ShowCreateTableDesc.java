@@ -22,7 +22,7 @@ import java.io.Serializable;
 
 /**
  * ShowCreateTableDesc.
- *
+ * SHOW CREATE TABLE tableName 
  */
 @Explain(displayName = "Show Create Table")
 public class ShowCreateTableDesc extends DDLDesc implements Serializable {

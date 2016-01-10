@@ -25,7 +25,8 @@ import org.apache.hadoop.fs.Path;
 
 /**
  * UnlockTableDesc.
- *
+ *unlockStatement
+∏Ò Ω:UNLOCK TABLE tableName [PARTITION (name=value,name=value,name)]
  */
 @Explain(displayName = "Unlock Table")
 public class UnlockTableDesc extends DDLDesc implements Serializable {

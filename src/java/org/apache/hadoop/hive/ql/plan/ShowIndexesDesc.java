@@ -25,13 +25,17 @@ import org.apache.hadoop.fs.Path;
 /**
  * ShowIndexesDesc.
  * Returns table index information per SQL syntax.
+ * 
+ * SHOW [FORMATTED](INDEX|INDEXES) ON tableName (FROM | IN) db_name ]
+ * 
+ * 注意:该hive版本目前好像没有解析(FROM | IN) db_name这句语法的代码
  */
 @Explain(displayName = "Show Indexes")
 public class ShowIndexesDesc extends DDLDesc implements Serializable {
   private static final long serialVersionUID = 1L;
-  String tableName;
+  String tableName;//解析tableName
   String resFile;
-  boolean isFormatted;
+  boolean isFormatted;//true表示设置了FORMATTED
 
   /**
    * thrift ddl for the result of show indexes.

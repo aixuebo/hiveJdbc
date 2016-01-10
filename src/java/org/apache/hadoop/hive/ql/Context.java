@@ -82,8 +82,8 @@ public class Context {
 
   private final Configuration conf;
   protected int pathid = 10000;
-  protected boolean explain = false;
-  protected boolean explainLogical = false;
+  protected boolean explain = false;//true说明sql中使用的explain关键字
+  protected boolean explainLogical = false;//true说明在EXPLAIN [EXTENDED|FORMATTED|DEPENDENCY|LOGICAL] execStatement中使用了LOGICAL关键字
   protected String cmd = "";
   // number of previous attempts
   protected int tryCount = 0;
@@ -95,6 +95,12 @@ public class Context {
   protected List<HiveLock> hiveLocks;
   protected HiveLockManager hiveLockMgr;
 
+  /**
+   * 以下的时候,该值是true
+   * UNLOCK TABLE tableName [PARTITION (name=value,name=value,name)]
+   * LOCK TABLE tableName [PARTITION (name=value,name=value,name)] (SHARED | EXCLUSIVE)
+   * SHOW LOCKS xxx .($ELEM$ | $KEY$ | $VALUE$ | xxx ) .($ELEM$ | $KEY$ | $VALUE$ | xxx )
+   */
   private boolean needLockMgr;
 
   // Keep track of the mapping from load table desc to the output and the lock

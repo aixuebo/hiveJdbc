@@ -24,12 +24,12 @@ import org.apache.hadoop.fs.Path;
 
 /**
  * ShowDatabasesDesc.
- *
+ * SHOW DATABASES|SCHEMAS LIKE "xxx" 模糊查询,一定要带引号
  */
 @Explain(displayName = "Show Databases")
 public class ShowDatabasesDesc extends DDLDesc implements Serializable {
   private static final long serialVersionUID = 1L;
-  String pattern;
+  String pattern;//xxx
   String resFile;
 
   /**

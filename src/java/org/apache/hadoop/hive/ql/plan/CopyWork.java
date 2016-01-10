@@ -22,7 +22,8 @@ import java.io.Serializable;
 
 /**
  * CopyWork.
- *
+ * EXPORT TABLE tableName [PARTITION (name=value,name=value,name)] TO "Path"
+ * 参见ExportSemanticAnalyzer 导出sql解析类
  */
 @Explain(displayName = "Copy")
 public class CopyWork implements Serializable {

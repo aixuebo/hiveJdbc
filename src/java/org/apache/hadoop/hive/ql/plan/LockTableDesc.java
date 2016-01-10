@@ -25,17 +25,18 @@ import org.apache.hadoop.fs.Path;
 
 /**
  * LockTableDesc.
- *
+ *  lockStatement
+   格式:LOCK TABLE tableName [PARTITION (name=value,name=value,name)] (SHARED | EXCLUSIVE)  
  */
 @Explain(displayName = "Lock Table")
 public class LockTableDesc extends DDLDesc implements Serializable {
   private static final long serialVersionUID = 1L;
 
   private String tableName;
-  private String mode;
-  private Map<String, String> partSpec;
+  private String mode;//SHARED | EXCLUSIVE
+  private Map<String, String> partSpec;//PARTITION (name=value,name=value,name) 分区
   private String queryId;
-  private String queryStr;
+  private String queryStr;//Context.getCmd()
 
   public LockTableDesc() {
   }

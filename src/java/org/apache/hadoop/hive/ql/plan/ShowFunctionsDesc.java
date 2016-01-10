@@ -24,12 +24,12 @@ import org.apache.hadoop.fs.Path;
 
 /**
  * ShowFunctionsDesc.
- *
+ * SHOW FUNCTIONS [xxx]
  */
 @Explain(displayName = "Show Functions")
 public class ShowFunctionsDesc extends DDLDesc implements Serializable {
   private static final long serialVersionUID = 1L;
-  String pattern;
+  String pattern;//xxx,如果该值为null,表示查询所有的函数
   String resFile;
   /**
    * table name for the result of show tables.
@@ -53,6 +53,7 @@ public class ShowFunctionsDesc extends DDLDesc implements Serializable {
 
   /**
    * @param resFile
+   * SHOW FUNCTIONS [xxx]
    */
   public ShowFunctionsDesc(Path resFile) {
     this.resFile = resFile.toString();

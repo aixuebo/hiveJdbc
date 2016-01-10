@@ -24,14 +24,14 @@ import org.apache.hadoop.fs.Path;
 
 /**
  * DescFunctionDesc.
- *
+ * DESCRIBE | DESC FUNCTION [EXTENDED] descFuncNames
  */
 @Explain(displayName = "Describe Function")
 public class DescFunctionDesc extends DDLDesc implements Serializable {
   private static final long serialVersionUID = 1L;
   String name;
   String resFile;
-  boolean isExtended;
+  boolean isExtended;//Ä¬ÈÏÊÇfalse
 
   public boolean isExtended() {
     return isExtended;

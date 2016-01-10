@@ -278,6 +278,7 @@ public enum ErrorMsg {
   SKEWED_TABLE_SKEWED_COL_NAME_VALUE_MISMATCH_3(10206,
       "The number of skewed column names and the number of " +
       "skewed column values are different: "),
+      //skewed的属性是不允许String CHANGE [COLUMN] "oldName" "newName" type [COMMENT String] [FIRST|AFTER String]操作的
   ALTER_TABLE_NOT_ALLOWED_RENAME_SKEWED_COLUMN(10207,
       " is a skewed column. It's not allowed to rename skewed column"
           + " or change skewed column type."),

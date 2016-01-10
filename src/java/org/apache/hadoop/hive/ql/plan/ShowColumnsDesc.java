@@ -21,6 +21,9 @@ import java.io.Serializable;
 
 import org.apache.hadoop.fs.Path;
 
+/**
+ * SHOW COLUMNS (FROM | IN) tableName [(FROM | IN) db_name ]
+ */
 public class ShowColumnsDesc extends DDLDesc implements Serializable {
   private static final long serialVersionUID = 1L;
   String dbName;

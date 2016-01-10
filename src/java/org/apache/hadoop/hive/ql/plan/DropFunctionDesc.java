@@ -23,6 +23,7 @@ import java.io.Serializable;
 /**
  * DropFunctionDesc.
  * 等待drop的函数名称
+ * drop TEMPORARY FUNCTION [ifExists] xxx
  */
 @Explain(displayName = "Drop Function")
 public class DropFunctionDesc implements Serializable {

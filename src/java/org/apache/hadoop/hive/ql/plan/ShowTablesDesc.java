@@ -24,13 +24,13 @@ import org.apache.hadoop.fs.Path;
 
 /**
  * ShowTablesDesc.
- *
+ * SHOW TABLES [(FROM | IN) tableName ] like "xxx"
  */
 @Explain(displayName = "Show Tables")
 public class ShowTablesDesc extends DDLDesc implements Serializable {
   private static final long serialVersionUID = 1L;
-  String pattern;
-  String dbName;
+  String pattern;//xxx
+  String dbName;//tableName
   String resFile;
   /**
    * table name for the result of show tables.

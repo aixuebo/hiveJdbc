@@ -24,7 +24,7 @@ import org.apache.hadoop.fs.Path;
 
 /**
  * DescDatabaseDesc.
- *
+ * DESCRIBE | DESC DATABASE [EXTENDED] "dbName"
  */
 @Explain(displayName = "Describe Database")
 public class DescDatabaseDesc extends DDLDesc implements Serializable {
@@ -33,7 +33,7 @@ public class DescDatabaseDesc extends DDLDesc implements Serializable {
 
   String dbName;
   String resFile;
-  boolean isExt;
+  boolean isExt;//Ω‚ŒˆEXTENDED
 
   /**
    * thrift ddl for the result of describe database.
