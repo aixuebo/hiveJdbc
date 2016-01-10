@@ -699,6 +699,11 @@ public abstract class BaseSemanticAnalyzer {
    * @param typeNode 数据库属性类型节点
    * @return
    * @throws SemanticException
+   * 1.如果是array,返回结果是array<Type>
+   * 2.如果是map,返回结果是map<Type.Type>
+   * 3.如果是struct,返回是解析后的对象
+   * 4.如果是unionType,返回是他的格式
+   * 5.默认是解析基础类型
    */
   protected static String getTypeStringFromAST(ASTNode typeNode)
       throws SemanticException {
@@ -741,6 +746,7 @@ public abstract class BaseSemanticAnalyzer {
     return buffer.toString();
   }
 
+  //解析属性类型为UNIONTYPE的属性
   private static String getUnionTypeStringFromAST(ASTNode typeNode)
       throws SemanticException {
     String typeStr = serdeConstants.UNION_TYPE_NAME + "<";

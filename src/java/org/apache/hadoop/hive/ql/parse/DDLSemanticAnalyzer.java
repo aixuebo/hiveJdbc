@@ -162,6 +162,7 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
 
   /**
    * 返回该field属性节点对应的类型值,例如String类型被返回
+   * 节点是基础类型,而不是array、map、union、struct类型
    */
   public static String getTypeName(ASTNode node) throws SemanticException {
     int token = node.getType();
@@ -348,42 +349,52 @@ alterStatementSuffixBucketNum
       analyzeDescribeTable(ast);
       break;
     case HiveParser.TOK_SHOWDATABASES:
+      //SHOW DATABASES|SCHEMAS LIKE "xxx" 模糊查询,一定要带引号
       ctx.setResFile(new Path(ctx.getLocalTmpFileURI()));
       analyzeShowDatabases(ast);
       break;
     case HiveParser.TOK_SHOWTABLES:
+    	//SHOW TABLES [(FROM | IN) tableName ] like "xxx"
       ctx.setResFile(new Path(ctx.getLocalTmpFileURI()));
       analyzeShowTables(ast);
       break;
     case HiveParser.TOK_SHOWCOLUMNS:
+    	//SHOW COLUMNS (FROM | IN) tableName [(FROM | IN) db_name ]
       ctx.setResFile(new Path(ctx.getLocalTmpFileURI()));
       analyzeShowColumns(ast);
       break;
     case HiveParser.TOK_SHOW_TABLESTATUS:
+    	//SHOW TABLE EXTENDED [(FROM | IN) db_name ] like tableName [PARTITION (name=value,name=value,name)]
       ctx.setResFile(new Path(ctx.getLocalTmpFileURI()));
       analyzeShowTableStatus(ast);
       break;
     case HiveParser.TOK_SHOW_TBLPROPERTIES:
+    	//SHOW TBLPROPERTIES tblName [(columnName)] 获取该表的某一个自定义属性内容
       ctx.setResFile(new Path(ctx.getLocalTmpFileURI()));
       analyzeShowTableProperties(ast);
       break;
     case HiveParser.TOK_SHOWFUNCTIONS:
+    	//SHOW FUNCTIONS [xxx]
       ctx.setResFile(new Path(ctx.getLocalTmpFileURI()));
       analyzeShowFunctions(ast);
       break;
     case HiveParser.TOK_SHOWLOCKS:
       ctx.setResFile(new Path(ctx.getLocalTmpFileURI()));
+      //SHOW LOCKS xxx .($ELEM$ | $KEY$ | $VALUE$ | xxx ) .($ELEM$ | $KEY$ | $VALUE$ | xxx )
       analyzeShowLocks(ast);
       break;
     case HiveParser.TOK_DESCFUNCTION:
+    	//DESCRIBE | DESC FUNCTION [EXTENDED] descFuncNames
       ctx.setResFile(new Path(ctx.getLocalTmpFileURI()));
       analyzeDescFunction(ast);
       break;
     case HiveParser.TOK_DESCDATABASE:
+    	//DESCRIBE | DESC DATABASE [EXTENDED] "dbName"
       ctx.setResFile(new Path(ctx.getLocalTmpFileURI()));
       analyzeDescDatabase(ast);
       break;
     case HiveParser.TOK_MSCK:
+    //MSCK [REPAIR] [TABLE tableName PARTITION (name=value,name=value,name),PARTITION (name=value,name=value,name)...]
       ctx.setResFile(new Path(ctx.getLocalTmpFileURI()));
       analyzeMetastoreCheck(ast);
       break;
@@ -411,33 +422,58 @@ alterStatementSuffixBucketNum
     case HiveParser.TOK_ALTERVIEW_RENAME:
       // for ALTER VIEW RENAME, we wrapped the RENAME to discriminate
       // view from table; unwrap it now
+      //"oldName" RENAME TO "newName"
       analyzeAlterTableRename(((ASTNode) ast.getChild(0)), true);
       break;
     case HiveParser.TOK_ALTERTABLE_RENAME:
+    	//"oldName" RENAME TO "newName"
       analyzeAlterTableRename(ast, false);
       break;
     case HiveParser.TOK_ALTERTABLE_TOUCH:
+/**
+ *    * 重新写回关于table的partition下的元数据信息
+   * String TOUCH PARTITION (name=value,name=value,name) PARTITION (name=value,name=value,name)..    	
+ */
       analyzeAlterTableTouch(ast);
       break;
     case HiveParser.TOK_ALTERTABLE_ARCHIVE:
+      //String ARCHIVE PARTITION (name=value,name=value,name) PARTITION (name=value,name=value,name)
       analyzeAlterTableArchive(ast, false);
       break;
     case HiveParser.TOK_ALTERTABLE_UNARCHIVE:
+      //String ARCHIVE PARTITION (name=value,name=value,name) PARTITION (name=value,name=value,name)
       analyzeAlterTableArchive(ast, true);
       break;
     case HiveParser.TOK_ALTERTABLE_ADDCOLS:
+    	//修改表的属性 String ADD|REPLACE COLUMNS (columnNameTypeList)
       analyzeAlterTableModifyCols(ast, AlterTableTypes.ADDCOLS);
       break;
     case HiveParser.TOK_ALTERTABLE_REPLACECOLS:
+      //修改表的属性 String ADD|REPLACE COLUMNS (columnNameTypeList)
       analyzeAlterTableModifyCols(ast, AlterTableTypes.REPLACECOLS);
       break;
     case HiveParser.TOK_ALTERTABLE_RENAMECOL:
+    	/**
+    	 * alterStatementSuffixRenameCol
+    	 * 格式:String CHANGE [COLUMN] "oldName" "newName" type [COMMENT String] [FIRST|AFTER String]
+			注意:type表示字段类型
+    	 */
       analyzeAlterTableRenameCol(ast);
       break;
     case HiveParser.TOK_ALTERTABLE_ADDPARTS:
+/**
+ *    * 为视图和table添加partition分区
+   * String ADD [IF NOT Exists] PARTITION (name=value,name=value,name) [LOCATION String] PARTITION (name=value,name=value,name) [LOCATION String]..    	
+ */
       analyzeAlterTableAddParts(ast, false);
       break;
     case HiveParser.TOK_ALTERTABLE_DROPPARTS:
+    	  /**
+    	删除一个数据库表的某些partition
+    	String DROP [IF Exists] PARTITION(key 符号 value,key 符号 value),PARTITION( key 符号 value,key 符号 value) [IGNORE PROTECTION]
+    	注意:符号 = 、 == 、 <>、 != 、 <= 、< 、 < 、 >=
+    	@param expectView,true表示是一个视图,false表示是一个实体表
+    	   */
       analyzeAlterTableDropParts(ast, false);
       break;
     case HiveParser.TOK_ALTERTABLE_PROPERTIES:
@@ -462,35 +498,54 @@ alterStatementSuffixBucketNum
       analyzeShowPartitions(ast);
       break;
     case HiveParser.TOK_SHOW_CREATETABLE:
+    	//SHOW CREATE TABLE tableName 
       ctx.setResFile(new Path(ctx.getLocalTmpFileURI()));
       analyzeShowCreateTable(ast);
       break;
     case HiveParser.TOK_SHOWINDEXES:
+    	//SHOW [FORMATTED](INDEX|INDEXES) ON tableName (FROM | IN) db_name ]
       ctx.setResFile(new Path(ctx.getLocalTmpFileURI()));
       analyzeShowIndexes(ast);
       break;
     case HiveParser.TOK_LOCKTABLE:
+    	/**
+    	 lockStatement
+    	 格式:LOCK TABLE tableName [PARTITION (name=value,name=value,name)] (SHARED | EXCLUSIVE)
+    	 */
       analyzeLockTable(ast);
       break;
     case HiveParser.TOK_UNLOCKTABLE:
+/**
+unlockStatement
+格式:UNLOCK TABLE tableName [PARTITION (name=value,name=value,name)]
+ */
       analyzeUnlockTable(ast);
       break;
     case HiveParser.TOK_CREATEDATABASE:
+    	  /**
+    	   * CREATE DATABASE|SCHEMA [IF NOT Exists] "databaseName" [COMMENT String] [LOCATION String][WITH DBPROPERTIES (key=value,key=value)]
+    	   * 创建一个数据库
+    	   */
       analyzeCreateDatabase(ast);
       break;
     case HiveParser.TOK_DROPDATABASE:
+    	//DROP (DATABASE|SCHEMA) [IF EXISTS] database_name [RESTRICT|CASCADE]; 删除一个数据库
       analyzeDropDatabase(ast);
       break;
     case HiveParser.TOK_SWITCHDATABASE:
+    	//use + 字符串  表示切换数据库操作
       analyzeSwitchDatabase(ast);
       break;
     case HiveParser.TOK_ALTERDATABASE_PROPERTIES:
+    	//String SET DBPROPERTIES (key=value,key=value) 更改数据库的属性
       analyzeAlterDatabase(ast);
       break;
     case HiveParser.TOK_CREATEROLE:
+    	//CREATE ROLE "roleName" 创建一个角色
       analyzeCreateRole(ast);
       break;
     case HiveParser.TOK_DROPROLE:
+    	//DROP ROLE "roleName" 删除一个角色
       analyzeDropRole(ast);
       break;
     case HiveParser.TOK_SHOW_ROLE_GRANT:
@@ -523,6 +578,11 @@ c.String NOT STORED AS DIRECTORIES
       analyzeAltertableSkewedby(ast);
       break;
    case HiveParser.TOK_EXCHANGEPARTITION:
+	   /**
+	   tableName1 EXCHANGE PARTITION (name=value,name=value,name) WITH TABLE tableName2
+	     将tableName1的某一个partition的数据交换到另外一个tableName2中
+	     注意:此时两个数据库表结构一样、分区字段相同
+	      */
       analyzeExchangePartition(ast);
       break;
     default:
@@ -784,8 +844,7 @@ c.String NOT STORED AS DIRECTORIES
   }
 
   /**
-   * 更改数据库的属性
-   * String SET DBPROPERTIES (key=value,key=value)
+   * String SET DBPROPERTIES (key=value,key=value) 更改数据库的属性
    */
   private void analyzeAlterDatabase(ASTNode ast) throws SemanticException {
 
@@ -933,8 +992,7 @@ tableName1 EXCHANGE PARTITION (name=value,name=value,name) WITH TABLE tableName2
   }
 
   /**
-   * DROP (DATABASE|SCHEMA) [IF EXISTS] database_name [RESTRICT|CASCADE];
-   * 删除一个数据库
+   * DROP (DATABASE|SCHEMA) [IF EXISTS] database_name [RESTRICT|CASCADE]; 删除一个数据库
    */
   private void analyzeDropDatabase(ASTNode ast) throws SemanticException {
     String dbName = unescapeIdentifier(ast.getChild(0).getText());
@@ -954,8 +1012,7 @@ tableName1 EXCHANGE PARTITION (name=value,name=value,name) WITH TABLE tableName2
   }
 
   /**
-   * use + 字符串 
-   * 表示切换数据库操作
+   * use + 字符串  表示切换数据库操作
    */
   private void analyzeSwitchDatabase(ASTNode ast) {
     String dbName = unescapeIdentifier(ast.getChild(0).getText());//数据库名字
@@ -1231,10 +1288,10 @@ CREATE INDEX table01_index ON TABLE table01 (column1,column2) AS 'COMPACT';
 9.indexComment:  comment xxx 表示为索引添加备注
    */
   private void analyzeCreateIndex(ASTNode ast) throws SemanticException {
-    String indexName = unescapeIdentifier(ast.getChild(0).getText());//索引名称
-    String typeName = unescapeSQLString(ast.getChild(1).getText());//索引的引擎,HiveIndex表内的name或者自定义的class全路径
-    String tableName = getUnescapedName((ASTNode) ast.getChild(2));//对哪个表建立索引
-    List<String> indexedCols = getColumnNames((ASTNode) ast.getChild(3));//对哪些列建立索引
+    String indexName = unescapeIdentifier(ast.getChild(0).getText());//索引名称,解析INDEX table01_index
+    String typeName = unescapeSQLString(ast.getChild(1).getText());//解析AS 'COMPACT',索引的引擎,HiveIndex表内的name或者自定义的class全路径
+    String tableName = getUnescapedName((ASTNode) ast.getChild(2));//解析ON TABLE table01,对哪个表建立索引
+    List<String> indexedCols = getColumnNames((ASTNode) ast.getChild(3));//解析(column1,column2),对哪些列建立索引
 
     //获取索引的类型
     IndexType indexType = HiveIndex.getIndexType(typeName);
@@ -2313,6 +2370,7 @@ alterStatementSuffixClusterbySortby格式:
    *
    * @param ast
    * @throws SemanticException
+   * DESCRIBE | DESC DATABASE [EXTENDED] "dbName"
    */
   private void analyzeDescDatabase(ASTNode ast) throws SemanticException {
 
@@ -2380,6 +2438,9 @@ alterStatementSuffixClusterbySortby格式:
     setFetchTask(createFetchTask(showPartsDesc.getSchema()));
   }
 
+  /**
+   * SHOW CREATE TABLE tableName 
+   */
   private void analyzeShowCreateTable(ASTNode ast) throws SemanticException {
     ShowCreateTableDesc showCreateTblDesc;
     String tableName = getUnescapedName((ASTNode)ast.getChild(0));
@@ -2396,6 +2457,9 @@ alterStatementSuffixClusterbySortby格式:
     setFetchTask(createFetchTask(showCreateTblDesc.getSchema()));
   }
 
+  /**
+   * SHOW DATABASES|SCHEMAS LIKE "xxx" 模糊查询,一定要带引号
+   */
   private void analyzeShowDatabases(ASTNode ast) throws SemanticException {
     ShowDatabasesDesc showDatabasesDesc;
     if (ast.getChildCount() == 1) {
@@ -2408,6 +2472,9 @@ alterStatementSuffixClusterbySortby格式:
     setFetchTask(createFetchTask(showDatabasesDesc.getSchema()));
   }
 
+  /**
+SHOW TABLES [(FROM | IN) tableName ] like "xxx"
+   */
   private void analyzeShowTables(ASTNode ast) throws SemanticException {
     ShowTablesDesc showTblsDesc;
     String dbName = SessionState.get().getCurrentDatabase();
@@ -2418,7 +2485,7 @@ alterStatementSuffixClusterbySortby格式:
     }
 
     switch (ast.getChildCount()) {
-    case 1: // Uses a pattern
+    case 1: // Uses a pattern 仅仅有数据库表名字
       tableNames = unescapeSQLString(ast.getChild(0).getText());
       showTblsDesc = new ShowTablesDesc(ctx.getResFile(), dbName, tableNames);
       break;
@@ -2445,6 +2512,9 @@ alterStatementSuffixClusterbySortby格式:
     setFetchTask(createFetchTask(showTblsDesc.getSchema()));
   }
 
+  /**
+   * SHOW COLUMNS (FROM | IN) tableName [(FROM | IN) db_name ]
+   */
   private void analyzeShowColumns(ASTNode ast) throws SemanticException {
     ShowColumnsDesc showColumnsDesc;
     String dbName = null;
@@ -2470,10 +2540,10 @@ alterStatementSuffixClusterbySortby格式:
     setFetchTask(createFetchTask(showColumnsDesc.getSchema()));
   }
 
-  //SHOW TABLE EXTENDED [ (from | in) db_name ] like tableName [  PARTITION (name=value,name=value,name) ]
+  //SHOW TABLE EXTENDED [(FROM | IN) db_name ] like tableName [PARTITION (name=value,name=value,name)]
   private void analyzeShowTableStatus(ASTNode ast) throws SemanticException {
     ShowTableStatusDesc showTblStatusDesc;
-    String tableNames = getUnescapedName((ASTNode) ast.getChild(0));
+    String tableNames = getUnescapedName((ASTNode) ast.getChild(0));//解析 like tableName 
     String dbName = SessionState.get().getCurrentDatabase();
     int children = ast.getChildCount();
     HashMap<String, String> partSpec = null;
@@ -2483,9 +2553,9 @@ alterStatementSuffixClusterbySortby格式:
       }
       for (int i = 1; i < children; i++) {
         ASTNode child = (ASTNode) ast.getChild(i);
-        if (child.getToken().getType() == HiveParser.Identifier) {
+        if (child.getToken().getType() == HiveParser.Identifier) {//解析(FROM | IN) db_name 
           dbName = unescapeIdentifier(child.getText());
-        } else if (child.getToken().getType() == HiveParser.TOK_PARTSPEC) {
+        } else if (child.getToken().getType() == HiveParser.TOK_PARTSPEC) {//解析[PARTITION (name=value,name=value,name)]
           partSpec = getPartSpec(child);
         } else {
           throw new SemanticException(ErrorMsg.GENERIC_ERROR.getMsg());
@@ -2504,6 +2574,9 @@ alterStatementSuffixClusterbySortby格式:
     setFetchTask(createFetchTask(showTblStatusDesc.getSchema()));
   }
 
+  /**
+   * SHOW TBLPROPERTIES tblName [(columnName)] 获取该表的某一个自定义属性内容
+   */
   private void analyzeShowTableProperties(ASTNode ast) throws SemanticException {
     ShowTblPropertiesDesc showTblPropertiesDesc;
     String tableNames = getUnescapedName((ASTNode) ast.getChild(0));
@@ -2522,12 +2595,18 @@ alterStatementSuffixClusterbySortby格式:
     setFetchTask(createFetchTask(showTblPropertiesDesc.getSchema()));
   }
 
+  /**
+   * SHOW [FORMATTED](INDEX|INDEXES) ON tableName (FROM | IN) db_name ]
+   * 注意:该hive版本目前好像没有解析(FROM | IN) db_name这句语法的代码
+   * KW_SHOW (showOptions=KW_FORMATTED)? (KW_INDEX|KW_INDEXES) KW_ON showStmtIdentifier ((KW_FROM|KW_IN) db_name=identifier)?
+    -> ^(TOK_SHOWINDEXES showStmtIdentifier $showOptions? $db_name?)
+   */
   private void analyzeShowIndexes(ASTNode ast) throws SemanticException {
     ShowIndexesDesc showIndexesDesc;
-    String tableName = getUnescapedName((ASTNode) ast.getChild(0));
+    String tableName = getUnescapedName((ASTNode) ast.getChild(0));//解析ON tableName
     showIndexesDesc = new ShowIndexesDesc(tableName, ctx.getResFile());
 
-    if (ast.getChildCount() == 2) {
+    if (ast.getChildCount() == 2) {//解析(showOptions=KW_FORMATTED)? 
       int descOptions = ast.getChild(1).getType();
       showIndexesDesc.setFormatted(descOptions == HiveParser.KW_FORMATTED);
     }
@@ -2545,13 +2624,14 @@ alterStatementSuffixClusterbySortby格式:
    *          The parsed command tree.
    * @throws SemanticException
    *           Parsin failed
+   * SHOW FUNCTIONS [xxx]
    */
   private void analyzeShowFunctions(ASTNode ast) throws SemanticException {
     ShowFunctionsDesc showFuncsDesc;
-    if (ast.getChildCount() == 1) {
+    if (ast.getChildCount() == 1) {//仅仅展示一个函数
       String funcNames = stripQuotes(ast.getChild(0).getText());
       showFuncsDesc = new ShowFunctionsDesc(ctx.getResFile(), funcNames);
-    } else {
+    } else {//展示全部函数
       showFuncsDesc = new ShowFunctionsDesc(ctx.getResFile());
     }
     rootTasks.add(TaskFactory.get(new DDLWork(getInputs(), getOutputs(),
@@ -2567,6 +2647,7 @@ alterStatementSuffixClusterbySortby格式:
    *          The parsed command tree.
    * @throws SemanticException
    *           Parsing failed
+   * SHOW LOCKS xxx .($ELEM$ | $KEY$ | $VALUE$ | xxx ) .($ELEM$ | $KEY$ | $VALUE$ | xxx )
    */
   private void analyzeShowLocks(ASTNode ast) throws SemanticException {
     String tableName = null;
@@ -2610,11 +2691,13 @@ alterStatementSuffixClusterbySortby格式:
    *          The parsed command tree.
    * @throws SemanticException
    *           Parsing failed
+   * lockStatement
+    格式:LOCK TABLE tableName [PARTITION (name=value,name=value,name)] (SHARED | EXCLUSIVE)
    */
   private void analyzeLockTable(ASTNode ast)
       throws SemanticException {
     String tableName = getUnescapedName((ASTNode) ast.getChild(0)).toLowerCase();
-    String mode = unescapeIdentifier(ast.getChild(1).getText().toUpperCase());
+    String mode = unescapeIdentifier(ast.getChild(1).getText().toUpperCase());//解析SHARED | EXCLUSIVE
     List<Map<String, String>> partSpecs = getPartitionSpecs(ast);
 
     // We only can have a single partition spec
@@ -2642,6 +2725,8 @@ alterStatementSuffixClusterbySortby格式:
    *          The parsed command tree.
    * @throws SemanticException
    *           Parsing failed
+unlockStatement
+格式:UNLOCK TABLE tableName [PARTITION (name=value,name=value,name)]
    */
   private void analyzeUnlockTable(ASTNode ast)
       throws SemanticException {
@@ -2671,10 +2756,12 @@ alterStatementSuffixClusterbySortby格式:
    *          The parsed command tree.
    * @throws SemanticException
    *           Parsing failed
+   * 
+   * DESCRIBE | DESC FUNCTION [EXTENDED] descFuncNames
    */
   private void analyzeDescFunction(ASTNode ast) throws SemanticException {
     String funcName;
-    boolean isExtended;
+    boolean isExtended;//是否设置了EXTENDED在sql中,默认是false
 
     if (ast.getChildCount() == 1) {
       funcName = stripQuotes(ast.getChild(0).getText());
@@ -2693,9 +2780,12 @@ alterStatementSuffixClusterbySortby格式:
     setFetchTask(createFetchTask(descFuncDesc.getSchema()));
   }
 
-
+  /**
+   * "oldName" RENAME TO "newName"
+   * @PARAM expectView true表示操作的是视图
+   */
   private void analyzeAlterTableRename(ASTNode ast, boolean expectView) throws SemanticException {
-    String tblName = getUnescapedName((ASTNode) ast.getChild(0));
+    String tblName = getUnescapedName((ASTNode) ast.getChild(0));//老表名
     AlterTableDesc alterTblDesc = new AlterTableDesc(tblName,
         getUnescapedName((ASTNode) ast.getChild(1)), expectView);
 
@@ -2704,39 +2794,49 @@ alterStatementSuffixClusterbySortby格式:
         alterTblDesc), conf));
   }
 
+  /**
+   * alterStatementSuffixRenameCol 更改表的属性名字
+   * 格式:String CHANGE [COLUMN] "oldName" "newName" type [COMMENT String] [FIRST|AFTER String]
+   注意:
+   1.type表示字段类型
+   2.FIRST或者AFTER String
+   TOK_ALTERTABLE_RENAMECOL identifier $oldName $newName colType $comment? alterStatementChangeColPosition?
+   */
   private void analyzeAlterTableRenameCol(ASTNode ast) throws SemanticException {
-    String tblName = getUnescapedName((ASTNode) ast.getChild(0));
-    String newComment = null;
-    String newType = null;
-    newType = getTypeStringFromAST((ASTNode) ast.getChild(3));
-    boolean first = false;
-    String flagCol = null;
-    ASTNode positionNode = null;
-    if (ast.getChildCount() == 6) {
-      newComment = unescapeSQLString(ast.getChild(4).getText());
-      positionNode = (ASTNode) ast.getChild(5);
-    } else if (ast.getChildCount() == 5) {
-      if (ast.getChild(4).getType() == HiveParser.StringLiteral) {
+    String tblName = getUnescapedName((ASTNode) ast.getChild(0));//解析String,即表名字
+    String newComment = null;//新表备注,解析COMMENT String
+    String newType = null;//解析type
+    newType = getTypeStringFromAST((ASTNode) ast.getChild(3));//解析colType,即属性的类型,比如是String还是array、map、strust等结构
+    boolean first = false;//说明解析的是FIRST
+    String flagCol = null;//说明解析的是AFTER String
+    ASTNode positionNode = null;//解析[FIRST|AFTER String]产生一个节点对象
+    if (ast.getChildCount() == 6) {//如果所有属性都设置了
+      newComment = unescapeSQLString(ast.getChild(4).getText());//解析COMMENT String
+      positionNode = (ASTNode) ast.getChild(5);//解析[FIRST|AFTER String]
+    } else if (ast.getChildCount() == 5) {//[COMMENT String] [FIRST|AFTER String],sql中仅仅选择了一个
+      if (ast.getChild(4).getType() == HiveParser.StringLiteral) {//说明解析的是COMMENT String
         newComment = unescapeSQLString(ast.getChild(4).getText());
-      } else {
+      } else {//说明解析的是一个节点,即[FIRST|AFTER String]
         positionNode = (ASTNode) ast.getChild(4);
       }
     }
 
-    if (positionNode != null) {
-      if (positionNode.getChildCount() == 0) {
+    if (positionNode != null) {//说明设置了[FIRST|AFTER String]
+      if (positionNode.getChildCount() == 0) {//说明解析的是FIRST
         first = true;
-      } else {
+      } else {//说明解析的是AFTER String
         flagCol = unescapeIdentifier(positionNode.getChild(0).getText());
       }
     }
 
+    //解析 "oldName" "newName"
     String oldColName = ast.getChild(1).getText();
     String newColName = ast.getChild(2).getText();
 
     /* Validate the operation of renaming a column name. */
     Table tab = getTable(tblName);
 
+    //skewed的属性是不允许String CHANGE [COLUMN] "oldName" "newName" type [COMMENT String] [FIRST|AFTER String]操作的
     SkewedInfo skewInfo = tab.getTTable().getSd().getSkewedInfo();
     if ((null != skewInfo)
         && (null != skewInfo.getSkewedColNames())
@@ -3213,18 +3313,20 @@ String DROP [IF Exists] PARTITION(key 符号 value,key 符号 value),PARTITION( key 
    * @param ast
    *          Query tree.
    * @throws SemanticException
+   * MSCK [REPAIR] [TABLE tableName PARTITION (name=value,name=value,name),PARTITION (name=value,name=value,name)...]
    */
   private void analyzeMetastoreCheck(CommonTree ast) throws SemanticException {
     String tableName = null;
     boolean repair = false;
     if (ast.getChildCount() > 0) {
-      repair = ast.getChild(0).getType() == HiveParser.KW_REPAIR;
+      repair = ast.getChild(0).getType() == HiveParser.KW_REPAIR;//解析[REPAIR] 
       if (!repair) {
-        tableName = getUnescapedName((ASTNode) ast.getChild(0));
+        tableName = getUnescapedName((ASTNode) ast.getChild(0));//解析tableName
       } else if (ast.getChildCount() > 1) {
         tableName = getUnescapedName((ASTNode) ast.getChild(1));
       }
     }
+    //解析[TABLE tableName PARTITION (name=value,name=value,name),PARTITION (name=value,name=value,name)...]
     List<Map<String, String>> specs = getPartitionSpecs(ast);
     MsckDesc checkDesc = new MsckDesc(tableName, specs, ctx.getResFile(),
         repair);
