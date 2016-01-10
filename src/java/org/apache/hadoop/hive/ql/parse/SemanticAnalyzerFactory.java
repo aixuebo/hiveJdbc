@@ -26,7 +26,7 @@ import org.apache.hadoop.hive.ql.session.SessionState;
 
 /**
  * SemanticAnalyzerFactory.
- *
+ * 该工厂那个类用于不同的sql,决定选择去哪个解析器去解析该sql
  */
 public final class SemanticAnalyzerFactory {
 

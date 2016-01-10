@@ -175,6 +175,7 @@ import org.apache.hadoop.mapred.InputFormat;
 
 /**
  * Implementation of the semantic analyzer.
+ * 该解析器只要用于解析主要执行select from等sql的解析器,是hive的最重要的解析器
  */
 public class SemanticAnalyzer extends BaseSemanticAnalyzer {
   private HashMap<TableScanOperator, ExprNodeDesc> opToPartPruner;
