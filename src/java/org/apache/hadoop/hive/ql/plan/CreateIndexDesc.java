@@ -24,31 +24,50 @@ import java.util.Map;
 
 /**
  * create index descriptor
+1.indexPropertiesList 格式: key=value,key=value
+2.indexProperties 格式 (key=value,key=value)
+3.indexPropertiesPrefixed 格式 IDXPROPERTIES (key=value,key=value)
+4.indexTblName 格式: IN TABLE tableName
+5.autoRebuild 索引的可选项  格式  WITH DEFERRED REBUILD
+6.indexComment 索引的备注  格式 COMMENT String
+7.createIndexStatement 含义:对table01表建立索引,该索引针对column1,column2两个列建立索引,索引名称是table01_index
+格式:
+CREATE INDEX "索引名称" ON TABLE "表名" (column1,column2) AS "COMPACT、aggregate、bitmap、或者class全路径,参见HiveIndex类"
+[WITH DEFERRED REBUILD 表示延期建立索引] 
+[IDXPROPERTIES (key=value,key=value) 表示该index的额外属性信息]
+[IN TABLE tableName]
+[tableRowFormat]
+[tableFileFormat]
+[LOCATION xxx 表示存储在HDFS上的路径]
+[tablePropertiesPrefixed]
+[COMMENT String 索引的备注] 
  */
 public class CreateIndexDesc extends DDLDesc implements Serializable {
 
   private static final long serialVersionUID = 1L;
-  String tableName;
-  String indexName;
-  List<String> indexedCols;
-  String indexTableName;
-  boolean deferredRebuild;
+  String tableName;//解析 ON TABLE "表名"
+  String indexName;//解析INDEX "索引名称"
+  List<String> indexedCols;//解析(column1,column2),对哪些列建立索引
+  String indexTableName;//解析IN TABLE tableName
+  boolean deferredRebuild;//解析WITH DEFERRED REBUILD
   String inputFormat;
   String outputFormat;
   String serde;
   String storageHandler;
-  String indexTypeHandlerClass;
-  String location;
-  Map<String, String> idxProps;
-  Map<String, String> tblProps;
-  Map<String, String> serdeProps;
-  String collItemDelim;
-  String fieldDelim;
-  String fieldEscape;
-  String lineDelim;
-  String mapKeyDelim;
+  String indexTypeHandlerClass;//解析AS 'COMPACT',索引的引擎,HiveIndex表内的name或者自定义的class全路径
+  String location;//LOCATION xxx 表示存储在HDFS上的路径
+  Map<String, String> idxProps;//索引的全局属性,IDXPROPERTIES (key=value,key=value) 表示该index的额外属性信息
+  Map<String, String> tblProps;//表的全局属性
+  Map<String, String> serdeProps;//序列化格式,比如proto,json等格式需要的属性配置信息
+  
+  //解析tableRowFormat,即一行的拆分条件
+  String collItemDelim;//集合之间的拆分
+  String fieldDelim;//属性之间的拆分
+  String fieldEscape;//分隔属性时候用的转义字符
+  String lineDelim;//行之间的拆分
+  String mapKeyDelim;//map之间的拆分
 
-  String indexComment;
+  String indexComment;//解析COMMENT String 索引的备注
 
   public CreateIndexDesc() {
     super();

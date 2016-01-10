@@ -40,7 +40,7 @@ public class AlterIndexDesc extends DDLDesc implements Serializable {
    *
    */
   public static enum AlterIndexTypes {
-    UPDATETIMESTAMP,//更新时间戳
+    UPDATETIMESTAMP,//更新时间戳,即执行"indexName" ON "tableName" [PARTITION (name=value,name=value,name)] REBUILD,即修改index的属性信息
     ADDPROPS//更新索引的属性信息
     };
 

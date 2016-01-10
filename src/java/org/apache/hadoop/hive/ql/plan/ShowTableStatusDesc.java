@@ -26,14 +26,15 @@ import org.apache.hadoop.fs.Path;
 /**
  * ShowTableStatusDesc.
  * 包含数据库名、表名、分区信息
+ * SHOW TABLE EXTENDED [(FROM | IN) db_name ] like tableName [PARTITION (name=value,name=value,name)]
  */
 @Explain(displayName = "Show Table Status")
 public class ShowTableStatusDesc extends DDLDesc implements Serializable {
   private static final long serialVersionUID = 1L;
-  String pattern;
+  String pattern;//解析like tableName 
   String resFile;
-  String dbName;
-  HashMap<String, String> partSpec;
+  String dbName;//解析(FROM | IN) db_name 
+  HashMap<String, String> partSpec;//解析[PARTITION (name=value,name=value,name)]
 
   /**
    * table name for the result of show tables.

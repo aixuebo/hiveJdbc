@@ -27,14 +27,14 @@ import org.apache.hadoop.fs.Path;
 
 /**
  * MsckDesc.
- *
+ * MSCK [REPAIR] [TABLE tableName PARTITION (name=value,name=value,name),PARTITION (name=value,name=value,name)...]
  */
 public class MsckDesc extends DDLWork implements Serializable {
 
   private String tableName;
-  private ArrayList<LinkedHashMap<String, String>> partSpecs;
+  private ArrayList<LinkedHashMap<String, String>> partSpecs;//½âÎö[REPAIR]
   private String resFile;
-  private boolean repairPartitions;
+  private boolean repairPartitions;//½âÎö[REPAIR]
 
   /**
    * For serialization use only.

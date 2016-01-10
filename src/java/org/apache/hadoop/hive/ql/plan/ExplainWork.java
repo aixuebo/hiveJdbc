@@ -29,17 +29,19 @@ import org.apache.hadoop.hive.ql.parse.ParseContext;
 
 /**
  * ExplainWork.
- *
+ * EXPLAIN [EXTENDED|FORMATTED|DEPENDENCY|LOGICAL] execStatement
+ * 参见ExplainSemanticAnalyzer类
  */
 public class ExplainWork implements Serializable {
   private static final long serialVersionUID = 1L;
 
   private String resFile;
-  private ArrayList<Task<? extends Serializable>> rootTasks;
+  private ArrayList<Task<? extends Serializable>> rootTasks;//sql对应解析后的任务集合
   private String astStringTree;
   private HashSet<ReadEntity> inputs;
   private ParseContext pCtx;
 
+  //解析[EXTENDED|FORMATTED|DEPENDENCY|LOGICAL],属性中只有一次sql只能设置一个值,因此只有一个是true
   boolean extended;
   boolean formatted;
   boolean dependency;

@@ -31,6 +31,10 @@ import org.apache.hadoop.hive.ql.parse.AlterTablePartMergeFilesDesc;
 public class DDLWork implements Serializable {
   private static final long serialVersionUID = 1L;
   private CreateIndexDesc createIndexDesc;
+  /**
+   *修改index的属性信息 "indexName" ON "tableName" [PARTITION (name=value,name=value,name)] SET IDXPROPERTIES (key=value,key=value),该属于ADDPROPS
+   *  "indexName" ON "tableName" [PARTITION (name=value,name=value,name)] REBUILD
+   */
   private AlterIndexDesc alterIndexDesc;
   private DropIndexDesc dropIdxDesc;//删除一个索引
   private CreateDatabaseDesc createDatabaseDesc;//创建一个数据库操作
@@ -42,25 +46,25 @@ public class DDLWork implements Serializable {
   private DropTableDesc dropTblDesc;//删除一个数据表操作,也可能仅仅删除该表的某一些分区
   private AlterTableDesc alterTblDesc;//做一个alter更改表数据的操作
   private AlterIndexDesc alterIdxDesc;
-  private ShowDatabasesDesc showDatabasesDesc;
-  private ShowTablesDesc showTblsDesc;
-  private ShowColumnsDesc showColumnsDesc;
-  private ShowTblPropertiesDesc showTblPropertiesDesc;
-  private LockTableDesc lockTblDesc;
-  private UnlockTableDesc unlockTblDesc;
-  private ShowFunctionsDesc showFuncsDesc;
-  private ShowLocksDesc showLocksDesc;
-  private DescFunctionDesc descFunctionDesc;
+  private ShowDatabasesDesc showDatabasesDesc;//SHOW DATABASES|SCHEMAS LIKE "xxx" 模糊查询,一定要带引号
+  private ShowTablesDesc showTblsDesc;//SHOW TABLES [(FROM | IN) tableName ] like "xxx"
+  private ShowColumnsDesc showColumnsDesc;//SHOW COLUMNS (FROM | IN) tableName [(FROM | IN) db_name ]
+  private ShowTblPropertiesDesc showTblPropertiesDesc;//SHOW TBLPROPERTIES tblName [(columnName)] 获取该表的某一个自定义属性内容
+  private LockTableDesc lockTblDesc;//lockStatement
+  private UnlockTableDesc unlockTblDesc;//unlockStatement
+  private ShowFunctionsDesc showFuncsDesc;//SHOW FUNCTIONS [xxx]
+  private ShowLocksDesc showLocksDesc;//SHOW LOCKS xxx .($ELEM$ | $KEY$ | $VALUE$ | xxx ) .($ELEM$ | $KEY$ | $VALUE$ | xxx )
+  private DescFunctionDesc descFunctionDesc;//DESCRIBE | DESC FUNCTION [EXTENDED] descFuncNames
   private ShowPartitionsDesc showPartsDesc;//展示某个表的某个partition信息
-  private ShowCreateTableDesc showCreateTblDesc;
+  private ShowCreateTableDesc showCreateTblDesc;//SHOW CREATE TABLE tableName 
   private DescTableDesc descTblDesc;//desc table 描述表
   private AddPartitionDesc addPartitionDesc;//为视图和table添加partition分区
   private RenamePartitionDesc renamePartitionDesc;//alterStatementSuffixRenamePart 为table修改新的partition属性
   private AlterTableSimpleDesc alterTblSimpleDesc;//针对table和partition的一些操作
-  private MsckDesc msckDesc;
-  private ShowTableStatusDesc showTblStatusDesc;
-  private ShowIndexesDesc showIndexesDesc;
-  private DescDatabaseDesc descDbDesc;
+  private MsckDesc msckDesc;//MSCK [REPAIR] [TABLE tableName PARTITION (name=value,name=value,name),PARTITION (name=value,name=value,name)...]
+  private ShowTableStatusDesc showTblStatusDesc;//SHOW TABLE EXTENDED [(FROM | IN) db_name ] like tableName [PARTITION (name=value,name=value,name)]
+  private ShowIndexesDesc showIndexesDesc;//SHOW [FORMATTED](INDEX|INDEXES) ON tableName (FROM | IN) db_name ]
+  private DescDatabaseDesc descDbDesc;//DESCRIBE | DESC DATABASE [EXTENDED] "dbName"
   private AlterDatabaseDesc alterDbDesc;//更改数据库的信息
   private AlterTableAlterPartDesc alterTableAlterPartDesc;
   private TruncateTableDesc truncateTblDesc;//创建截断表内数据,从表或者表分区删除所有行，不指定分区，将截断表中的所有分区，也可以一次指定多个分区，截断多个分区。
@@ -270,6 +274,7 @@ public class DDLWork implements Serializable {
 
   /**
    * @param showColumnsDesc
+   * SHOW COLUMNS (FROM | IN) tableName [(FROM | IN) db_name ]
    */
   public DDLWork(HashSet<ReadEntity> inputs, HashSet<WriteEntity> outputs,
       ShowColumnsDesc showColumnsDesc) {
@@ -300,6 +305,7 @@ public class DDLWork implements Serializable {
 
   /**
    * @param showFuncsDesc
+   * SHOW FUNCTIONS [xxx]
    */
   public DDLWork(HashSet<ReadEntity> inputs, HashSet<WriteEntity> outputs,
       ShowFunctionsDesc showFuncsDesc) {
@@ -320,6 +326,7 @@ public class DDLWork implements Serializable {
 
   /**
    * @param descFuncDesc
+   * DESCRIBE | DESC FUNCTION [EXTENDED] descFuncNames
    */
   public DDLWork(HashSet<ReadEntity> inputs, HashSet<WriteEntity> outputs,
       DescFunctionDesc descFuncDesc) {
@@ -385,6 +392,9 @@ public class DDLWork implements Serializable {
     this.alterTblSimpleDesc = simpleDesc;
   }
 
+  /**
+   * MSCK [REPAIR] [TABLE tableName PARTITION (name=value,name=value,name),PARTITION (name=value,name=value,name)...]
+   */
   public DDLWork(HashSet<ReadEntity> inputs, HashSet<WriteEntity> outputs,
       MsckDesc checkDesc) {
     this(inputs, outputs);
@@ -395,6 +405,7 @@ public class DDLWork implements Serializable {
   /**
    * @param showTblStatusDesc
    *          show table status descriptor
+   * SHOW TABLE EXTENDED [(FROM | IN) db_name ] like tableName [PARTITION (name=value,name=value,name)]
    */
   public DDLWork(HashSet<ReadEntity> inputs, HashSet<WriteEntity> outputs,
       ShowTableStatusDesc showTblStatusDesc) {
@@ -406,6 +417,7 @@ public class DDLWork implements Serializable {
   /**
    * @param showTblPropertiesDesc
    *          show table properties descriptor
+   * SHOW TBLPROPERTIES tblName [(columnName)] 获取该表的某一个自定义属性内容
    */
   public DDLWork(HashSet<ReadEntity> inputs, HashSet<WriteEntity> outputs,
       ShowTblPropertiesDesc showTblPropertiesDesc) {
@@ -450,6 +462,7 @@ public class DDLWork implements Serializable {
     this.grantRevokeRoleDDL = grantRevokeRoleDDL;
   }
 
+  //SHOW [FORMATTED](INDEX|INDEXES) ON tableName (FROM | IN) db_name ]
   public DDLWork(HashSet<ReadEntity> inputs, HashSet<WriteEntity> outputs,
       ShowIndexesDesc showIndexesDesc) {
     this(inputs, outputs);

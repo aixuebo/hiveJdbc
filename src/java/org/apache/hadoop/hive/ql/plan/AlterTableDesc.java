@@ -35,41 +35,61 @@ import org.apache.hadoop.hive.ql.parse.SemanticException;
  * AlterTableDesc.
  * 描述更改表操作的信息
  * 
+ * 一、
  * 修改表的属性 String ADD|REPLACE COLUMNS (columnNameTypeList)
  * 为某个table的某个partitions分配HDFS上路径 ,SET LOCATION xxxx
  * 
+ * 二、
  * 设置存储的方式是csv、json、还是protobuffer等等吧
 格式 SET SERDE "serde_class_name" [WITH SERDEPROPERTIES(key=value,key=value)]
 格式 SET SERDEPROPERTIES (key=value,key=value)
 
+三、
 设置/取消视图的属性
 格式:
 a.String SET TBLPROPERTIES (keyValueProperty,keyValueProperty)
 b.String UNSET TBLPROPERTIES [IF Exists](keyValueProperty,keyValueProperty)
 
+四、
 analyzeAlterTableProtectMode设置protect模式以及类型,但是该类没有sql被启动,因此暂时不会对系统有影响
 
+五、
 alterStatementSuffixClusterbySortby格式:
 1.NOT CLUSTERED 表示没有CLUSTERED BY 操作
 2.NOT SORTED 表示没有SORTED BY 操作
 3.CLUSTERED BY (column1,column2) [SORTED BY (column1 desc,column2 desc)] into Number BUCKETS,属于ADDCLUSTERSORTCOLUMN类型
 
+六、
 alterTblPartitionStatementSuffixSkewedLocation
 a.SET SKEWED LOCATION (key=value,key=value) 是ALTERSKEWEDLOCATION类型
 b.SET SKEWED LOCATION ((key1,key2)=value,(key1,key2)=value) 是ALTERSKEWEDLOCATION类型
 
-
+七、
 tableSkewed 属于ADDSKEWEDBY类型
 SKEWED BY (属性字符串,属性字符串) on (属性值集合xxx,xxx) [STORED AS DIRECTORIES]
 或者SKEWED BY (属性字符串,属性字符串) on (多组属性值集合 (xxx,xxx),(xxx,xxx),(xxx,xxx) ) [STORED AS DIRECTORIES]
 create table T (c1 string, c2 string) skewed by (c1) on ('x1') 表示在c1属性的值为x1的时候可能会数据发生偏移,因此在join的时候要先预估一下是否一个表的c1=x1的值能否很少,并且存储在内存中,如果是,则可以进行优化
 create table T (c1 string, c2 string) skewed by (c1,c2) on (('x11','x21'),('x12','x22')) 表示在c1,c2属性的值为(x11,x21),或者(x21,x22)的时候可能会数据发生偏移,因此在join的时候要先预估一下是否一个表的(x11,x21),或者(x21,x22)的值能否很少,并且存储在内存中,如果是,则可以进行优化
 
+八、
 alterStatementSuffixSkewedby 属于ADDSKEWEDBY类型
 "tableName" NOT SKEWED
 
+九、
  alterStatementSuffixBucketNum
  INTO number BUCKETS
+ 
+十、
+"oldName" RENAME TO "newName"
+
+十一
+ alterStatementSuffixRenameCol 更改表的属性名字,此时属于RENAMECOLUMN类型
+ 格式:String CHANGE [COLUMN] "oldName" "newName" type [COMMENT String] [FIRST|AFTER String]
+   注意:
+   1.type表示字段类型
+   2.FIRST或者AFTER String
+   TOK_ALTERTABLE_RENAMECOL identifier $oldName $newName colType $comment? alterStatementChangeColPosition?
+
  */
 @Explain(displayName = "Alter Table")
 public class AlterTableDesc extends DDLDesc implements Serializable {
@@ -87,7 +107,8 @@ public class AlterTableDesc extends DDLDesc implements Serializable {
     ADDSERDEPROPS,//设置存储的方式是csv、json、还是protobuffer等等吧,格式 SET SERDEPROPERTIES (key=value,key=value)
     ADDFILEFORMAT, 
     ADDCLUSTERSORTCOLUMN, //alterStatementSuffixClusterbySortby
-    RENAMECOLUMN, ADDPARTITION,
+    RENAMECOLUMN,//alterStatementSuffixRenameCol 
+    ADDPARTITION,
     TOUCH,//重新写回关于table的partition下的元数据信息
     ARCHIVE,//Hive中的归档移动分区中的文件到Hadoop归档中（HAR），该语句只会减少文件的数量，但不提供压缩。 
     UNARCHIVE,//Hive中的归档移动分区中的文件到Hadoop归档中（HAR），该语句只会减少文件的数量，但不提供压缩。 
@@ -107,7 +128,7 @@ public class AlterTableDesc extends DDLDesc implements Serializable {
 
   AlterTableTypes op;//更改的类型
   String oldName;//更改表前名字
-  String newName;//更改表后的名字
+  String newName;//更改表后的名字 "oldName" RENAME TO "newName"
   ArrayList<FieldSchema> newCols;//修改表的属性 String ADD|REPLACE COLUMNS (columnNameTypeList)中用于解释新的属性集合
   
   /**
@@ -132,10 +153,12 @@ public class AlterTableDesc extends DDLDesc implements Serializable {
   
   String oldColName;
   String newColName;
-  String newColType;
-  String newColComment;
-  boolean first;
-  String afterCol;
+  String newColType;//String CHANGE [COLUMN] "oldName" "newName" type [COMMENT String] [FIRST|AFTER String] 中用于修改type,即属性类型
+  String newColComment;//String CHANGE [COLUMN] "oldName" "newName" type [COMMENT String] [FIRST|AFTER String] 中用于修改备注
+  boolean first;//String CHANGE [COLUMN] "oldName" "newName" type [COMMENT String] [FIRST|AFTER String] 用于设置了FIRST
+  String afterCol;//String CHANGE [COLUMN] "oldName" "newName" type [COMMENT String] [FIRST|AFTER String] 用于设置了AFTER String
+  
+  
   boolean expectView;//true 表示操作的表示视图
   HashMap<String, String> partSpec;//确定一个partition,HashMap<String, String> partSpec 是因为确定某个partition可能来源于多个属性,例如log_date log_hour
   private String newLocation;//更改HDFS的路径 
@@ -161,6 +184,7 @@ public class AlterTableDesc extends DDLDesc implements Serializable {
    *          new column name
    * @param newComment
    * @param newType
+   * 解析String CHANGE [COLUMN] "oldName" "newName" type [COMMENT String] [FIRST|AFTER String]操作
    */
   public AlterTableDesc(String tblName, String oldColName, String newColName,
       String newType, String newComment, boolean first, String afterCol) {

@@ -25,14 +25,14 @@ import org.apache.hadoop.fs.Path;
 
 /**
  * ShowTblPropertiesDesc.
- *
+ * SHOW TBLPROPERTIES tblName [(columnName)] 获取该表的某一个自定义属性内容
  */
 @Explain(displayName = "Show Table Properties")
 public class ShowTblPropertiesDesc extends DDLDesc implements Serializable {
   private static final long serialVersionUID = 1L;
   String resFile;
   String tableName;
-  String propertyName;
+  String propertyName;//属性名称
 
   /**
    * table name for the result of showtblproperties.

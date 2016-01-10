@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.Path;
 
 /**
  * ShowLocksDesc.
- *
+ * SHOW LOCKS xxx .($ELEM$ | $KEY$ | $VALUE$ | xxx ) .($ELEM$ | $KEY$ | $VALUE$ | xxx )
  */
 @Explain(displayName = "Show Locks")
 public class ShowLocksDesc extends DDLDesc implements Serializable {
