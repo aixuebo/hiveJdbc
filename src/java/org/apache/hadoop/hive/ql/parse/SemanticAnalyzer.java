@@ -206,8 +206,8 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
   Map<GroupByOperator, Set<String>> groupOpToInputTables;
   Map<String, PrunedPartitionList> prunedPartitions;
   private List<FieldSchema> resultSchema;
-  private CreateViewDesc createVwDesc;
-  private ArrayList<String> viewsExpanded;
+  private CreateViewDesc createVwDesc;//创建视图sql
+  private ArrayList<String> viewsExpanded;//扩展了哪些视图表,即数据库+视图名称组成的集合
   private ASTNode viewSelect;//创建视图时,select部分的对象
   private final UnparseTranslator unparseTranslator;
   private final GlobalLimitCtx globalLimitCtx = new GlobalLimitCtx();
@@ -326,6 +326,12 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
 
   /**
    * from子句中的子查询操作
+   * from (xxx) as yyy
+   * @param ast 表示xxx对应的对象
+   * @param qbexpr 表示解析xxx子查询sql后生成的解析对象
+   * @param id 子查询的父ID
+   * @param alias 表示yyy
+   * @throws SemanticException
    */
   @SuppressWarnings("nls")
   public void doPhase1QBExpr(ASTNode ast, QBExpr qbexpr, String id, String alias)
@@ -367,30 +373,36 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
    * 该方法是递归的,因为存在函数到嵌套函数的,比如min(string())
    * @param selExpr select语句对应的语法树
    * @param qb
-   * @param dest
+   * @param dest 这个select对象对应的目的名称
    * 参数表示为QB对象的目标desc添加聚类函数,例如用于having子句解析
+   * 
+   * 解析SELECT [hintClause] [ALL|DISTINCT] selectList
    */
   private LinkedHashMap<String, ASTNode> doPhase1GetAggregationsFromSelect(
       ASTNode selExpr, QB qb, String dest) throws SemanticException {
 
     // Iterate over the selects search for aggregation Trees.
     // Use String as keys to eliminate duplicate trees.
-    LinkedHashMap<String, ASTNode> aggregationTrees = new LinkedHashMap<String, ASTNode>();
-    List<ASTNode> wdwFns = new ArrayList<ASTNode>();
-    for (int i = 0; i < selExpr.getChildCount(); ++i) {
-      ASTNode function = (ASTNode) selExpr.getChild(i).getChild(0);
+    LinkedHashMap<String, ASTNode> aggregationTrees = new LinkedHashMap<String, ASTNode>();//所有函数
+    List<ASTNode> wdwFns = new ArrayList<ASTNode>();//所有函数后面追加over方式的为窗口函数
+    
+    for (int i = 0; i < selExpr.getChildCount(); ++i) {//获取所有的select语句,并且循环每一个选择项
+      ASTNode function = (ASTNode) selExpr.getChild(i).getChild(0);//获取select name中的name节点,可能该name不是字符串,而是一个函数,并且可以嵌套的函数
       //真正去递归寻找函数,该方法是递归的,因为存在函数到嵌套函数的,比如min(string())
+      //即如果该选择项是函数格式的,例如带括号,则进行函数处理
       doPhase1GetAllAggregations((ASTNode) function, aggregationTrees, wdwFns);
     }
 
     // window based aggregations are handled differently
     for (ASTNode wdwFn : wdwFns) {
+      //为该目的地添加窗口函数对象,该对象可以存储该目的地的所有窗口函数
       WindowingSpec spec = qb.getWindowingSpec(dest);
       if(spec == null) {
         queryProperties.setHasWindowing(true);
         spec = new WindowingSpec();
         qb.addDestToWindowingSpec(dest, spec);
       }
+      
       HashMap<String, ASTNode> wExprsInDest = qb.getParseInfo().getWindowingExprsForClause(dest);
       int wColIdx = spec.getWindowExpressions() == null ? 0 : spec.getWindowExpressions().size();
       WindowFunctionSpec wFnSpec = processWindowFunction(wdwFn,
@@ -427,7 +439,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
    * DFS-scan the expressionTree to find all aggregation subtrees and put them
    * in aggregations.
    *
-   * @param expressionTree
+   * @param expressionTree 获取select name中的name节点,可能该name不是字符串,而是一个函数,并且可以嵌套的函数
    * @param aggregations 找到的聚合函数集合
    *          the key to the HashTable is the toStringTree() representation of
    *          the aggregation subtree.
@@ -435,6 +447,13 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
    * 递归寻找聚合函数
    * 真正去递归寻找函数,该方法是递归的,因为存在函数到嵌套函数的,比如min(string())
    * 会将聚合函数添加到aggregations参数中,窗口函数中添加到wdwFns集合中
+   * 
+   * 函数名字定义
+   * functionName(*) [OVER window_specification]
+functionName() OVER window_specification
+functionName([DISTINCT] [selectExpression,selectExpression..]) OVER window_specification
+其中
+functionName格式为:IF | ARRAY | MAP | STRUCT | UNIONTYPE | String
    */
   private void doPhase1GetAllAggregations(ASTNode expressionTree,
       HashMap<String, ASTNode> aggregations, List<ASTNode> wdwFns) throws SemanticException {
@@ -444,14 +463,16 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         || exprTokenType == HiveParser.TOK_FUNCTIONSTAR) {
       assert (expressionTree.getChildCount() != 0);
       if (expressionTree.getChild(expressionTree.getChildCount()-1).getType()
-          == HiveParser.TOK_WINDOWSPEC) {
+          == HiveParser.TOK_WINDOWSPEC) {//解析OVER window_specification,说明最后一个位置是窗口函数
         wdwFns.add(expressionTree);
         return;
       }
       if (expressionTree.getChild(0).getType() == HiveParser.Identifier) {
         String functionName = unescapeIdentifier(expressionTree.getChild(0)
             .getText());//函数名
-        if(FunctionRegistry.impliesOrder(functionName)) {
+        
+        //校验函数名是否有意义
+        if(FunctionRegistry.impliesOrder(functionName)) {//函数名字是否要排序
           throw new SemanticException(ErrorMsg.MISSING_OVER_CLAUSE.getMsg(functionName));
         }
         if (FunctionRegistry.getGenericUDAFResolver(functionName) != null) {
@@ -469,7 +490,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       }
     }
     
-    //递归寻找聚合函数
+    //递归寻找聚合函数,因为函数套函数.因此是递归处理
     for (int i = 0; i < expressionTree.getChildCount(); i++) {
       doPhase1GetAllAggregations((ASTNode) expressionTree.getChild(i),
           aggregations, wdwFns);
@@ -526,32 +547,33 @@ tableSource
     -> ^(TOK_TABREF $tabname $props? $ts? $alias?)
     ;
     
+解析tableName [(keyValueProperty,keyValueProperty,keyProperty,keyProperty)] [tableSample] [ [AS] Identifier ]
 参数tabref是from子句,返回别名字符串
    */
   private String processTable(QB qb, ASTNode tabref) throws SemanticException {
     // For each table reference get the table name
     // and the alias (if alias is not present, the table name
     // is used as an alias)
-    int aliasIndex = 0;//第几个节点是别名节点
-    int propsIndex = -1;//第几个节点是属性节点
-    int tsampleIndex = -1;//第几个节点是按桶抽样节点
-    int ssampleIndex = -1;//第几个节点是按表抽样节点
+    int aliasIndex = 0;//第几个节点是[AS] Identifier
+    int propsIndex = -1;//第几个节点是(keyValueProperty,keyValueProperty,keyProperty,keyProperty)]
+    int tsampleIndex = -1;//第几个节点是TABLESAMPLE(BUCKET 数字 OUT OF 数字  [ ON expression,expression.. ] )
+    int ssampleIndex = -1;//第几个节点是TABLESAMPLE(数字    PERCENT) 或者TABLESAMPLE(数字    ROWS) 或者TABLESAMPLE(ByteLengthLiteral)
     for (int index = 1; index < tabref.getChildCount(); index++) {
       ASTNode ct = (ASTNode) tabref.getChild(index);
-      if (ct.getToken().getType() == HiveParser.TOK_TABLEBUCKETSAMPLE) {
+      if (ct.getToken().getType() == HiveParser.TOK_TABLEBUCKETSAMPLE) {//解析TABLESAMPLE(BUCKET 数字 OUT OF 数字  [ ON expression,expression.. ] )
         tsampleIndex = index;
-      } else if (ct.getToken().getType() == HiveParser.TOK_TABLESPLITSAMPLE) {
+      } else if (ct.getToken().getType() == HiveParser.TOK_TABLESPLITSAMPLE) {//解析TABLESAMPLE(数字    PERCENT) 或者TABLESAMPLE(数字    ROWS) 或者TABLESAMPLE(ByteLengthLiteral)
         ssampleIndex = index;
-      } else if (ct.getToken().getType() == HiveParser.TOK_TABLEPROPERTIES) {
+      } else if (ct.getToken().getType() == HiveParser.TOK_TABLEPROPERTIES) {//解析(keyValueProperty,keyValueProperty,keyProperty,keyProperty)]
         propsIndex = index;
-      } else {
+      } else {//解析[AS] Identifier
         aliasIndex = index;
       }
     }
 
     ASTNode tableTree = (ASTNode) (tabref.getChild(0));
 
-    String tabIdName = getUnescapedName(tableTree);
+    String tabIdName = getUnescapedName(tableTree);//表名字
 
     String alias;//别名要么自己设置了,要么是数据库表的名字
     if (aliasIndex != 0) {
@@ -561,6 +583,7 @@ tableSource
       alias = getUnescapedUnqualifiedTableName(tableTree);
     }
 
+    //获取属性信息(keyValueProperty,keyValueProperty,keyProperty,keyProperty)]
     if (propsIndex >= 0) {
       Tree propsAST = tabref.getChild(propsIndex);
       Map<String, String> props = DDLSemanticAnalyzer.getProps((ASTNode) propsAST.getChild(0));
@@ -675,6 +698,8 @@ tableSource
    * @param subq
    * @return
    * @throws SemanticException
+   * 
+   * 解析 from (xxx) as yyy
    */
   private String processSubQuery(QB qb, ASTNode subq) throws SemanticException {
 
@@ -682,8 +707,8 @@ tableSource
     if (subq.getChildCount() != 2) {
       throw new SemanticException(ErrorMsg.NO_SUBQUERY_ALIAS.getMsg(subq));
     }
-    ASTNode subqref = (ASTNode) subq.getChild(0);//子查询节点
-    String alias = unescapeIdentifier(subq.getChild(1).getText());//别名
+    ASTNode subqref = (ASTNode) subq.getChild(0);//解析(xxx),子查询节点
+    String alias = unescapeIdentifier(subq.getChild(1).getText());//解析yyy别名
 
     // Recursively do the first phase of semantic analysis for the subquery
     QBExpr qbexpr = new QBExpr(alias);
@@ -696,6 +721,7 @@ tableSource
       throw new SemanticException(ErrorMsg.AMBIGUOUS_TABLE_ALIAS.getMsg(subq
           .getChild(1)));
     }
+    //设置子查询对象与别名之间的关系
     // Insert this map into the stats
     qb.setSubqAlias(alias, qbexpr);
     qb.addAlias(alias);
@@ -743,7 +769,6 @@ tableSource
       ASTNode child = (ASTNode) join.getChild(num);
       if (child.getToken().getType() == HiveParser.TOK_TABREF) {
     	  /**
-			//[dbName.] tableName [(key=value,key=value,key)] [tableSample] [ as Identifier ]
 			//注意:
 			//1.(此时认为解析成key=null,即不需要value属性值)
 			//tableSample函数解析如下
@@ -751,12 +776,7 @@ tableSource
 			//2.TABLESAMPLE(数字    ROWS)
 			//3.TABLESAMPLE(ByteLengthLiteral)
 			//4.TABLESAMPLE(BUCKET 数字    OUT OF 数字  [ ON expression,expression ] )
-			tableSource
-			@init { gParent.msgs.push("table source"); }
-			@after { gParent.msgs.pop(); }
-			    : tabname=tableName (props=tableProperties)? (ts=tableSample)? (KW_AS? alias=Identifier)?
-			    -> ^(TOK_TABREF $tabname $props? $ts? $alias?)
-			    ;
+			 解析 [dbName.] tableName [(key=value,key=value,key)] [tableSample] [ as Identifier ]
     	   */
         processTable(qb, child);
       } else if (child.getToken().getType() == HiveParser.TOK_SUBQUERY) {//from子句,用于子查询,必须有别名
@@ -846,6 +866,20 @@ tableSource
    * TOK_ROLLUP_GROUPBY、TOK_CUBE_GROUPBY、TOK_GROUPING_SETS、TOK_HAVING、KW_WINDOW、
    * TOK_LIMIT、TOK_ANALYZE、TOK_UNION、TOK_LATERAL_VIEW、TOK_LATERAL_VIEW_OUTER 关键字解析
    * 该方法是解析的第一步,一般情况下QB都是全新的
+   * 
+   * 解析select语句块,
+   * @param ast 表示的就是等待解析的select语句块
+   * 
+   selectClause
+   fromClause
+   whereClause?
+   groupByClause?
+   havingClause?
+   orderByClause?
+   clusterByClause?
+   distributeByClause?
+   sortByClause?
+   window_clause?
    */
   @SuppressWarnings({"fallthrough", "nls"})
   public boolean doPhase1(ASTNode ast, QB qb, Phase1Ctx ctx_1)
@@ -862,6 +896,7 @@ tableSource
         qb.countSelDi();
         // fall through
       case HiveParser.TOK_SELECT:
+    	//SELECT [hintClause] [ALL|DISTINCT] selectList
         qb.countSel();
         qbp.setSelExprForClause(ctx_1.dest, ast);
 
@@ -885,28 +920,17 @@ tableSource
         break;
 
       case HiveParser.TOK_INSERT_INTO://仅仅针对INSERT INTO语句
+    	//INSERT INTO TABLE tableName [ PARTITION (name=value,name=value,name) ]
         String currentDatabase = SessionState.get().getCurrentDatabase();
         String tab_name = getUnescapedName((ASTNode) ast.getChild(0).getChild(0), currentDatabase);
         qbp.addInsertIntoTable(tab_name);
 
-        /**
-selectStatement
-   :
-   selectClause
-   fromClause
-   whereClause?
-   groupByClause?
-   havingClause?
-   orderByClause?
-   clusterByClause?
-   distributeByClause?
-   sortByClause?
-   window_clause?
-   limitClause? -> ^(TOK_QUERY fromClause ^(TOK_INSERT ^(TOK_DESTINATION ^(TOK_DIR TOK_TMP_FILE))
-                     selectClause whereClause? groupByClause? havingClause? orderByClause? clusterByClause?
-                     distributeByClause? sortByClause? window_clause? limitClause?))
-         */
       case HiveParser.TOK_DESTINATION://目标
+    	/**
+a.INSERT OVERWRITE LOCAL DIRECTORY "path" [tableRowFormat] [tableFileFormat] [IF NOT Exists]
+b.INSERT OVERWRITE DIRECTORY "path" [IF NOT Exists]
+c.INSERT OVERWRITE TABLE tableName [ PARTITION (name=value,name=value,name) ] [IF NOT Exists]
+    	 */
         ctx_1.dest = "insclause-" + ctx_1.nextNum;
         ctx_1.nextNum++;
 
@@ -923,6 +947,10 @@ selectStatement
         break;
         
       case HiveParser.TOK_FROM:
+    	  /**
+a.FROM fromSource joinToken fromSource [ON expression] joinToken fromSource [ON expression]..
+b.FROM UNIQUEJOIN [PRESERVE] fromSource (expression,expression..)
+    	   */
         int child_count = ast.getChildCount();
         if (child_count != 1) {
           throw new SemanticException(generateErrorMessage(ast,
@@ -948,6 +976,7 @@ tableSource
     ;
          */
         if (frm.getToken().getType() == HiveParser.TOK_TABREF) {
+          //tableName [(keyValueProperty,keyValueProperty,keyProperty,keyProperty)] [tableSample] [ [AS] Identifier ]
           processTable(qb, frm);
         } else if (frm.getToken().getType() == HiveParser.TOK_SUBQUERY) {//from子句,用于子查询,必须有别名
           processSubQuery(qb, frm);
@@ -1026,16 +1055,28 @@ tableSource
       case HiveParser.TOK_ROLLUP_GROUPBY:
       case HiveParser.TOK_CUBE_GROUPBY:
       case HiveParser.TOK_GROUPING_SETS:
+    	  /**
+1.groupByClause
+  格式:GROUP BY expression,expression...[WITH ROLLUP | WITH CUBE] [GROUPING SETS (groupingSetExpression,groupingSetExpression..)]
+2.groupingSetExpression
+  格式:
+  a.expression
+  b.(expression,expression...)
+  c.()
+    	   */
         // Get the groupby aliases - these are aliased to the entries in the
         // select list
         queryProperties.setHasGroupBy(true);
         if (qbp.getJoinExpr() != null) {//是否在有join表链接的情况下,依然设置了group by语句
           queryProperties.setHasJoinFollowedByGroupBy(true);
         }
+        
+        //select distinct语句不能与group by一同存在
         if (qbp.getSelForClause(ctx_1.dest).getToken().getType() == HiveParser.TOK_SELECTDI) {
           throw new SemanticException(generateErrorMessage(ast,
               ErrorMsg.SELECT_DISTINCT_WITH_GROUPBY.getMsg()));
         }
+        
         qbp.setGroupByExprForClause(ctx_1.dest, ast);
         skipRecursion = true;
 
@@ -1565,7 +1606,6 @@ tableSource
             .getChild(0)));
       }
       break;
-
     case HiveParser.Identifier:
       // it may be a field name, return the identifier and let the caller decide
       // whether it is or not
@@ -8489,7 +8529,7 @@ tableSource
     // analyze create table command
     if (ast.getToken().getType() == HiveParser.TOK_CREATETABLE) {//创建table语句
       // if it is not CTAS, we don't need to go further and just return
-      if ((child = analyzeCreateTable(ast, qb)) == null) {//返回的child是select语句块
+      if ((child = analyzeCreateTable(ast, qb)) == null) {//返回的child是select语句块,null说明没有select语句块
         return;
       }
     } else {
@@ -8497,19 +8537,27 @@ tableSource
     }
 
     // analyze create view command
+    /**
+解析视图
+CREATE [OR REPLACE] VIEW [IF NOT Exists] tableName [("columnName1" COMMENT string,"columnName2" COMMENT string)] [COMMENT String]
+[PARTITIONED ON (columnName1,columnName2)]
+[TBLPROPERTIES (keyValueProperty,keyValueProperty,keyProperty,keyProperty)]
+AS selectStatement
+     */
     if (ast.getToken().getType() == HiveParser.TOK_CREATEVIEW ||
         ast.getToken().getType() == HiveParser.TOK_ALTERVIEW_AS) {
       //创建视图,视图仅仅是表象,后期还是要select查询的,返回的child就是select查询部分的对象
       child = analyzeCreateView(ast, qb);
       SessionState.get().setCommandType(HiveOperation.CREATEVIEW);
-      if (child == null) {
+      if (child == null) {//等于null,说明不是AS语法
         return;
       }
-      viewSelect = child;
-      // prevent view from referencing itself
+      viewSelect = child;//创建视图中的as语法对应的节点
+      // prevent view from referencing itself 扩展了哪些视图表,即数据库+视图名称组成的集合
       viewsExpanded.add(SessionState.get().getCurrentDatabase() + "." + createVwDesc.getViewName());
     }
 
+    //child就是select节点,解析select语句块
     // continue analyzing from the child ASTNode.
     Phase1Ctx ctx_1 = initPhase1Ctx();
     if (!doPhase1(child, qb, ctx_1)) {
@@ -9020,50 +9068,65 @@ tableSource
    * the semantic analyzer need to deal with the select statement with respect
    * to the SerDe and Storage Format.
    * 解析:
-    : KW_CREATE (ext=KW_EXTERNAL)? KW_TABLE ifNotExists? name=tableName
-      (  like=KW_LIKE likeName=tableName
-         tableLocation?
-         tablePropertiesPrefixed?
-       | (LPAREN columnNameTypeList RPAREN)?
-         tableComment?
-         tablePartition?
-         tableBuckets?
-         tableSkewed?
-         tableRowFormat?
-         tableFileFormat?
-         tableLocation?
-         tablePropertiesPrefixed?
-         (KW_AS selectStatement)?
-      )
+createTableStatement 创建表
+格式:
+a.CREATE [EXTERNAL] TABLE [IF NOT Exists] tableName LIKE tableName [LOCATION xxx] [TBLPROPERTIES (keyValueProperty,keyValueProperty,keyProperty,keyProperty)]
+b.CREATE [EXTERNAL] TABLE [IF NOT Exists] tableName [(columnNameTypeList)] 
+  [COMMENT String] //备注
+  [PARTITIONED BY (xxx colType COMMENT xxx,xxx colType COMMENT xxx)] //分区
+  [CLUSTERED BY (column1,column2) [SORTED BY (column1 desc,column2 desc)] into Number BUCKETS] //为表进行分桶,即设置hadoop的partition类,以及设置每一个reduce中的排序方式
+  [tableSkewed] //为表设置偏斜属性
+  [tableRowFormat] //解析一行信息
+  [tableFileFormat] //数据表的存储方式
+  [LOCATION xxx] //存储在HDFS什么路径下
+  [TBLPROPERTIES (keyValueProperty,keyValueProperty,keyProperty,keyProperty)] //设置table的属性信息
+  [AS    selectClause
+   fromClause
+   whereClause?
+   groupByClause?
+   havingClause?
+   orderByClause?
+   clusterByClause?
+   distributeByClause?
+   sortByClause?
+   window_clause?] //写入sql查询语句,用于创建表
    */
-  //返回select语句块
+  //返回select语句块,即CREATE TABLE AS SELECT ...时候的select节点对象
   private ASTNode analyzeCreateTable(ASTNode ast, QB qb)
       throws SemanticException {
-    String tableName = getUnescapedName((ASTNode) ast.getChild(0));//表名
-    String likeTableName = null;//like产生的新表名
-    List<FieldSchema> cols = new ArrayList<FieldSchema>();//创建的属性对象集合
-    List<FieldSchema> partCols = new ArrayList<FieldSchema>();//创建的分区属性对象集合
-    List<String> bucketCols = new ArrayList<String>();//仅仅获取数据库属性名称,并且输出都是小写的name,即需要在哪些属性上进行分桶划分
-    int numBuckets = -1;//总共分多少个桶
-    List<Order> sortCols = new ArrayList<Order>();//每一个桶里面按照哪些属性排序,以及排序顺序
-    String comment = null;//table的备注信息
-    String location = null;//数据存储的url
-    Map<String, String> tblProps = null;//数据库的额外属性键值对信息
+    String tableName = getUnescapedName((ASTNode) ast.getChild(0));//表名,解析tableName
+    String likeTableName = null;//like产生的新表名,解析LIKE tableName
+    List<FieldSchema> cols = new ArrayList<FieldSchema>();//创建表中包含的属性对象集合,解析columnNameTypeList
+    List<FieldSchema> partCols = new ArrayList<FieldSchema>();//创建的分区属性对象集合,解析PARTITIONED BY (xxx colType COMMENT xxx,xxx colType COMMENT xxx)
+    
+    //解析 CLUSTERED BY (column1,column2) [SORTED BY (column1 desc,column2 desc)] into Number BUCKETS 分桶信息sql
+    List<String> bucketCols = new ArrayList<String>();//仅仅获取数据库属性名称,并且输出都是小写的name,即需要在哪些属性上进行分桶划分,解析CLUSTERED BY (column1,column2)
+    int numBuckets = -1;//总共分多少个桶,解析into Number BUCKETS
+    List<Order> sortCols = new ArrayList<Order>();//每一个桶里面按照哪些属性排序,以及排序顺序,解析SORTED BY (column1 desc,column2 desc)
+    
+    String comment = null;//table的备注信息,解析COMMENT String
+    String location = null;//数据存储的url,解析LOCATION xxx
+    Map<String, String> tblProps = null;//数据库的额外属性键值对信息,解析TBLPROPERTIES (keyValueProperty,keyValueProperty,keyProperty,keyProperty)
     boolean ifNotExists = false;
     boolean isExt = false;//是否是外部表
     ASTNode selectStmt = null;//CREATE TABLE AS SELECT ...时候的select节点对象
-    final int CREATE_TABLE = 0; // regular CREATE TABLE
-    final int CTLT = 1; // CREATE TABLE LIKE ... (CTLT)
-    final int CTAS = 2; // CREATE TABLE AS SELECT ... (CTAS)
+    
+    //创建的sql属于什么方式的sql
+    final int CREATE_TABLE = 0; // regular CREATE TABLE,不用like和as语句创建表,仅仅创建表,不添加数据
+    final int CTLT = 1; // CREATE TABLE LIKE ... (CTLT)方式1
+    final int CTAS = 2; // CREATE TABLE AS SELECT ... (CTAS)方式2
     int command_type = CREATE_TABLE;
     
+    //解析skewed by相关语法
   //create table T (c1 string, c2 string) skewed by (c1) on ('x1') [STORED AS DIRECTORIES] 表示在c1属性的值为x1的时候可能会数据发生偏移,因此在join的时候要先预估一下是否一个表的c1=x1的值能否很少,并且存储在内存中,如果是,则可以进行优化
   //create table T (c1 string, c2 string) skewed by (c1,c2) on (('x11','x21'),('x12','x22')) [STORED AS DIRECTORIES] 表示在c1,c2属性的值为(x11,x21),或者(x21,x22)的时候可能会数据发生偏移,因此在join的时候要先预估一下是否一个表的(x11,x21),或者(x21,x22)的值能否很少,并且存储在内存中,如果是,则可以进行优化
-    List<String> skewedColNames = new ArrayList<String>();//在哪些属性上可以有优化的可能,即哪些属性上有数据偏移的可能
+    List<String> skewedColNames = new ArrayList<String>();//在哪些属性上可以有优化的可能,即哪些属性上有数据偏移的可能,解析SKEWED BY (属性字符串,属性字符串)
+    //解析on (属性值集合xxx,xxx)或者on (多组属性值集合 (xxx,xxx),(xxx,xxx),(xxx,xxx) )解析后的value值
     List<List<String>> skewedValues = new ArrayList<List<String>>();//这些属性在那些值上有优化可能,每一个元素对应一个List,因为每一个元素是一组
     Map<List<String>, String> listBucketColValuesMapping = new HashMap<List<String>, String>();
-    boolean storedAsDirs = false;//是否存储skewed by相关语句被设置
+    boolean storedAsDirs = false;//是否存储skewed by相关语句被设置,解析STORED AS DIRECTORIES
 
+    
     RowFormatParams rowFormatParams = new RowFormatParams();
     StorageFormat storageFormat = new StorageFormat();
     AnalyzeCreateCommonVars shared = new AnalyzeCreateCommonVars();
@@ -9080,14 +9143,16 @@ tableSource
      */
     for (int num = 1; num < numCh; num++) {
       ASTNode child = (ASTNode) ast.getChild(num);
-      if (storageFormat.fillStorageFormat(child, shared)) {
+      if (storageFormat.fillStorageFormat(child, shared)) {//解析输入、输出格式
         continue;
       }
       switch (child.getToken().getType()) {
       case HiveParser.TOK_IFNOTEXISTS:
+    	//解析IF NOT Exists
         ifNotExists = true;
         break;
       case HiveParser.KW_EXTERNAL:
+    	//解析CREATE [EXTERNAL]
         isExt = true;
         break;
       case HiveParser.TOK_LIKETABLE:
@@ -9107,7 +9172,7 @@ tableSource
         }
         break;
       case HiveParser.TOK_QUERY: // CTAS
-        if (command_type == CTLT) {
+        if (command_type == CTLT) {//as语法不允许使用like语法创建sql
           throw new SemanticException(ErrorMsg.CTAS_CTLT_COEXISTENCE.getMsg());
         }
         if (cols.size() != 0) {
@@ -9115,50 +9180,58 @@ tableSource
         }
         if (partCols.size() != 0 || bucketCols.size() != 0) {
           boolean dynPart = HiveConf.getBoolVar(conf, HiveConf.ConfVars.DYNAMICPARTITIONING);
-          if (dynPart == false) {
+          if (dynPart == false) {//CREATE-TABLE-AS-SELECT方式不支持partition分区以及CLUSTERED BY分桶
             throw new SemanticException(ErrorMsg.CTAS_PARCOL_COEXISTENCE.getMsg());
           } else {
             // TODO: support dynamic partition for CTAS
             throw new SemanticException(ErrorMsg.CTAS_PARCOL_COEXISTENCE.getMsg());
           }
         }
-        if (isExt) {//create table as select的表示不能外部表
+        if (isExt) {//CREATE-TABLE-AS-SELECT方式,不能创建外部表外部表
           throw new SemanticException(ErrorMsg.CTAS_EXTTBL_COEXISTENCE.getMsg());
         }
         command_type = CTAS;
         selectStmt = child;
         break;
       case HiveParser.TOK_TABCOLLIST:
+    	//解析xxx colType COMMENT xxx,xxx colType COMMENT xxx
         cols = getColumns(child);
         break;
       case HiveParser.TOK_TABLECOMMENT:
+    	//解析备注
         comment = unescapeSQLString(child.getChild(0).getText());
         break;
       case HiveParser.TOK_TABLEPARTCOLS:
+    	//解析PARTITIONED BY (xxx colType COMMENT xxx,xxx colType COMMENT xxx)
         partCols = getColumns((ASTNode) child.getChild(0), false);
         break;
       case HiveParser.TOK_TABLEBUCKETS:
-        bucketCols = getColumnNames((ASTNode) child.getChild(0));
+    	//解析[CLUSTERED BY (column1,column2) [SORTED BY (column1 desc,column2 desc)] into Number BUCKETS]
+        bucketCols = getColumnNames((ASTNode) child.getChild(0));//解析解析CLUSTERED BY (column1,column2)
         if (child.getChildCount() == 2) {
           numBuckets = (Integer.valueOf(child.getChild(1).getText()))
-              .intValue();
+              .intValue();//解析into Number BUCKETS
         } else {
-          sortCols = getColumnNamesOrder((ASTNode) child.getChild(1));
+          sortCols = getColumnNamesOrder((ASTNode) child.getChild(1));//解析SORTED BY (column1 desc,column2 desc)
           numBuckets = (Integer.valueOf(child.getChild(2).getText()))
-              .intValue();
+              .intValue();//解析into Number BUCKETS
         }
         break;
       case HiveParser.TOK_TABLEROWFORMAT:
+    	//解析RowFormatParams 行如何拆分数据
         rowFormatParams.analyzeRowFormat(shared, child);
         break;
       case HiveParser.TOK_TABLELOCATION:
+    	//解析LOCATION xxx
         location = unescapeSQLString(child.getChild(0).getText());
         location = EximUtil.relativeToAbsolutePath(conf, location);
         break;
       case HiveParser.TOK_TABLEPROPERTIES:
+    	//解析TBLPROPERTIES (keyValueProperty,keyValueProperty,keyProperty,keyProperty)
         tblProps = DDLSemanticAnalyzer.getProps((ASTNode) child.getChild(0));
         break;
       case HiveParser.TOK_TABLESERIALIZER:
+    	//解析ROW FORMAT SERDE "class全路径" [WHIN SERDEPROPERTIES TBLPROPERTIES (key=value,key=value,key)]
         child = (ASTNode) child.getChild(0);
         shared.serde = unescapeSQLString(child.getChild(0).getText());
         if (child.getChildCount() == 2) {
@@ -9168,6 +9241,7 @@ tableSource
         break;
 
       case HiveParser.TOK_FILEFORMAT_GENERIC:
+    	//解析SET FILEFORMAT xxxx 属于TOK_FILEFORMAT_GENERIC类型自定义格式
         handleGenericFileFormat(child);
         break;
         
@@ -9177,13 +9251,16 @@ tableSource
         /**
          * Throw an error if the user tries to use the DDL with
          * hive.internal.ddl.list.bucketing.enable set to false.
+         * 解析
+         * 	SKEWED BY (属性字符串,属性字符串) on (属性值集合xxx,xxx) [STORED AS DIRECTORIES]
+	   		或者SKEWED BY (属性字符串,属性字符串) on (多组属性值集合 (xxx,xxx),(xxx,xxx),(xxx,xxx) ) [STORED AS DIRECTORIES]
          */
         HiveConf hiveConf = SessionState.get().getConf();
 
         // skewed column names TOK_TABCOLNAME 获取属性集合,这些属性是需要被优化的属性
-        skewedColNames = analyzeSkewedTablDDLColNames(skewedColNames, child);
+        skewedColNames = analyzeSkewedTablDDLColNames(skewedColNames, child);//解析SKEWED BY (属性字符串,属性字符串)
         // skewed value
-        analyzeDDLSkewedValues(skewedValues, child);
+        analyzeDDLSkewedValues(skewedValues, child);//解析on (属性值集合xxx,xxx)或者on (多组属性值集合 (xxx,xxx),(xxx,xxx),(xxx,xxx) )解析后的value值
         // stored as directories
         storedAsDirs = analyzeStoredAdDirs(child);
 
@@ -9218,7 +9295,7 @@ tableSource
     CreateTableDesc crtTblDesc = null;
     switch (command_type) {
 
-    case CREATE_TABLE: // REGULAR CREATE TABLE DDL
+    case CREATE_TABLE: // REGULAR CREATE TABLE DDL 不用like和as语句创建表,仅仅创建表,不添加数据
       tblProps = addDefaultProperties(tblProps);//为参数添加默认的属性信息
 
       crtTblDesc = new CreateTableDesc(tableName, isExt, cols, partCols,
@@ -9239,7 +9316,7 @@ tableSource
           crtTblDesc), conf));
       break;
 
-    case CTLT: // create table like <tbl_name>
+    case CTLT: // create table like <tbl_name> 使用like方式创建表
       tblProps = addDefaultProperties(tblProps);//为参数添加默认的属性信息
 
       //用like语句创建的table,table的属性信息、分区信息都在原始table中,因此不需要再该实体类中存在
@@ -9247,11 +9324,13 @@ tableSource
           storageFormat.inputFormat, storageFormat.outputFormat, location,
           shared.serde, shared.serdeProps, tblProps, ifNotExists, likeTableName);
       SessionState.get().setCommandType(HiveOperation.CREATETABLE);
+      
+      //创建通过create table like方式创建表
       rootTasks.add(TaskFactory.get(new DDLWork(getInputs(), getOutputs(),
           crtTblLikeDesc), conf));
       break;
 
-    case CTAS: // create table as select
+    case CTAS: // create table as select 使用as select 查询语句的方式创建表,说明该数据库表一定已经存在了
 
       // Verify that the table does not already exist 校验该table不能存在
       String databaseName;
@@ -9270,7 +9349,7 @@ tableSource
 
       tblProps = addDefaultProperties(tblProps);
 
-      //通过as select创建的table
+      //通过as select创建的table,
       crtTblDesc = new CreateTableDesc(databaseName, tableName, isExt, cols, partCols,
           bucketCols, sortCols, numBuckets, rowFormatParams.fieldDelim,
           rowFormatParams.fieldEscape,
@@ -9292,26 +9371,27 @@ tableSource
   }
 
   /**
-KW_CREATE (orReplace)? KW_VIEW (ifNotExists)? name=tableName
-        (LPAREN columnNameCommentList RPAREN)? tableComment? viewPartition?
-        tablePropertiesPrefixed?
-        KW_AS
-        selectStatement
+CREATE [OR REPLACE] VIEW [IF NOT Exists] tableName [("columnName1" COMMENT string,"columnName2" COMMENT string)] [COMMENT String]
+[PARTITIONED ON (columnName1,columnName2)]
+[TBLPROPERTIES (keyValueProperty,keyValueProperty,keyProperty,keyProperty)]
+AS selectStatement
    * 创建视图,视图仅仅是表象,后期还是要select查询的
-   * 返回select的节点对象
+   * 返回select的节点对象,即AS后面的节点
    */
   private ASTNode analyzeCreateView(ASTNode ast, QB qb)
       throws SemanticException {
     String tableName = getUnescapedName((ASTNode) ast.getChild(0));//视图名称
-    List<FieldSchema> cols = null;//视图需要的列属性对象集合
-    boolean ifNotExists = false;
-    boolean orReplace = false;//true表示要替换所有的列
-    boolean isAlterViewAs = false;
-    String comment = null;//视图的备注
-    ASTNode selectStmt = null;//视图对应的select节点对象
-    Map<String, String> tblProps = null;//视图的额外属性键值对
-    List<String> partColNames = null;//视图分区字段集合,是字符串,因为分区只需要字符串即可
+    List<FieldSchema> cols = null;//视图需要的列属性对象集合,解析("columnName1" COMMENT string,"columnName2" COMMENT string)
+    String comment = null;//视图的备注,解析COMMENT String
+    Map<String, String> tblProps = null;//解析TBLPROPERTIES (keyValueProperty,keyValueProperty,keyProperty,keyProperty)
+    List<String> partColNames = null;//解析PARTITIONED ON (columnName1,columnName2)
 
+    boolean ifNotExists = false;
+    boolean orReplace = false;//true表示要替换所有的列,解析OR REPLACE
+    
+    boolean isAlterViewAs = false;//执行alert view tableName AS selectStatement命令时候才设置isAlterViewAs属性
+    ASTNode selectStmt = null;//视图对应的select节点对象,即AS后面的节点
+    
     LOG.info("Creating view " + tableName + " position="
         + ast.getCharPositionInLine());
     int numCh = ast.getChildCount();
@@ -9325,18 +9405,22 @@ KW_CREATE (orReplace)? KW_VIEW (ifNotExists)? name=tableName
         orReplace = true;
         break;
       case HiveParser.TOK_QUERY:
+    	//解析AS select语句
         selectStmt = child;
         break;
       case HiveParser.TOK_TABCOLNAME:
+    	//解析xxx colType COMMENT xxx,xxx colType COMMENT xxx
         cols = getColumns(child);
         break;
       case HiveParser.TOK_TABLECOMMENT:
         comment = unescapeSQLString(child.getChild(0).getText());
         break;
       case HiveParser.TOK_TABLEPROPERTIES:
+    	//解析TBLPROPERTIES (keyValueProperty,keyValueProperty,keyProperty,keyProperty)
         tblProps = DDLSemanticAnalyzer.getProps((ASTNode) child.getChild(0));
         break;
       case HiveParser.TOK_VIEWPARTCOLS:
+    	//解析PARTITIONED ON (columnName1,columnName2)
         partColNames = getColumnNames((ASTNode) child.getChild(0));
         break;
       default:
@@ -9348,6 +9432,7 @@ KW_CREATE (orReplace)? KW_VIEW (ifNotExists)? name=tableName
       throw new SemanticException("Can't combine IF NOT EXISTS and OR REPLACE.");
     }
 
+    //执行alert view tableName AS selectStatement命令时候才设置isAlterViewAs属性
     if (ast.getToken().getType() == HiveParser.TOK_ALTERVIEW_AS) {
       isAlterViewAs = true;
       orReplace = true;

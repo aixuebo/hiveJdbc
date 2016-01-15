@@ -44,17 +44,28 @@ import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoFactory;
 
 /**
  * CreateTableDesc.
- * CREATE [EXTERNAL] TABLE [IF NOT EXISTS] table_name
-  [(col_name data_type [COMMENT col_comment], ...)]
-  [COMMENT table_comment]
-  [PARTITIONED BY (col_name data_type
-    [COMMENT col_comment], ...)]
-  [CLUSTERED BY (col_name, col_name, ...)
-  [SORTED BY (col_name [ASC|DESC], ...)] 可以利用SORT BY 对数据进行排序
-  INTO num_buckets BUCKETS]
-  [ROW FORMAT row_format]
-  [STORED AS file_format]
-  [LOCATION hdfs_path]
+createTableStatement 创建表
+格式:
+a.CREATE [EXTERNAL] TABLE [IF NOT Exists] tableName LIKE tableName [LOCATION xxx] [TBLPROPERTIES (keyValueProperty,keyValueProperty,keyProperty,keyProperty)]
+b.CREATE [EXTERNAL] TABLE [IF NOT Exists] tableName [(columnNameTypeList)] 
+  [COMMENT String] //备注
+  [PARTITIONED BY (xxx colType COMMENT xxx,xxx colType COMMENT xxx)] //分区
+  [CLUSTERED BY (column1,column2) [SORTED BY (column1 desc,column2 desc)] into Number BUCKETS] //为表进行分桶,即设置hadoop的partition类,以及设置每一个reduce中的排序方式
+  [tableSkewed] //为表设置偏斜属性
+  [tableRowFormat] //解析一行信息
+  [tableFileFormat] //数据表的存储方式
+  [LOCATION xxx] //存储在HDFS什么路径下
+  [TBLPROPERTIES (keyValueProperty,keyValueProperty,keyProperty,keyProperty)] //设置table的属性信息
+  [AS    selectClause
+   fromClause
+   whereClause?
+   groupByClause?
+   havingClause?
+   orderByClause?
+   clusterByClause?
+   distributeByClause?
+   sortByClause?
+   window_clause?] //写入sql查询语句,用于创建表
  */
 @Explain(displayName = "Create Table")
 public class CreateTableDesc extends DDLDesc implements Serializable {
@@ -63,30 +74,36 @@ public class CreateTableDesc extends DDLDesc implements Serializable {
   String databaseName;//表所在数据库名字
   String tableName;//表名字
   boolean isExternal;//是否是外部表
-  ArrayList<FieldSchema> cols;//该表的所有属性集合FieldSchema
-  ArrayList<FieldSchema> partCols;//分区字段集合
+  ArrayList<FieldSchema> cols;//该表的所有属性集合FieldSchema,解析columnNameTypeList
+  ArrayList<FieldSchema> partCols;//分区字段集合,解析PARTITIONED BY (xxx colType COMMENT xxx,xxx colType COMMENT xxx)
+  
+  //解析CLUSTERED BY (column1,column2) [SORTED BY (column1 desc,column2 desc)] into Number BUCKETS
   ArrayList<String> bucketCols;
   ArrayList<Order> sortCols;//可以利用SORT BY 对数据进行排序
   int numBuckets;
+  
   String fieldDelim;//每一个属性的拆分字符
   String fieldEscape;//每一个属性的拆分字符 转义信息
   String collItemDelim;//该表中集合对象的拆分字符
   String mapKeyDelim;//该表中map对象的key-value之间拆分字符
   String lineDelim;//换行拆分字符
+  
   String comment;//注释
+  
   String inputFormat;//输入格式
   String outputFormat;//输出格式
   String location;//该表数据的存储路径
   String serName;
   String storageHandler;
   Map<String, String> serdeProps;
+  
   Map<String, String> tblProps;//全局属性集合
   boolean ifNotExists;//是否设置了不存在属性
-  //SKEWED BY (id) ON (142624653, 198477395, 102641838, 138947865, 156483436, 96411677, 210082076, 800174765, 139116901, 704352025)
-  //SKEWED BY (col1, col2) ON (('s1',1), ('s3',3), ('s13',13), ('s78',78))
-  List<String> skewedColNames;//id
-  List<List<String>> skewedColValues;//用逗号拆分成集合,如果skewedColNames是两个以上列,则每一个元素又是一个List,例如('s1',1)
-  boolean isStoredAsSubDirectories = false;
+  //SKEWED BY (id) ON (142624653, 198477395, 102641838, 138947865, 156483436, 96411677, 210082076, 800174765, 139116901, 704352025) [STORED AS DIRECTORIES]
+  //SKEWED BY (col1, col2) ON (('s1',1), ('s3',3), ('s13',13), ('s78',78)) [STORED AS DIRECTORIES]
+  List<String> skewedColNames;//解析SKEWED BY (col1, col2)
+  List<List<String>> skewedColValues;//用逗号拆分成集合,如果skewedColNames是两个以上列,则每一个元素又是一个List,例如('s1',1),解析ON (('s1',1), ('s3',3), ('s13',13), ('s78',78))
+  boolean isStoredAsSubDirectories = false;//解析[STORED AS DIRECTORIES]
 
   public CreateTableDesc() {
   }

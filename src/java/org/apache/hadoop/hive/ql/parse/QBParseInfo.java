@@ -38,20 +38,24 @@ import org.apache.hadoop.hive.ql.parse.BaseSemanticAnalyzer.tableSpec;
 public class QBParseInfo {
 
   private final boolean isSubQ;//是否包含子查询
-  private final String alias;
+  private final String alias;//别名,即from (select...) as yyy中的yyy
   private ASTNode joinExpr;
   private ASTNode hints;//select中的hint节点
   private final HashMap<String, ASTNode> aliasToSrc;//别名为key,value为from子句
   private final HashMap<String, ASTNode> nameToDest;//key是目标,value是该目标对应的根节点
   private final HashMap<String, TableSample> nameToSample;//from的抽样子句,key是table的别名
+  
+  private final Map<String, ASTNode> destToSelExpr;//key是目的地,value是SELECT [hintClause] [ALL|DISTINCT] selectList
   private final Map<ASTNode, String> exprToColumnAlias;//映射select中每一个属性和对应的别名,key是属性节点,value是别名
-  private final Map<String, ASTNode> destToSelExpr;//目标对象的select节点
+  
   private final HashMap<String, ASTNode> destToWhereExpr;//where语句的语法对象为value,key是目标,即谁的where条件
   private final HashMap<String, ASTNode> destToGroupby;//group by语句的语法对象为value,key是目标,即可能包含嵌套的子查询
+  private final Map<String, ASTNode> destToHaving;//having语句的语法对象为value,key是目标,即可能包含嵌套的子查询
+  
+  //GROUP BY expression,expression...[WITH ROLLUP | WITH CUBE] [GROUPING SETS (groupingSetExpression,groupingSetExpression..)]
   private final Set<String> destRollups;//存储有roll by的key目标
   private final Set<String> destCubes;//存储有cube by的key目标
   private final Set<String> destGroupingSets;//存储有groupSet的key目标
-  private final Map<String, ASTNode> destToHaving;//having语句的语法对象为value,key是目标,即可能包含嵌套的子查询
   private final HashSet<String> insertIntoTables;//涉及到的insert into 到哪个表集合,该集合内容格式是db.tableName,注意:仅仅针对INSERT INTO语句,如果一个数据库是分桶的,是不允许向该数据库进行insert插入数据的
 
   //KW_ANALYZE KW_TABLE (parttype=tableOrPartition) KW_COMPUTE KW_STATISTICS ((noscan=KW_NOSCAN) | (partialscan=KW_PARTIALSCAN) | (KW_FOR KW_COLUMNS statsColumnName=columnNameList))? -> ^(TOK_ANALYZE $parttype $noscan? $partialscan? $statsColumnName?)
@@ -98,14 +102,15 @@ public class QBParseInfo {
   private final HashMap<String, Integer> destToLimit;//limit对应的数字为value,key是目标,即可能包含嵌套的子查询
   private int outerQueryLimit;
 
-  // used by GroupBy 该存储每一个select中存储的聚合函数,因为存在函数到嵌套函数的,比如min(string()),因此value是一个节点信息,通过该信息可以获取嵌套关系
+  // used by GroupBy 该存储每一个select或者having中存储的聚合函数,因为存在函数到嵌套函数的,比如min(string()),因此value是一个节点信息,通过该信息可以获取嵌套关系
   //key是目标,即可能包含嵌套的子查询,例如可能是group by,可能是having by等
   //value中key是集合函数的名称,value是聚合函数对应对应的节点,通过该信息可以获取嵌套关系
   private final LinkedHashMap<String, LinkedHashMap<String, ASTNode>> destToAggregationExprs;
-  //过滤,只要distinct函数集合,value就是该集合,key是目标,即可能包含嵌套的子查询
+  
+  //过滤,只要distinct函数集合,value就是该集合,key是目标
   private final HashMap<String, List<ASTNode>> destToDistinctFuncExprs;
 
-  // used by Windowing
+  // used by Windowing 该目的地中使用的哪些窗口函数
   private final LinkedHashMap<String, LinkedHashMap<String, ASTNode>> destToWindowingExprs;
 
 
@@ -159,6 +164,11 @@ public class QBParseInfo {
     destToAggregationExprs.put(clause, aggregationTrees);
   }
 
+  /**
+   * 将select和having中的聚合函数存储到整体集合中
+   * @param clause
+   * @param aggregationTrees
+   */
   public void addAggregationExprsForClause(String clause,
       LinkedHashMap<String, ASTNode> aggregationTrees) {
     if (destToAggregationExprs.containsKey(clause)) {

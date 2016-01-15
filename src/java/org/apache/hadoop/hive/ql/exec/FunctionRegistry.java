@@ -1662,6 +1662,7 @@ public final class FunctionRegistry {
    *          name of function
    * @return true if a GenericUDF or GenericUDAF exists for this name and implyOrder is true, false
    *         otherwise.
+   * 是否意味着要排序
    */
   public static boolean impliesOrder(String functionName) {
 

@@ -40,9 +40,9 @@ public class DDLWork implements Serializable {
   private CreateDatabaseDesc createDatabaseDesc;//创建一个数据库操作
   private SwitchDatabaseDesc switchDatabaseDesc;//切换数据库操作
   private DropDatabaseDesc dropDatabaseDesc;//删除一个数据库操作
-  private CreateTableDesc createTblDesc;
-  private CreateTableLikeDesc createTblLikeDesc;
-  private CreateViewDesc createVwDesc;
+  private CreateTableDesc createTblDesc;//创建一个表
+  private CreateTableLikeDesc createTblLikeDesc;//创建通过create table like方式创建表
+  private CreateViewDesc createVwDesc;//创建一个视图
   private DropTableDesc dropTblDesc;//删除一个数据表操作,也可能仅仅删除该表的某一些分区
   private AlterTableDesc alterTblDesc;//做一个alter更改表数据的操作
   private AlterIndexDesc alterIdxDesc;

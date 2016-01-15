@@ -609,7 +609,7 @@ public abstract class BaseSemanticAnalyzer {
     return null;
   }
 
-  //获取所有的数据库属性集合
+  //获取所有的数据库属性集合,解析xxx colType COMMENT xxx,xxx colType COMMENT xxx
   protected List<FieldSchema> getColumns(ASTNode ast) throws SemanticException {
     return getColumns(ast, true);
   }
@@ -630,6 +630,7 @@ public abstract class BaseSemanticAnalyzer {
    * Get the list of FieldSchema out of the ASTNode.
    * 获取数据库属性集合
    * lowerCase:true,表示将name属性名字改成小写
+   * 解析式xxx colType COMMENT xxx,xxx colType COMMENT xxx
    */
   public static List<FieldSchema> getColumns(ASTNode ast, boolean lowerCase) throws SemanticException {
 	  //FieldSchema 表示数据库表的一个属性,包含name、类型、注释

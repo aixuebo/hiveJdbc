@@ -175,8 +175,8 @@ class UnparseTranslator {
     }
     assert (identifier.getToken().getType() == HiveParser.Identifier);
     String replacementText = identifier.getText();
-    replacementText = BaseSemanticAnalyzer.unescapeIdentifier(replacementText);
-    replacementText = HiveUtils.unparseIdentifier(replacementText);
+    replacementText = BaseSemanticAnalyzer.unescapeIdentifier(replacementText);//去除``字符信息,该字符应用于数据库表名字
+    replacementText = HiveUtils.unparseIdentifier(replacementText);//对sql的关键字而言,添加``字符
     addTranslation(identifier, replacementText);
   }
 

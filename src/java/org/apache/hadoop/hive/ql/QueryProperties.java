@@ -38,7 +38,7 @@ public class QueryProperties {
   boolean hasSortBy = false;//是否设置了sort by,是分桶ClusterBy的一个子步骤,但是仅仅排序,但是没有按照什么字段去进行分桶操作
   boolean hasJoinFollowedByGroupBy = false;//是否在有join表链接的情况下,依然设置了group by语句
   boolean hasPTF = false;//from子句使用了partitionTableFunctionSource,属于窗口函数的应用
-  boolean hasWindowing = false;//使用了窗口函数
+  boolean hasWindowing = false;//select中的函数使用了窗口函数
 
   // does the query have a using clause
   boolean usesScript = false;

@@ -51,8 +51,8 @@ public class Order implements org.apache.thrift.TBase<Order, Order._Fields>, jav
     schemes.put(TupleScheme.class, new OrderTupleSchemeFactory());
   }
 
-  private String col; // required
-  private int order; // required
+  private String col; // required 属性名
+  private int order; // required 升序还是降序
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {

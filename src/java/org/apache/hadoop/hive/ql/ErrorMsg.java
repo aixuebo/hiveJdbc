@@ -87,7 +87,7 @@ public enum ErrorMsg {
   INVALID_MAPINDEX_CONSTANT(10031, "Non-constant expression for map indexes not supported"),
   INVALID_MAPINDEX_TYPE(10032, "MAP key type does not match index expression type"),
   NON_COLLECTION_TYPE(10033, "[] not valid on non-collection types"),
-  SELECT_DISTINCT_WITH_GROUPBY(10034, "SELECT DISTINCT and GROUP BY can not be in the same query"),
+  SELECT_DISTINCT_WITH_GROUPBY(10034, "SELECT DISTINCT and GROUP BY can not be in the same query"),//select distinct语句不能与group by一同存在
   COLUMN_REPEATED_IN_PARTITIONING_COLS(10035, "Column repeated in partitioning columns"),
   DUPLICATE_COLUMN_NAMES(10036, "Duplicate column name:"),
   //CLUSTERED BY (column1,column2) [SORTED BY (column1 desc,column2 desc)] into Number BUCKETS语法中必须存在into Number BUCKETS语句,并且Number一定要大于1
@@ -126,7 +126,7 @@ public enum ErrorMsg {
   NEED_PARTITION_ERROR(10062, "Need to specify partition columns because the destination "
       + "table is partitioned"),
   CTAS_CTLT_COEXISTENCE(10063, "Create table command does not allow LIKE and AS-SELECT in "
-      + "the same command"),
+      + "the same command"),//as语法不允许使用like语法创建sql
   LINES_TERMINATED_BY_NON_NEWLINE(10064, "LINES TERMINATED BY only supports "
       + "newline '\\n' right now"),
   CTAS_COLLST_COEXISTENCE(10065, "CREATE TABLE AS SELECT command cannot specify "
@@ -136,9 +136,9 @@ public enum ErrorMsg {
       + "the target table"),
   INVALID_SELECT_SCHEMA(10067, "Cannot derive schema from the select-clause"),
   CTAS_PARCOL_COEXISTENCE(10068, "CREATE-TABLE-AS-SELECT does not support "
-      + "partitioning in the target table "),
+      + "partitioning in the target table "),//CREATE-TABLE-AS-SELECT方式不支持partition分区以及CLUSTERED BY分桶
   CTAS_MULTI_LOADFILE(10069, "CREATE-TABLE-AS-SELECT results in multiple file load"),
-  CTAS_EXTTBL_COEXISTENCE(10070, "CREATE-TABLE-AS-SELECT cannot create external table"),
+  CTAS_EXTTBL_COEXISTENCE(10070, "CREATE-TABLE-AS-SELECT cannot create external table"),//CREATE-TABLE-AS-SELECT方式,不能创建外部表外部表
   INSERT_EXTERNAL_TABLE(10071, "Inserting into a external table is not allowed"),
   DATABASE_NOT_EXISTS(10072, "Database does not exist:"),
   TABLE_ALREADY_EXISTS(10073, "Table already exists:", "42S02"),
@@ -365,7 +365,7 @@ public enum ErrorMsg {
   BAD_LOCATION_VALUE(10244, "{0}  is not absolute or has no scheme information.  Please specify a complete absolute uri with scheme information."),
   UNSUPPORTED_ALTER_TBL_OP(10245, "{0} alter table options is not supported"),
   INVALID_BIGTABLE_MAPJOIN(10246, "{0} table chosen for streaming is not valid", true),
-  MISSING_OVER_CLAUSE(10247, "Missing over clause for function : "),
+  MISSING_OVER_CLAUSE(10247, "Missing over clause for function : "),//函数名字不允许排序
   PARTITION_SPEC_TYPE_MISMATCH(10248, "Cannot add partition column {0} of type {1} as it cannot be converted to type {2}", true),
 
   SCRIPT_INIT_ERROR(20000, "Unable to initialize custom script."),

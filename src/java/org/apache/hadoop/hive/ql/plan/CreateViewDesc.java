@@ -28,22 +28,30 @@ import org.apache.hadoop.hive.ql.exec.Utilities;
 /**
  * CreateViewDesc.
  * 创建一个视图
+ * CREATE [OR REPLACE] VIEW [IF NOT Exists] tableName [("columnName1" COMMENT string,"columnName2" COMMENT string)] [COMMENT String]
+[PARTITIONED ON (columnName1,columnName2)]
+[TBLPROPERTIES (keyValueProperty,keyValueProperty,keyProperty,keyProperty)]
+AS selectStatement
+
+
+alert view tableName AS selectStatement
  */
 @Explain(displayName = "Create View")
 public class CreateViewDesc extends DDLDesc implements Serializable {
   private static final long serialVersionUID = 1L;
 
-  private String viewName;
+  private String viewName;//解析tableName 视图的名字
   private String originalText;
   private String expandedText;
-  private List<FieldSchema> schema;
-  private Map<String, String> tblProps;
-  private List<String> partColNames;
-  private List<FieldSchema> partCols;
-  private String comment;
+  private List<FieldSchema> schema;//解析("columnName1" COMMENT string,"columnName2" COMMENT string)
+  private Map<String, String> tblProps;//解析TBLPROPERTIES (keyValueProperty,keyValueProperty,keyProperty,keyProperty)
+  private List<String> partColNames;//解析PARTITIONED ON (columnName1,columnName2)
+  private List<FieldSchema> partCols;//解析PARTITIONED ON (columnName1,columnName2)
+  private String comment;//解析COMMENT String
   private boolean ifNotExists;
   private boolean orReplace;
-  private boolean isAlterViewAs;
+  
+  private boolean isAlterViewAs;//执行alert view tableName AS selectStatement命令时候才设置isAlterViewAs属性
 
   /**
    * For serialization only.

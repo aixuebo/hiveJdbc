@@ -32,6 +32,8 @@ import org.apache.hadoop.hive.ql.plan.CreateTableDesc;
 /**
  * Implementation of the query block.
  * 表示一次查询语句定义的信息,该信息可能也是子查询中的一次查询
+ * 
+ * 该实体表示针对sql总体上的一个统计信息
  **/
 public class QB {
 
@@ -39,8 +41,8 @@ public class QB {
 
   private final int numJoins = 0;
   private final int numGbys = 0;
-  private int numSels = 0;//有多少个select字段
-  private int numSelDi = 0;//有多少个select distinct字段
+  private int numSels = 0;//出现多少个select语法
+  private int numSelDi = 0;//出现多少个select distinct语法
   private HashMap<String, String> aliasToTabs;//设置别名key,和数据库表名value的映射关系
   private HashMap<String, QBExpr> aliasToSubq;//设置别名key,和子查询表名value的映射关系
   private HashMap<String, Map<String, String>> aliasToProps;//为table设置对应的全局属性,key是数据库的表别名,value是该数据库对应的信息,这些信息都是查询sql中存储的
@@ -51,7 +53,7 @@ public class QB {
   private String id;
   private boolean isQuery;//true表示该query是子查询中的query
   private boolean isAnalyzeRewrite;
-  private CreateTableDesc tblDesc = null; // table descriptor of the final
+  private CreateTableDesc tblDesc = null; // table descriptor of the final,create table as select 此语法创建的表对象
   private CreateTableDesc localDirectoryDesc = null ;
 
   // used by PTFs
@@ -62,6 +64,7 @@ public class QB {
   private HashMap<ASTNode, PTFInvocationSpec> ptfNodeToSpec;
   /*
    * the WindowingSpec used for windowing clauses in this QB.
+   * key为别名,每一个别名分配一个窗口函数,即select 选择项里面有窗口函数的,比如有2个,则这两个都存储到WindowingSpec对象中
    */
   private HashMap<String, WindowingSpec> destToWindowingSpec;
 

@@ -24,20 +24,29 @@ import java.util.Map;
 /**
  * CreateTableLikeDesc.
  * 用like语句创建的table,table的属性信息、分区信息都在原始table中,因此不需要再该实体类中存在
+ * 
+ * createTableStatement 创建表
+格式:
+CREATE [EXTERNAL] TABLE [IF NOT Exists] tableName LIKE tableName [LOCATION xxx] [TBLPROPERTIES (keyValueProperty,keyValueProperty,keyProperty,keyProperty)]
+  [tableRowFormat] //解析一行信息
+  [tableFileFormat] //数据表的存储方式
  */
 @Explain(displayName = "Create Table")
 public class CreateTableLikeDesc extends DDLDesc implements Serializable {
   private static final long serialVersionUID = 1L;
   String tableName;
-  boolean isExternal;
+  
+  //解析tableRowFormat和tableFileFormat
   String defaultInputFormat;
   String defaultOutputFormat;
   String defaultSerName;
   Map<String, String> defaultSerdeProps;
-  String location;
-  Map<String, String> tblProps;
+  
+  String location;//解析LOCATION xxx
+  Map<String, String> tblProps;//解析TBLPROPERTIES (keyValueProperty,keyValueProperty,keyProperty,keyProperty)
   boolean ifNotExists;
-  String likeTableName;
+  boolean isExternal;
+  String likeTableName;//解析LIKE tableName
 
   public CreateTableLikeDesc() {
   }

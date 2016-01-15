@@ -47,9 +47,9 @@ public class FieldSchema implements org.apache.thrift.TBase<FieldSchema, FieldSc
     schemes.put(TupleScheme.class, new FieldSchemaTupleSchemeFactory());
   }
 
-  private String name; // required
-  private String type; // required
-  private String comment; // required
+  private String name; // required属性name
+  private String type; // required属性类型
+  private String comment; // required备注
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {

@@ -58,6 +58,21 @@ public class CliDriverTest {
 	  }
 	  
 	  @Test
+	  public void test5(){
+		  HiveConf conf = new HiveConf();
+		  SessionState.start(conf);
+		  StringBuffer command = new StringBuffer();
+			command.append("select id,max(name),age,sex from biao")
+		       .append(" where id = 100 ");
+		  Driver driver = new Driver(conf);
+		  try {
+			driver.run(command.toString());
+		} catch (CommandNeedRetryException e) {
+			e.printStackTrace();
+		}
+	  }
+	  
+	  @Test
 	  public void test4(){
 		  String[] args = {"hive"};
 		    int ret;

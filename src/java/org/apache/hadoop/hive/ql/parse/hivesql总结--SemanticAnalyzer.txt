@@ -1,0 +1,22 @@
+一、group by 和 order by 中使用数字
+select name,age from biao group by 1 order by 2
+其中1表示name,2表示age
+
+二、创建表
+1.CREATE-TABLE-AS-SELECT方式不支持partition分区以及CLUSTERED BY分桶
+2.CREATE-TABLE-AS-SELECT方式,不能创建外部表外部表
+
+三、select 字段 、函数、窗口函数
+1.函数的格式是function()形式
+2.窗口函数是function() OVER window_specification形式
+3.获取所有在select中产生的聚合函数集合
+4.设置select中别名的选择项与别名的映射关系
+5.设置在group by中
+6.设置在select中dinstinct函数集合
+四、
+select distinct(xxx) 不能与group by一同使用
+例如:以下sql是有问题的
+select distinct(channel)
+from stat.message
+where log_day = '20160114'
+group by mobile

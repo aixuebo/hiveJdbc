@@ -1,4 +1,7 @@
-
+/**
+ * Implementation of the semantic analyzer.
+ * 该解析器只要用于解析主要执行select from等sql的解析器,是hive的最重要的解析器
+ */
 public class SemanticAnalyzer extends BaseSemanticAnalyzer {
   private HashMap<TableScanOperator, ExprNodeDesc> opToPartPruner;
   private HashMap<TableScanOperator, PrunedPartitionList> opToPartList;
@@ -48,13 +51,90 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
   // Max characters when auto generating the column name with func name
   private static final int AUTOGEN_COLALIAS_PRFX_MAXLENGTH = 20;
 
+  //KW_ANALYZE KW_TABLE (parttype=tableOrPartition) KW_COMPUTE KW_STATISTICS ((noscan=KW_NOSCAN) | (partialscan=KW_PARTIALSCAN) | (KW_FOR KW_COLUMNS statsColumnName=columnNameList))? -> ^(TOK_ANALYZE $parttype $noscan? $partialscan? $statsColumnName?)
   // flag for no scan during analyze ... compute statistics
   protected boolean noscan = false;
 
   //flag for partial scan during analyze ... compute statistics
   protected boolean partialscan = false;
 
+  private static class Phase1Ctx {
+    String dest;
+    int nextNum;
+  }
 
+  //校验输入格式.必须是CombineHiveInputFormat格式
+  private void assertCombineInputFormat(Tree numerator, String message) throws SemanticException {
+    String inputFormat = HiveConf.getVar(conf, HiveConf.ConfVars.HIVEINPUTFORMAT);
+    if (!inputFormat.equals(CombineHiveInputFormat.class.getName())) {
+      throw new SemanticException(generateErrorMessage((ASTNode) numerator,
+          message + " sampling is not supported in " + inputFormat));
+    }
+  }
+
+  /**
+   * Given the AST with TOK_JOIN as the root, get all the aliases for the tables
+   * or subqueries in the join.
+   *
+   * @param qb
+   * @param join
+   * @throws SemanticException
+   */
+  @SuppressWarnings("nls")
+  private void processJoin(QB qb, ASTNode join) throws SemanticException {
+    int numChildren = join.getChildCount();
+    if ((numChildren != 2) && (numChildren != 3)
+        && join.getToken().getType() != HiveParser.TOK_UNIQUEJOIN) {
+      throw new SemanticException(generateErrorMessage(join,
+          "Join with multiple children"));
+    }
+
+    for (int num = 0; num < numChildren; num++) {
+      ASTNode child = (ASTNode) join.getChild(num);
+      if (child.getToken().getType() == HiveParser.TOK_TABREF) {
+    	  /**
+			//[dbName.] tableName [(key=value,key=value,key)] [tableSample] [ as Identifier ]
+			//注意:
+			//1.(此时认为解析成key=null,即不需要value属性值)
+			//tableSample函数解析如下
+			//1.TABLESAMPLE(数字    PERCENT)
+			//2.TABLESAMPLE(数字    ROWS)
+			//3.TABLESAMPLE(ByteLengthLiteral)
+			//4.TABLESAMPLE(BUCKET 数字    OUT OF 数字  [ ON expression,expression ] )
+			tableSource
+			@init { gParent.msgs.push("table source"); }
+			@after { gParent.msgs.pop(); }
+			    : tabname=tableName (props=tableProperties)? (ts=tableSample)? (KW_AS? alias=Identifier)?
+			    -> ^(TOK_TABREF $tabname $props? $ts? $alias?)
+			    ;
+    	   */
+        processTable(qb, child);
+      } else if (child.getToken().getType() == HiveParser.TOK_SUBQUERY) {//from子句,用于子查询,必须有别名
+        processSubQuery(qb, child);
+      } else if (child.getToken().getType() == HiveParser.TOK_PTBLFUNCTION) {//from子句使用了partitionTableFunctionSource
+        queryProperties.setHasPTF(true);
+        processPTF(qb, child);
+        PTFInvocationSpec ptfInvocationSpec = qb.getPTFInvocationSpec(child);
+        String inputAlias = ptfInvocationSpec == null ? null :
+          ((PartitionedTableFunctionSpec)ptfInvocationSpec.getFunction()).getAlias();
+        if ( inputAlias == null ) {
+          throw new SemanticException(generateErrorMessage(child,
+              "PTF invocation in a Join must have an alias"));
+        }
+
+      } else if (child.getToken().getType() == HiveParser.TOK_LATERAL_VIEW ||
+          child.getToken().getType() == HiveParser.TOK_LATERAL_VIEW_OUTER) {
+        // SELECT * FROM src1 LATERAL VIEW udtf() AS myTable JOIN src2 ...
+        // is not supported. Instead, the lateral view must be in a subquery
+        // SELECT * FROM (SELECT * FROM src1 LATERAL VIEW udtf() AS myTable) a
+        // JOIN src2 ...
+        throw new SemanticException(ErrorMsg.LATERAL_VIEW_WITH_JOIN
+            .getMsg(join));
+      } else if (isJoinToken(child)) {//是否from子句带有join部分,fromSource ( joinToken^ fromSource (KW_ON! expression)
+        processJoin(qb, child);
+      }
+    }
+  }
 
   /**
    * Given the AST with TOK_LATERAL_VIEW as the root, get the alias for the
@@ -97,22 +177,327 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     return alias;
   }
 
-  //如果该tab是一个视图
+
+  private void getMetaData(QBExpr qbexpr) throws SemanticException {
+    getMetaData(qbexpr, null);
+  }
+
+  private void getMetaData(QBExpr qbexpr, ReadEntity parentInput)
+      throws SemanticException {
+    if (qbexpr.getOpcode() == QBExpr.Opcode.NULLOP) {
+      getMetaData(qbexpr.getQB(), parentInput);
+    } else {
+      getMetaData(qbexpr.getQBExpr1(), parentInput);
+      getMetaData(qbexpr.getQBExpr2(), parentInput);
+    }
+  }
+
+  public void getMetaData(QB qb) throws SemanticException {
+    getMetaData(qb, null);
+  }
+
+  @SuppressWarnings("nls")
+  public void getMetaData(QB qb, ReadEntity parentInput) throws SemanticException {
+    try {
+
+      LOG.info("Get metadata for source tables");
+
+      // Go over the tables and populate the related structures.
+      // We have to materialize the table alias list since we might
+      // modify it in the middle for view rewrite.
+      List<String> tabAliases = new ArrayList<String>(qb.getTabAliases());
+
+      // Keep track of view alias to view name and read entity
+      // For eg: for a query like 'select * from V3', where V3 -> V2, V2 -> V1, V1 -> T
+      // keeps track of full view name and read entity corresponding to alias V3, V3:V2, V3:V2:V1.
+      // This is needed for tracking the dependencies for inputs, along with their parents.
+      Map<String, ObjectPair<String, ReadEntity>> aliasToViewInfo =
+          new HashMap<String, ObjectPair<String, ReadEntity>>();
+      //循环所有数据库别名,进行校验每一个数据库信息
+      for (String alias : tabAliases) {
+        String tab_name = qb.getTabNameForAlias(alias);//通过别名找到具体的数据库名字
+        Table tab = null;
+        try {//校验数据库是否存在
+          tab = db.getTable(tab_name);
+        } catch (InvalidTableException ite) {
+          throw new SemanticException(ErrorMsg.INVALID_TABLE.getMsg(qb
+              .getParseInfo().getSrcForAlias(alias)));
+        }
+
+        // Disallow INSERT INTO on bucketized tables 如果一个数据库是分桶的,是不允许向该数据库进行insert into 插入数据的,可以说是暂时不支持
+        if (qb.getParseInfo().isInsertIntoTable(tab.getDbName(), tab.getTableName()) &&
+            tab.getNumBuckets() > 0) {
+          throw new SemanticException(ErrorMsg.INSERT_INTO_BUCKETIZED_TABLE.
+              getMsg("Table: " + tab_name));
+        }
+
+        // We check offline of the table, as if people only select from an
+        // non-existing partition of an offline table, the partition won't
+        // be added to inputs and validate() won't have the information to
+        // check the table's offline status.
+        // TODO: Modify the code to remove the checking here and consolidate
+        // it in validate()
+        //数据库已经关闭了也要抛异常
+        //
+        if (tab.isOffline()) {
+          throw new SemanticException(ErrorMsg.OFFLINE_TABLE_OR_PARTITION.
+              getMsg("Table " + getUnescapedName(qb.getParseInfo().getSrcForAlias(alias))));
+        }
+
+        if (tab.isView()) {//如果该table是一个视图
+          if (qb.getParseInfo().isAnalyzeCommand()) {//视图是不支持分析的
+            throw new SemanticException(ErrorMsg.ANALYZE_VIEW.getMsg());
+          }
+          String fullViewName = tab.getDbName() + "." + tab.getTableName();
+          // Prevent view cycles
+          if (viewsExpanded.contains(fullViewName)) {
+            throw new SemanticException("Recursive view " + fullViewName +
+                " detected (cycle: " + StringUtils.join(viewsExpanded, " -> ") +
+                " -> " + fullViewName + ").");
+          }
+          replaceViewReferenceWithDefinition(qb, tab, tab_name, alias);
+          // This is the last time we'll see the Table objects for views, so add it to the inputs
+          // now
+          ReadEntity viewInput = new ReadEntity(tab, parentInput);
+          //向所有的输入源中添加新的输入源viewInput
+          viewInput = PlanUtils.addInput(inputs, viewInput);
+          aliasToViewInfo.put(alias, new ObjectPair<String, ReadEntity>(fullViewName, viewInput));
+          viewAliasToInput.put(getAliasId(alias, qb), viewInput);
+          continue;
+        }
+
+        //校验table表的读取格式一定是InputFormat的子类,因为table就是HDFS上的一个文件,要对其进行读取,过滤信息,因此一定要InputFormat的子类才能进行读取数据操作
+        if (!InputFormat.class.isAssignableFrom(tab.getInputFormatClass())) {
+          throw new SemanticException(generateErrorMessage(
+              qb.getParseInfo().getSrcForAlias(alias),
+              ErrorMsg.INVALID_INPUT_FORMAT_TYPE.getMsg()));
+        }
+
+        //设置校验好的table别名与table对象映射关系
+        qb.getMetaData().setSrcForAlias(alias, tab);
+
+        if (qb.getParseInfo().isAnalyzeCommand()) {//需要分析表
+          // allow partial partition specification for nonscan since noscan is fast.
+          tableSpec ts = new tableSpec(db, conf, (ASTNode) ast.getChild(0), true, this.noscan);
+          if (ts.specType == SpecType.DYNAMIC_PARTITION) { // dynamic partitions
+            try {
+              ts.partitions = db.getPartitionsByNames(ts.tableHandle, ts.partSpec);
+            } catch (HiveException e) {
+              throw new SemanticException(generateErrorMessage(
+                  qb.getParseInfo().getSrcForAlias(alias),
+                  "Cannot get partitions for " + ts.partSpec), e);
+            }
+          }
+          // validate partial scan command
+          QBParseInfo qbpi = qb.getParseInfo();
+          if (qbpi.isPartialScanAnalyzeCommand()) {
+            Class<? extends InputFormat> inputFormatClass = null;
+            switch (ts.specType) {
+            case TABLE_ONLY:
+              inputFormatClass = ts.tableHandle.getInputFormatClass();
+              break;
+            case STATIC_PARTITION:
+              inputFormatClass = ts.partHandle.getInputFormatClass();
+              break;
+            default:
+              assert false;
+            }
+            // throw a HiveException for non-rcfile.
+            if (!inputFormatClass.equals(RCFileInputFormat.class)) {
+              throw new SemanticException(ErrorMsg.ANALYZE_TABLE_PARTIALSCAN_NON_RCFILE.getMsg());
+            }
+          }
+
+          qb.getParseInfo().addTableSpec(alias, ts);
+        }
+      }
+
+      LOG.info("Get metadata for subqueries");
+      // Go over the subqueries and getMetaData for these
+      for (String alias : qb.getSubqAliases()) {
+        boolean wasView = aliasToViewInfo.containsKey(alias);
+        ReadEntity newParentInput = null;
+        if (wasView) {
+          viewsExpanded.add(aliasToViewInfo.get(alias).getFirst());
+          newParentInput = aliasToViewInfo.get(alias).getSecond();
+        }
+        QBExpr qbexpr = qb.getSubqForAlias(alias);
+        getMetaData(qbexpr, newParentInput);
+        if (wasView) {
+          viewsExpanded.remove(viewsExpanded.size() - 1);
+        }
+      }
+
+      RowFormatParams rowFormatParams = new RowFormatParams();
+      AnalyzeCreateCommonVars shared = new AnalyzeCreateCommonVars();
+      StorageFormat storageFormat = new StorageFormat();
+
+      LOG.info("Get metadata for destination tables");
+      // Go over all the destination structures and populate the related
+      // metadata
+      QBParseInfo qbp = qb.getParseInfo();
+
+      //遍历每一个根节点
+      //包含TOK_TAB、TOK_LOCAL_DIR、TOK_DIR
+      for (String name : qbp.getClauseNamesForDest()) {
+        ASTNode ast = qbp.getDestForClause(name);
+        switch (ast.getToken().getType()) {
+        case HiveParser.TOK_TAB: {
+          tableSpec ts = new tableSpec(db, conf, ast);
+          if (ts.tableHandle.isView()) {
+            throw new SemanticException(ErrorMsg.DML_AGAINST_VIEW.getMsg());
+          }
+
+          Class<?> outputFormatClass = ts.tableHandle.getOutputFormatClass();
+          if (!HiveOutputFormat.class.isAssignableFrom(outputFormatClass)) {
+            throw new SemanticException(ErrorMsg.INVALID_OUTPUT_FORMAT_TYPE
+                .getMsg(ast, "The class is " + outputFormatClass.toString()));
+          }
+
+          // tableSpec ts is got from the query (user specified),
+          // which means the user didn't specify partitions in their query,
+          // but whether the table itself is partitioned is not know.
+          if (ts.specType != SpecType.STATIC_PARTITION) {
+            // This is a table or dynamic partition
+            qb.getMetaData().setDestForAlias(name, ts.tableHandle);
+            // has dynamic as well as static partitions
+            if (ts.partSpec != null && ts.partSpec.size() > 0) {
+              qb.getMetaData().setPartSpecForAlias(name, ts.partSpec);
+            }
+          } else {
+            // This is a partition
+            qb.getMetaData().setDestForAlias(name, ts.partHandle);
+          }
+          if (HiveConf.getBoolVar(conf, HiveConf.ConfVars.HIVESTATSAUTOGATHER)) {
+            // Set that variable to automatically collect stats during the MapReduce job
+            qb.getParseInfo().setIsInsertToTable(true);
+            // Add the table spec for the destination table.
+            qb.getParseInfo().addTableSpec(ts.tableName.toLowerCase(), ts);
+          }
+          break;
+        }
+        
+        case HiveParser.TOK_LOCAL_DIR://设置存储在本地的哪个路径下
+        case HiveParser.TOK_DIR: {//设置存储在hdfs的哪个路径下
+          // This is a dfs file
+          String fname = stripQuotes(ast.getChild(0).getText());
+          if ((!qb.getParseInfo().getIsSubQ())
+              && (((ASTNode) ast.getChild(0)).getToken().getType() == HiveParser.TOK_TMP_FILE)) {
+
+            if (qb.isCTAS()) {
+              qb.setIsQuery(false);
+              ctx.setResDir(null);
+              ctx.setResFile(null);
+
+              // allocate a temporary output dir on the location of the table
+              String tableName = getUnescapedName((ASTNode) ast.getChild(0));
+              Table newTable = db.newTable(tableName);
+              Path location;
+              try {
+                Warehouse wh = new Warehouse(conf);
+                location = wh.getDatabasePath(db.getDatabase(newTable.getDbName()));
+              } catch (MetaException e) {
+                throw new SemanticException(e);
+              }
+              try {
+                fname = ctx.getExternalTmpFileURI(
+                    FileUtils.makeQualified(location, conf).toUri());
+              } catch (Exception e) {
+                throw new SemanticException(generateErrorMessage(ast,
+                    "Error creating temporary folder on: " + location.toString()), e);
+              }
+              if (HiveConf.getBoolVar(conf, HiveConf.ConfVars.HIVESTATSAUTOGATHER)) {
+                tableSpec ts = new tableSpec(db, conf, this.ast);
+                // Set that variable to automatically collect stats during the MapReduce job
+                qb.getParseInfo().setIsInsertToTable(true);
+                // Add the table spec for the destination table.
+                qb.getParseInfo().addTableSpec(ts.tableName.toLowerCase(), ts);
+              }
+            } else {
+              qb.setIsQuery(true);
+              fname = ctx.getMRTmpFileURI();
+              ctx.setResDir(new Path(fname));
+            }
+          }
+          qb.getMetaData().setDestForAlias(name, fname,
+              (ast.getToken().getType() == HiveParser.TOK_DIR));
+
+          CreateTableDesc localDirectoryDesc = new CreateTableDesc();
+          boolean localDirectoryDescIsSet = false;
+          int numCh = ast.getChildCount();
+          for (int num = 1; num < numCh ; num++){
+            ASTNode child = (ASTNode) ast.getChild(num);
+            if (ast.getChild(num) != null){
+              switch (child.getToken().getType()) {
+                case HiveParser.TOK_TABLEROWFORMAT:
+                  rowFormatParams.analyzeRowFormat(shared, child);
+                  localDirectoryDesc.setFieldDelim(rowFormatParams.fieldDelim);
+                  localDirectoryDesc.setLineDelim(rowFormatParams.lineDelim);
+                  localDirectoryDesc.setCollItemDelim(rowFormatParams.collItemDelim);
+                  localDirectoryDesc.setMapKeyDelim(rowFormatParams.mapKeyDelim);
+                  localDirectoryDesc.setFieldEscape(rowFormatParams.fieldEscape);
+                  localDirectoryDescIsSet=true;
+                  break;
+                case HiveParser.TOK_TABLESERIALIZER:
+                  ASTNode serdeChild = (ASTNode) child.getChild(0);
+                  shared.serde = unescapeSQLString(serdeChild.getChild(0).getText());
+                  localDirectoryDesc.setSerName(shared.serde);
+                  localDirectoryDescIsSet=true;
+                  break;
+                case HiveParser.TOK_TBLSEQUENCEFILE:
+                case HiveParser.TOK_TBLTEXTFILE:
+                case HiveParser.TOK_TBLRCFILE:
+                case HiveParser.TOK_TBLORCFILE:
+                case HiveParser.TOK_TABLEFILEFORMAT:
+                  storageFormat.fillStorageFormat(child, shared);
+                  localDirectoryDesc.setOutputFormat(storageFormat.outputFormat);
+                  localDirectoryDesc.setSerName(shared.serde);
+                  localDirectoryDescIsSet=true;
+                  break;
+              }
+            }
+          }
+          if (localDirectoryDescIsSet){
+            qb.setLocalDirectoryDesc(localDirectoryDesc);
+          }
+          break;
+        }
+        default:
+          throw new SemanticException(generateErrorMessage(ast,
+              "Unknown Token Type " + ast.getToken().getType()));
+        }
+      }
+    } catch (HiveException e) {
+      // Has to use full name to make sure it does not conflict with
+      // org.apache.commons.lang.StringUtils
+      LOG.error(org.apache.hadoop.util.StringUtils.stringifyException(e));
+      throw new SemanticException(e.getMessage(), e);
+    }
+  }
+
+  /**
+   * 如果该tab是一个视图 
+   * @param qb 
+   * @param tab table对象
+   * @param tab_name table的真实name名字
+   * @param alias table此时使用的别名
+   */
   private void replaceViewReferenceWithDefinition(QB qb, Table tab,
       String tab_name, String alias) throws SemanticException {
 
     ParseDriver pd = new ParseDriver();
-    ASTNode viewTree;
+    ASTNode viewTree;//视图的sql解析后的语法树
     final ASTNodeOrigin viewOrigin = new ASTNodeOrigin("VIEW", tab.getTableName(),
         tab.getViewExpandedText(), alias, qb.getParseInfo().getSrcForAlias(
             alias));
     try {
-      String viewText = tab.getViewExpandedText();
+      String viewText = tab.getViewExpandedText();//如果该table是视图的话,则返回该视图的内容
       // Reparse text, passing null for context to avoid clobbering
       // the top-level token stream.
-      ASTNode tree = pd.parse(viewText, null);
-      tree = ParseUtils.findRootNonNullToken(tree);
+      ASTNode tree = pd.parse(viewText, null);//临时解析该视图的sql
+      tree = ParseUtils.findRootNonNullToken(tree);//过滤到第一个不是null的节点
       viewTree = tree;
+      
       Dispatcher nodeOriginDispatcher = new Dispatcher() {
         public Object dispatch(Node nd, java.util.Stack<Node> stack,
             Object... nodeOutputs) {
@@ -140,17 +525,40 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     qb.rewriteViewToSubq(alias, tab_name, qbexpr);
   }
 
+  //校验list中是否存在elem,true表示存在
+  private boolean isPresent(String[] list, String elem) {
+    for (String s : list) {
+      if (s.toLowerCase().equals(elem)) {
+        return true;
+      }
+    }
 
+    return false;
+  }
+
+  /**
+   * 解析join后面的on表达式需要的数据库节点属于左边树还是右边树的 
+   * @param joinTree
+   * @param condn
+   * @param leftAliases 左边树则添加到该集合
+   * @param rightAliases 右边树则添加到该集合
+   * @param fields
+   * @throws SemanticException
+   */
   @SuppressWarnings("nls")
   private void parseJoinCondPopulateAlias(QBJoinTree joinTree, ASTNode condn,
       ArrayList<String> leftAliases, ArrayList<String> rightAliases,
       ArrayList<String> fields) throws SemanticException {
     // String[] allAliases = joinTree.getAllAliases();
     switch (condn.getToken().getType()) {
+    //TOK_TABLE_OR_COL(biao1))(id))(.(TOK_TABLE_OR_COL(biao))(id)))(=(.(TOK_TABLE_OR_COL(biao))(name))('xxx')
+    //原式=select * from biao left join biao1 on biao1.id = biao.id and biao.name = 'xxx'中的biao1.id = biao.id and biao.name = 'xxx'部分
     case HiveParser.TOK_TABLE_OR_COL:
       String tableOrCol = unescapeIdentifier(condn.getChild(0).getText()
           .toLowerCase());
       unparseTranslator.addIdentifierTranslation((ASTNode) condn.getChild(0));
+      
+      //查看tableOrCol别名是左边还是右边树里面的别名
       if (isPresent(joinTree.getLeftAliases(), tableOrCol)) {
         if (!leftAliases.contains(tableOrCol)) {
           leftAliases.add(tableOrCol);
@@ -159,7 +567,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         if (!rightAliases.contains(tableOrCol)) {
           rightAliases.add(tableOrCol);
         }
-      } else {
+      } else {//说明找不到该别名
         // We don't support columns without table prefix in JOIN condition right
         // now.
         // We need to pass Metadata here to know which table the column belongs
@@ -309,17 +717,17 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     }
 
     switch (joinCond.getToken().getType()) {
-    case HiveParser.KW_OR:
+    case HiveParser.KW_OR://OR
       throw new SemanticException(ErrorMsg.INVALID_JOIN_CONDITION_3
           .getMsg(joinCond));
 
-    case HiveParser.KW_AND:
+    case HiveParser.KW_AND://AND
       parseJoinCondition(joinTree, (ASTNode) joinCond.getChild(0), leftSrc, type);
       parseJoinCondition(joinTree, (ASTNode) joinCond.getChild(1), leftSrc, type);
       break;
 
-    case HiveParser.EQUAL_NS:
-    case HiveParser.EQUAL:
+    case HiveParser.EQUAL_NS://<=>
+    case HiveParser.EQUAL://'=' | '=='
       ASTNode leftCondn = (ASTNode) joinCond.getChild(0);
       ArrayList<String> leftCondAl1 = new ArrayList<String>();
       ArrayList<String> leftCondAl2 = new ArrayList<String>();
@@ -562,7 +970,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       RowResolver input, Integer pos, RowResolver output, List<String> aliases, boolean subQuery)
       throws SemanticException {
 
-    // The table alias should exist
+    // The table alias should exist必须存在该table别名,并且真实存在
     if (tabAlias != null && !input.hasTableAlias(tabAlias)) {
       throw new SemanticException(ErrorMsg.INVALID_TABLE_ALIAS.getMsg(sel));
     }
@@ -577,7 +985,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     }
 
     StringBuilder replacementText = new StringBuilder();
-    int matched = 0;
+    int matched = 0;//column名字匹配正则表达式的个数
     // add empty string to the list of aliases. Some operators (ex. GroupBy) add
     // ColumnInfos for table alias "".
     if (!aliases.contains("")) {
@@ -586,6 +994,8 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     // For expr "*", aliases should be iterated in the order they are specified
     // in the query.
     for (String alias : aliases) {
+    	
+      //循环别名, 	fMap不是null,说明该别名是table别名,返回的fMap是属性-属性对象信息
       HashMap<String, ColumnInfo> fMap = input.getFieldMap(alias);
       if (fMap == null) {
         continue;
@@ -595,7 +1005,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       for (Map.Entry<String, ColumnInfo> entry : fMap.entrySet()) {
         ColumnInfo colInfo = entry.getValue();
         String name = colInfo.getInternalName();
-        String[] tmp = input.reverseLookup(name);
+        String[] tmp = input.reverseLookup(name);//table-colnmn别名数组
 
         // Skip the colinfos which are not for this particular alias
         if (tabAlias != null && !tmp[0].equalsIgnoreCase(tabAlias)) {
@@ -606,7 +1016,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
           continue;
         }
 
-        // Not matching the regex?
+        // Not matching the regex?正则表达式必须匹配该columnName
         if (!regex.matcher(tmp[1]).matches()) {
           continue;
         }
@@ -634,6 +1044,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         }
       }
     }
+    
     if (matched == 0) {
       throw new SemanticException(ErrorMsg.INVALID_COLUMN.getMsg(sel));
     }
@@ -757,6 +1168,9 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     return null;
   }
 
+  /**
+   * name不允许在集合nameSet中存在
+   */
   private void failIfColAliasExists(Set<String> nameSet, String name)
       throws SemanticException {
     if (nameSet.contains(name)) {
@@ -1177,6 +1591,23 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     colRef[1] = colAlias;
     return colRef;
   }
+
+  /**
+   * Returns whether the pattern is a regex expression (instead of a normal
+   * string). Normal string is a string with all alphabets/digits and "_".
+   * 只允许是数字、字符、_
+   * true表示参数是数字、字符、_组成的
+   */
+  private static boolean isRegex(String pattern) {
+    for (int i = 0; i < pattern.length(); i++) {
+      if (!Character.isLetterOrDigit(pattern.charAt(i))
+          && pattern.charAt(i) != '_') {
+        return true;
+      }
+    }
+    return false;
+  }
+
 
   private Operator<?> genSelectPlan(String dest, QB qb, Operator<?> input)
       throws SemanticException {
@@ -5017,6 +5448,37 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     }
   }
 
+  //获取hint关键字所有的需要map-side端的join标签集合
+  private List<String> getMapSideJoinTables(QB qb) {
+    List<String> cols = new ArrayList<String>();
+
+
+    //获取hint标签,并且解析
+    ASTNode hints = qb.getParseInfo().getHints();
+    for (int pos = 0; pos < hints.getChildCount(); pos++) {
+      ASTNode hint = (ASTNode) hints.getChild(pos);
+      if (((ASTNode) hint.getChild(0)).getToken().getType() == HiveParser.TOK_MAPJOIN) {//仅仅解析mapjoin节点
+        // the user has specified to ignore mapjoin hint
+        if (!conf.getBoolVar(HiveConf.ConfVars.HIVEIGNOREMAPJOINHINT)) {//不忽略hint
+          ASTNode hintTblNames = (ASTNode) hint.getChild(1);
+          int numCh = hintTblNames.getChildCount();
+          for (int tblPos = 0; tblPos < numCh; tblPos++) {
+            String tblName = ((ASTNode) hintTblNames.getChild(tblPos)).getText()
+                .toLowerCase();
+            if (!cols.contains(tblName)) {
+              cols.add(tblName);
+            }
+          }
+        }
+        else {//忽略hint
+          queryProperties.setMapJoinRemoved(true);
+        }
+      }
+    }
+
+    return cols;
+  }
+
   // The join alias is modified before being inserted for consumption by sort-merge
   // join queries. If the join is part of a sub-query the alias is modified to include
   // the sub-query alias.
@@ -5124,6 +5586,198 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     return joinTree;
   }
 
+  /**
+   * JOIN 、INNER JOIN、CROSS JOIN、LEFT [OUTER] JOIN 、RIGHT [OUTER] JOIN 、FULL [OUTER] JOIN 、LEFT SEMI JOIN
+   * 解析表关联操作
+   */
+  private QBJoinTree genJoinTree(QB qb, ASTNode joinParseTree,
+      Map<String, Operator> aliasToOpInfo)
+      throws SemanticException {
+    QBJoinTree joinTree = new QBJoinTree();
+    JoinCond[] condn = new JoinCond[1];
+
+    switch (joinParseTree.getToken().getType()) {
+    case HiveParser.TOK_LEFTOUTERJOIN://LEFT [OUTER] JOIN 
+      joinTree.setNoOuterJoin(false);
+      condn[0] = new JoinCond(0, 1, JoinType.LEFTOUTER);
+      break;
+    case HiveParser.TOK_RIGHTOUTERJOIN://RIGHT [OUTER] JOIN
+      joinTree.setNoOuterJoin(false);
+      condn[0] = new JoinCond(0, 1, JoinType.RIGHTOUTER);
+      break;
+    case HiveParser.TOK_FULLOUTERJOIN://FULL [OUTER] JOIN 
+      joinTree.setNoOuterJoin(false);
+      condn[0] = new JoinCond(0, 1, JoinType.FULLOUTER);
+      break;
+    case HiveParser.TOK_LEFTSEMIJOIN://LEFT SEMI JOIN
+      joinTree.setNoSemiJoin(false);
+      condn[0] = new JoinCond(0, 1, JoinType.LEFTSEMI);
+      break;
+    default:
+      condn[0] = new JoinCond(0, 1, JoinType.INNER);//INNER JOIN或者JOIN
+      joinTree.setNoOuterJoin(true);
+      break;
+    }
+
+    joinTree.setJoinCond(condn);
+
+    ASTNode left = (ASTNode) joinParseTree.getChild(0);
+    ASTNode right = (ASTNode) joinParseTree.getChild(1);
+
+    if ((left.getToken().getType() == HiveParser.TOK_TABREF)//eg:[dbName.] tableName [(key=value,key=value,key)] [tableSample] [ as Identifier ]
+        || (left.getToken().getType() == HiveParser.TOK_SUBQUERY) //eg: (queryStatementExpression) identifier
+        || (left.getToken().getType() == HiveParser.TOK_PTBLFUNCTION)) {//eg:partition by
+      String tableName = getUnescapedUnqualifiedTableName((ASTNode) left.getChild(0))
+          .toLowerCase();//第一个位置是表名
+      String alias = left.getChildCount() == 1 ? tableName
+          : unescapeIdentifier(left.getChild(left.getChildCount() - 1)
+          .getText().toLowerCase());//最后一个位置是别名
+      // ptf node form is: ^(TOK_PTBLFUNCTION $name $alias? partitionTableFunctionSource partitioningSpec? expression*)
+      // guranteed to have an lias here: check done in processJoin
+      alias = (left.getToken().getType() == HiveParser.TOK_PTBLFUNCTION) ?
+          unescapeIdentifier(left.getChild(1).getText().toLowerCase()) :
+            alias;
+      joinTree.setLeftAlias(alias);
+      String[] leftAliases = new String[1];
+      leftAliases[0] = alias;
+      joinTree.setLeftAliases(leftAliases);
+      String[] children = new String[2];
+      children[0] = alias;
+      joinTree.setBaseSrc(children);
+      joinTree.setId(qb.getId());
+      joinTree.getAliasToOpInfo().put(
+          getModifiedAlias(qb, alias), aliasToOpInfo.get(alias));
+    } else if (isJoinToken(left)) {//遇见JOIN 、INNER JOIN、CROSS JOIN、LEFT [OUTER] JOIN 、RIGHT [OUTER] JOIN 、FULL [OUTER] JOIN 、LEFT SEMI JOIN字符串
+      QBJoinTree leftTree = genJoinTree(qb, left, aliasToOpInfo);
+      joinTree.setJoinSrc(leftTree);
+      String[] leftChildAliases = leftTree.getLeftAliases();
+      String leftAliases[] = new String[leftChildAliases.length + 1];
+      for (int i = 0; i < leftChildAliases.length; i++) {
+        leftAliases[i] = leftChildAliases[i];
+      }
+      leftAliases[leftChildAliases.length] = leftTree.getRightAliases()[0];
+      joinTree.setLeftAliases(leftAliases);
+    } else {
+      assert (false);
+    }
+
+    if ((right.getToken().getType() == HiveParser.TOK_TABREF)
+        || (right.getToken().getType() == HiveParser.TOK_SUBQUERY)
+        || (right.getToken().getType() == HiveParser.TOK_PTBLFUNCTION)) {
+      String tableName = getUnescapedUnqualifiedTableName((ASTNode) right.getChild(0))
+          .toLowerCase();
+      String alias = right.getChildCount() == 1 ? tableName
+          : unescapeIdentifier(right.getChild(right.getChildCount() - 1)
+          .getText().toLowerCase());
+      // ptf node form is: ^(TOK_PTBLFUNCTION $name $alias? partitionTableFunctionSource partitioningSpec? expression*)
+      // guranteed to have an lias here: check done in processJoin
+      alias = (right.getToken().getType() == HiveParser.TOK_PTBLFUNCTION) ?
+          unescapeIdentifier(right.getChild(1).getText().toLowerCase()) :
+            alias;
+      String[] rightAliases = new String[1];
+      rightAliases[0] = alias;
+      joinTree.setRightAliases(rightAliases);
+      String[] children = joinTree.getBaseSrc();
+      if (children == null) {
+        children = new String[2];
+      }
+      children[1] = alias;
+      joinTree.setBaseSrc(children);
+      joinTree.setId(qb.getId());
+      joinTree.getAliasToOpInfo().put(
+          getModifiedAlias(qb, alias), aliasToOpInfo.get(alias));
+      // remember rhs table for semijoin
+      if (joinTree.getNoSemiJoin() == false) {
+        joinTree.addRHSSemijoin(alias);
+      }
+    } else {
+      assert false;
+    }
+
+    ArrayList<ArrayList<ASTNode>> expressions = new ArrayList<ArrayList<ASTNode>>();
+    expressions.add(new ArrayList<ASTNode>());
+    expressions.add(new ArrayList<ASTNode>());
+    joinTree.setExpressions(expressions);
+
+    ArrayList<Boolean> nullsafes = new ArrayList<Boolean>();
+    joinTree.setNullSafes(nullsafes);
+
+    ArrayList<ArrayList<ASTNode>> filters = new ArrayList<ArrayList<ASTNode>>();
+    filters.add(new ArrayList<ASTNode>());
+    filters.add(new ArrayList<ASTNode>());
+    joinTree.setFilters(filters);
+    joinTree.setFilterMap(new int[2][]);
+
+    ArrayList<ArrayList<ASTNode>> filtersForPushing =
+        new ArrayList<ArrayList<ASTNode>>();
+    filtersForPushing.add(new ArrayList<ASTNode>());
+    filtersForPushing.add(new ArrayList<ASTNode>());
+    joinTree.setFiltersForPushing(filtersForPushing);
+
+    ASTNode joinCond = (ASTNode) joinParseTree.getChild(2);
+    ArrayList<String> leftSrc = new ArrayList<String>();
+    parseJoinCondition(joinTree, joinCond, leftSrc);
+    if (leftSrc.size() == 1) {
+      joinTree.setLeftAlias(leftSrc.get(0));
+    }
+
+    // check the hints to see if the user has specified a map-side join. This
+    // will be removed later on, once the cost-based
+    // infrastructure is in place
+    //检查是否存在hint,即map端的join操作
+    if (qb.getParseInfo().getHints() != null) {
+    	//获取hint关键字所有的需要map-side端的join标签集合
+      List<String> mapSideTables = getMapSideJoinTables(qb);
+      List<String> mapAliases = joinTree.getMapAliases();
+
+      for (String mapTbl : mapSideTables) {//循环每一个标签,查看标签是否是left端或者right端表的别名,是的话,则设置map-side的表名字集合
+        boolean mapTable = false;
+        for (String leftAlias : joinTree.getLeftAliases()) {
+          if (mapTbl.equalsIgnoreCase(leftAlias)) {
+            mapTable = true;
+          }
+        }
+        for (String rightAlias : joinTree.getRightAliases()) {
+          if (mapTbl.equalsIgnoreCase(rightAlias)) {
+            mapTable = true;
+          }
+        }
+
+        if (mapTable) {
+          if (mapAliases == null) {
+            mapAliases = new ArrayList<String>();
+          }
+          mapAliases.add(mapTbl);
+          joinTree.setMapSideJoin(true);
+        }
+      }
+
+      joinTree.setMapAliases(mapAliases);
+
+      parseStreamTables(joinTree, qb);
+    }
+
+    return joinTree;
+  }
+
+  //标示大表是哪些别名的表
+  private void parseStreamTables(QBJoinTree joinTree, QB qb) {
+    List<String> streamAliases = joinTree.getStreamAliases();
+
+    for (Node hintNode : qb.getParseInfo().getHints().getChildren()) {
+      ASTNode hint = (ASTNode) hintNode;
+      if (hint.getChild(0).getType() == HiveParser.TOK_STREAMTABLE) {
+        for (int i = 0; i < hint.getChild(1).getChildCount(); i++) {
+          if (streamAliases == null) {
+            streamAliases = new ArrayList<String>();
+          }
+          streamAliases.add(hint.getChild(1).getChild(i).getText());
+        }
+      }
+    }
+
+    joinTree.setStreamAliases(streamAliases);
+  }
 
   /**
    * Merges node to target
@@ -6833,6 +7487,41 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
   @Override
   @SuppressWarnings("nls")
   public void analyzeInternal(ASTNode ast) throws SemanticException {
+    ASTNode child = ast;
+    this.ast = ast;
+    viewsExpanded = new ArrayList<String>();
+
+    LOG.info("Starting Semantic Analysis");
+
+
+    // analyze create view command
+    if (ast.getToken().getType() == HiveParser.TOK_CREATEVIEW ||
+        ast.getToken().getType() == HiveParser.TOK_ALTERVIEW_AS) {
+      //创建视图,视图仅仅是表象,后期还是要select查询的,返回的child就是select查询部分的对象
+      child = analyzeCreateView(ast, qb);
+      SessionState.get().setCommandType(HiveOperation.CREATEVIEW);
+      if (child == null) {
+        return;
+      }
+      viewSelect = child;
+      // prevent view from referencing itself
+      viewsExpanded.add(SessionState.get().getCurrentDatabase() + "." + createVwDesc.getViewName());
+    }
+
+    // continue analyzing from the child ASTNode.
+    Phase1Ctx ctx_1 = initPhase1Ctx();
+    if (!doPhase1(child, qb, ctx_1)) {
+      // if phase1Result false return
+      return;
+    }
+
+    //已经完成了第一阶段的语意解析
+    LOG.info("Completed phase 1 of Semantic Analysis");
+
+    getMetaData(qb);
+    //已经完成了获取元数据的语意解析
+    LOG.info("Completed getting MetaData in Semantic Analysis");
+
     // Save the result schema derived from the sink operator produced
     // by genPlan. This has the correct column names, which clients
     // such as JDBC would prefer instead of the c0, c1 we'll end
@@ -7320,6 +8009,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     }
     return retValue;
   }
+
   // validate the create view statement
   // the statement could be CREATE VIEW, REPLACE VIEW, or ALTER VIEW AS SELECT
   // check semantic conditions
@@ -7506,6 +8196,14 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     }
   }
 
+
+  public QB getQB() {
+    return qb;
+  }
+
+  public void setQB(QB qb) {
+    this.qb = qb;
+  }
 
 //--------------------------- PTF handling -----------------------------------
 

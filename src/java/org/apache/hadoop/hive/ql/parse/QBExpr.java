@@ -24,6 +24,9 @@ import org.apache.commons.logging.LogFactory;
 /**
  * Implementation of the query block expression.
  * 查询语句之间的关系
+ * 
+ * QBExpr对象表示一个子查询对象
+ * 一个别名对应一个子查询对象,
  **/
 public class QBExpr {
 

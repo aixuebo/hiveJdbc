@@ -56,10 +56,12 @@ import org.apache.hadoop.hive.ql.parse.PTFInvocationSpec.PartitioningSpec;
  * represents the Select Expression that was translated to a Window
  * Function invocation or a Window Expression. This is used when
  * building RowResolvers.
+ * 每一个别名分配一个窗口函数,即select 选择项里面有窗口函数的,比如有2个,则这两个都存储到WindowingSpec对象中
  */
-public class WindowingSpec {
-  HashMap<String, WindowExpressionSpec> aliasToWdwExpr;
+public class WindowingSpec {//表示窗口函数的规则
   HashMap<String, WindowSpec> windowSpecs;
+  
+  HashMap<String, WindowExpressionSpec> aliasToWdwExpr;
   ArrayList<WindowExpressionSpec> windowExpressions;
 
   public void addWindowSpec(String name, WindowSpec wdwSpec) {
