@@ -67,7 +67,7 @@ public class ExprNodeGenericFuncDesc extends ExprNodeDesc implements
    * the canonical type information for this NodeDesc.
    */
   private transient ObjectInspector writableObjectInspector;
-  //Is this an expression that should perform a comparison for sorted searches
+  //Is this an expression that should perform a comparison for sorted searches 是否执行一个排序
   private boolean isSortedExpr;
 
   public ExprNodeGenericFuncDesc() {
@@ -184,6 +184,7 @@ public class ExprNodeGenericFuncDesc extends ExprNodeDesc implements
 
     // Check if a bigint is implicitely cast to a double as part of a comparison
     // Perform the check here instead of in GenericUDFBaseCompare to guarantee it is only run once per operator
+    //是两个参数,可以进行比较,例如a op b,比较a与b的顺序
     if (genericUDF instanceof GenericUDFBaseCompare && children.size() == 2) {
 
       TypeInfo oiTypeInfo0 = children.get(0).getTypeInfo();
@@ -195,6 +196,8 @@ public class ExprNodeGenericFuncDesc extends ExprNodeDesc implements
       LogHelper console = new LogHelper(LOG);
 
       // For now, if a bigint is going to be cast to a double throw an error or warning
+      //对long类型和String类型比较、对long类型和double类型比较的时候,是要有警告或者严格约束抛异常的
+      //原因会有丢失精度的可能
       if ((oiTypeInfo0.equals(TypeInfoFactory.stringTypeInfo) && oiTypeInfo1.equals(TypeInfoFactory.longTypeInfo)) ||
           (oiTypeInfo0.equals(TypeInfoFactory.longTypeInfo) && oiTypeInfo1.equals(TypeInfoFactory.stringTypeInfo))) {
         if (HiveConf.getVar(conf, HiveConf.ConfVars.HIVEMAPREDMODE).equalsIgnoreCase("strict")) {

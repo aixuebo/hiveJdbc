@@ -42,6 +42,8 @@ import org.apache.hadoop.io.BooleanWritable;
 
 /**
  * GenericUDF Base Class for operations.
+ * 比较,因此一定是两个参数进行比较
+ * a op b表示a与b进行比较大小
  */
 @Description(name = "op", value = "a op b - Returns the result of operation")
 public abstract class GenericUDFBaseCompare extends GenericUDF {
@@ -50,18 +52,21 @@ public abstract class GenericUDFBaseCompare extends GenericUDF {
     // treated as special cases.
     // For other types, we reuse ObjectInspectorUtils.compare()
     COMPARE_STRING, COMPARE_TEXT, COMPARE_INT, COMPARE_LONG, COMPARE_BYTE,
-    COMPARE_BOOL, SAME_TYPE, NEED_CONVERT
+    COMPARE_BOOL,
+    SAME_TYPE,//两个参数类型相同的进行对比
+    NEED_CONVERT//两个不同类型的参数进行对比,需要类型转换
   }
 
   protected String opName;
   protected String opDisplayName;
 
-  protected transient ObjectInspector[] argumentOIs;
+  protected transient ObjectInspector[] argumentOIs;//参数类型
 
   protected transient ReturnObjectInspectorResolver conversionHelper = null;
-  protected ObjectInspector compareOI;
-  protected CompareType compareType;
-  protected transient Converter converter0, converter1;
+  protected ObjectInspector compareOI;//两个不同类型的参数进行比较时候的比较器
+  protected CompareType compareType;//什么类型的比较
+  protected transient Converter converter0, converter1;//两个不同类型的参数进行比较时候,分别的转换器
+  
   protected transient StringObjectInspector soi0, soi1;
   protected transient IntObjectInspector ioi0, ioi1;
   protected transient LongObjectInspector loi0, loi1;
@@ -69,6 +74,10 @@ public abstract class GenericUDFBaseCompare extends GenericUDF {
   protected transient BooleanObjectInspector boi0,boi1;
   protected final BooleanWritable result = new BooleanWritable();
 
+  /**
+   * 比较,因此一定是两个参数进行比较
+   * 初始化操作
+   */
   @Override
   public ObjectInspector initialize(ObjectInspector[] arguments) throws UDFArgumentException {
 
@@ -81,7 +90,7 @@ public abstract class GenericUDFBaseCompare extends GenericUDF {
 
     for (int i = 0; i < arguments.length; i++) {
       Category category = arguments[i].getCategory();
-      if (category != Category.PRIMITIVE) {
+      if (category != Category.PRIMITIVE) {//比较的必须是基础类型
         throw new UDFArgumentTypeException(i, "The "
             + GenericUDFUtils.getOrdinal(i + 1)
             + " argument of " + opName + "  is expected to a "
@@ -93,25 +102,25 @@ public abstract class GenericUDFBaseCompare extends GenericUDF {
     if (TypeInfoUtils.getTypeInfoFromObjectInspector(arguments[0]).equals(
       TypeInfoFactory.stringTypeInfo) &&
       TypeInfoUtils.getTypeInfoFromObjectInspector(arguments[1]).equals(
-      TypeInfoFactory.stringTypeInfo)) {
+      TypeInfoFactory.stringTypeInfo)) {//两个String类型参数进行对比
       soi0 = (StringObjectInspector) arguments[0];
       soi1 = (StringObjectInspector) arguments[1];
-      if (soi0.preferWritable() || soi1.preferWritable()) {
+      if (soi0.preferWritable() || soi1.preferWritable()) {//Text方式对比
         compareType = CompareType.COMPARE_TEXT;
-      } else {
+      } else {//String方式对比
         compareType = CompareType.COMPARE_STRING;
       }
     } else if (TypeInfoUtils.getTypeInfoFromObjectInspector(arguments[0]).equals(
       TypeInfoFactory.intTypeInfo) &&
       TypeInfoUtils.getTypeInfoFromObjectInspector(arguments[1]).equals(
-        TypeInfoFactory.intTypeInfo)) {
+        TypeInfoFactory.intTypeInfo)) {//两个Int类型参数对比
       compareType = CompareType.COMPARE_INT;
       ioi0 = (IntObjectInspector) arguments[0];
       ioi1 = (IntObjectInspector) arguments[1];
     } else if (TypeInfoUtils.getTypeInfoFromObjectInspector(arguments[0]).equals(
         TypeInfoFactory.longTypeInfo) &&
         TypeInfoUtils.getTypeInfoFromObjectInspector(arguments[1]).equals(
-          TypeInfoFactory.longTypeInfo)) {
+          TypeInfoFactory.longTypeInfo)) {//两个Long类型参数对比
         compareType = CompareType.COMPARE_LONG;
         loi0 = (LongObjectInspector) arguments[0];
         loi1 = (LongObjectInspector) arguments[1];
@@ -134,10 +143,10 @@ public abstract class GenericUDFBaseCompare extends GenericUDF {
       TypeInfo oiTypeInfo1 = TypeInfoUtils.getTypeInfoFromObjectInspector(arguments[1]);
 
       if (oiTypeInfo0 == oiTypeInfo1
-          || TypeInfoUtils.doPrimitiveCategoriesMatch(oiTypeInfo0, oiTypeInfo1)) {
+          || TypeInfoUtils.doPrimitiveCategoriesMatch(oiTypeInfo0, oiTypeInfo1)) {//两个类型相同的参数进行对比
         compareType = CompareType.SAME_TYPE;
-      } else {
-        compareType = CompareType.NEED_CONVERT;
+      } else {//两个不同类型的参数进行对比
+        compareType = CompareType.NEED_CONVERT;//需要转换
         TypeInfo compareType = FunctionRegistry.getCommonClassForComparison(
             oiTypeInfo0, oiTypeInfo1);
 
@@ -165,7 +174,7 @@ public abstract class GenericUDFBaseCompare extends GenericUDF {
       return null;
     }
 
-    if (compareType == CompareType.NEED_CONVERT) {
+    if (compareType == CompareType.NEED_CONVERT) {//需要转换的情况
       Object converted_o0 = converter0.convert(o0);
       if (converted_o0 == null) {
         return null;
@@ -177,7 +186,7 @@ public abstract class GenericUDFBaseCompare extends GenericUDF {
       return ObjectInspectorUtils.compare(
           converted_o0, compareOI,
           converted_o1, compareOI);
-    } else {
+    } else {//不需要转换直接比较
       return ObjectInspectorUtils.compare(
           o0, argumentOIs[0], o1, argumentOIs[1]);
     }

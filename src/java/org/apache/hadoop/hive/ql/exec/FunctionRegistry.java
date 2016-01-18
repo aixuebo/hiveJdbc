@@ -726,6 +726,7 @@ public final class FunctionRegistry {
    * them to double and then compare.
    *
    * @return null if no common class could be found.
+   * 两个参数类型不同,要进行类型转换成相同可比较的类型
    */
   public static TypeInfo getCommonClassForComparison(TypeInfo a, TypeInfo b) {
     // If same return one of them
