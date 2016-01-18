@@ -44,7 +44,7 @@ public class QB {
   private int numSels = 0;//出现多少个select语法
   private int numSelDi = 0;//出现多少个select distinct语法
   private HashMap<String, String> aliasToTabs;//设置别名key,和数据库表名value的映射关系
-  private HashMap<String, QBExpr> aliasToSubq;//设置别名key,和子查询表名value的映射关系
+  private HashMap<String, QBExpr> aliasToSubq;//设置别名key,和子查询表名value的映射关系,value也可能是视图
   private HashMap<String, Map<String, String>> aliasToProps;//为table设置对应的全局属性,key是数据库的表别名,value是该数据库对应的信息,这些信息都是查询sql中存储的
   private List<String> aliases;//所有的别名集合
   private QBParseInfo qbp;
@@ -267,6 +267,7 @@ public class QB {
    * Retrieve skewed column name for a table.
    * @param alias table alias
    * @return
+   * 获取该别名对应的table中哪些属性是用于设置偏移
    */
   public List<String> getSkewedColumnNames(String alias) {
     List<String> skewedColNames = null;

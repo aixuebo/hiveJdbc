@@ -22,11 +22,11 @@ import java.io.Serializable;
  * Implementation of the Operator Parse Context. It maintains the parse context
  * that may be needed by an operator. Currently, it only maintains the row
  * resolver.
+ * 解析操作的上下文
  **/
-
 public class OpParseContext implements Serializable {
   private static final long serialVersionUID = 1L;
-  private RowResolver rr; // row resolver for the operator
+  private RowResolver rr; // row resolver for the operator 如何解析一行数据
 
   public OpParseContext() {
   }

@@ -33,14 +33,15 @@ import org.apache.hadoop.hive.ql.metadata.VirtualColumn;
 public class TableScanDesc extends AbstractOperatorDesc {
   private static final long serialVersionUID = 1L;
 
-  private String alias;
+  private String alias;//该table的别名
 
-  private List<VirtualColumn> virtualCols;
+  private List<VirtualColumn> virtualCols;//该table的虚拟列集合
   private String statsAggKeyPrefix;   // stats publishing/aggregating key prefix
 
  /**
   * A list of the partition columns of the table.
   * Set by the semantic analyzer only in case of the analyze command.
+  * 用于分区的属性集合,仅仅用于分析命令中
   */
   private List<String> partColumns;
 
@@ -49,16 +50,16 @@ public class TableScanDesc extends AbstractOperatorDesc {
    * For example,
    *   select count(1) from ss_src2 tablesample (10 ROWS) s;
    * provides first 10 rows from all input splits
+   * 如果表进行抽样处理了,并且是from ss_src2 tablesample (10 ROWS) 这种ROWS方式抽样处理,才会设置该值
    */
   private int rowLimit = -1;
 
   /**
    * A boolean variable set to true by the semantic analyzer only in case of the analyze command.
-   *
    */
-  private boolean gatherStats;
-  private boolean statsReliable;
-  private int maxStatsKeyPrefixLength = -1;
+  private boolean gatherStats;//true表示ANALYZE TABLE tableName语句,即收集状态信息
+  private boolean statsReliable;//conf配置信息中的值
+  private int maxStatsKeyPrefixLength = -1;//conf配置信息中的值
 
   private ExprNodeDesc filterExpr;
 

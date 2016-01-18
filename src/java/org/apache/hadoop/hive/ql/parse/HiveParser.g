@@ -1482,7 +1482,7 @@ descStatement
     | (KW_DESCRIBE|KW_DESC) KW_DATABASE KW_EXTENDED? (dbName=identifier) -> ^(TOK_DESCDATABASE $dbName KW_EXTENDED?)
     ;
 
-格式:ANALYZE TABLE tableName [ PARTITION (name=value,name=value,name) ] COMPUTE STATISTICS [NOSCAN | PARTIALSCAN | FOR COLUMNS "column1","column2"]
+格式:ANALYZE TABLE tableName [ PARTITION (name=value,name=value,name) ] COMPUTE STATISTICS [NOSCAN]  [PARTIALSCAN]  [FOR COLUMNS "column1","column2"]
 analyzeStatement
 @init { msgs.push("analyze statement"); }
 @after { msgs.pop(); }
@@ -2326,6 +2326,10 @@ b.INSERT OVERWRITE DIRECTORY "path" [IF NOT Exists]
 c.INSERT OVERWRITE TABLE tableName [ PARTITION (name=value,name=value,name) ] [IF NOT Exists]
 d.INSERT INTO TABLE tableName [ PARTITION (name=value,name=value,name) ]
 注意:path必须是单引号或者双引号包裹
+例如:
+insert overwrite local directory '/data11/coohua/logs/csv/csv' 向本地目录存储
+insert overwrite directory '/logs/statistics/report/h_order_5/log_day=${d}' 向HDFS上目录存储
+FROM nginx n INSERT OVERWRITE TABLE shareStatis PARTITION (task = 'share', date = '20150905')  SELECT * from where 向一个表中某个分区内插入数据
 insertClause
 @init { msgs.push("insert clause"); }
 @after { msgs.pop(); }

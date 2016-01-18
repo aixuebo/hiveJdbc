@@ -36,11 +36,11 @@ package org.apache.hadoop.hive.ql.parse;
  * usage within the query.
  */
 public class ASTNodeOrigin {
-  private final String objectType;//view表示是视图
+  private final String objectType;//类型,view表示是视图
   private final String objectName;//table的名字,即可以是视图的名字
-  private final String objectDefinition;//如果该table是视图的话,则返回该视图的内容
+  private final String objectDefinition;//如果该table是视图的话,则返回该视图的内容,即视图view的sql
   private final String usageAlias;//当时使用的别名
-  private final ASTNode usageNode;//节点对象
+  private final ASTNode usageNode;//别名如果是对应的from子句中的子查询,则该对象表示子查询的对象
 
   public ASTNodeOrigin(String objectType, String objectName,
       String objectDefinition, String usageAlias, ASTNode usageNode) {

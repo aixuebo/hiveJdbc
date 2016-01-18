@@ -29,19 +29,7 @@ import java.util.ArrayList;
  * bucket to be picked out of the 2 buckets created by hashing on c1.
  * 
  *    * //[dbName.] tableName [(key=value,key=value,key)] [tableSample] [ as Identifier ]
-//注意:
-//1.(此时认为解析成key=null,即不需要value属性值)
-//tableSample函数解析如下
-//1.TABLESAMPLE(数字    PERCENT)
-//2.TABLESAMPLE(数字    ROWS)
-//3.TABLESAMPLE(ByteLengthLiteral)
-//4.TABLESAMPLE(BUCKET 数字    OUT OF 数字  [ ON expression,expression ] )
-tableSource
-@init { gParent.msgs.push("table source"); }
-@after { gParent.msgs.pop(); }
-    : tabname=tableName (props=tableProperties)? (ts=tableSample)? (KW_AS? alias=Identifier)?
-    -> ^(TOK_TABREF $tabname $props? $ts? $alias?)
-    ;
+TABLESAMPLE(BUCKET 数字    OUT OF 数字  [ ON expression,expression ] )
     该类是from子句用于抽样提取,该类代表解析以下字符:TABLESAMPLE(BUCKET 数字    OUT OF 数字  [ ON expression,expression ] )
     
  */
@@ -50,12 +38,14 @@ public class TableSample {
   /**
    * The numerator of the TABLESAMPLE clause.
    * 第一个参数
+   * 解析TABLESAMPLE(BUCKET 数字    OUT OF 数字  [ ON expression,expression ] )的第一个数字参数
    */
   private int numerator;
 
   /**
    * The denominator of the TABLESAMPLE clause.
    * 第二个参数
+   * 解析TABLESAMPLE(BUCKET 数字    OUT OF 数字  [ ON expression,expression ] )的第二个数字参数
    */
   private int denominator;
 
@@ -66,12 +56,13 @@ public class TableSample {
    * on the tables clustering column(as specified when the table was created).
    * In case the table does not have any clustering column, the usage of a table
    * sample clause without an ON part is disallowed by the compiler
-   * on后面的表达式集合
+   * on后面的表达式集合,仅仅用于TABLESAMPLE(BUCKET 数字    OUT OF 数字  [ ON expression,expression ] )子句
    */
   private ArrayList<ASTNode> exprs;
 
   /**
    * Flag to indicate that input files can be pruned.
+   * true表示输入的文件可以被修剪,即抽样的时候TABLESAMPLE(BUCKET 数字    OUT OF 数字  [ ON expression,expression ] )子句 表示会进行修剪输入源
    */
   private boolean inputPruning;
 
@@ -85,6 +76,7 @@ public class TableSample {
    *          The denominator
    * @param exprs
    *          The list of expressions in the ON part of the TABLESAMPLE clause
+   * 用于解析TABLESAMPLE(BUCKET 数字    OUT OF 数字  [ ON expression,expression ] )
    */
   public TableSample(String num, String den, ArrayList<ASTNode> exprs) {
     numerator = Integer.valueOf(num).intValue();

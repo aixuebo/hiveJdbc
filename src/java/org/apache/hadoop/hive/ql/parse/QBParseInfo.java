@@ -34,19 +34,28 @@ import org.apache.hadoop.hive.ql.parse.BaseSemanticAnalyzer.tableSpec;
 /**
  * Implementation of the parse information related to a query block.
  * 进一步解析一个select from where group order 一整条查询语句表达式
+ * 
+ * 因为一个sql只能有一个select 和一个hint等,因此hints变量就是一个ASTNode对象
  **/
 public class QBParseInfo {
 
   private final boolean isSubQ;//是否包含子查询
   private final String alias;//别名,即from (select...) as yyy中的yyy
-  private ASTNode joinExpr;
+  private ASTNode joinExpr;//表示from的有join的子句,即FROM fromSource joinToken fromSource [ON expression] joinToken fromSource [ON expression]..
   private ASTNode hints;//select中的hint节点
-  private final HashMap<String, ASTNode> aliasToSrc;//别名为key,value为from子句
+  private final HashMap<String, ASTNode> aliasToSrc;//别名为key,value为from子句中关于哪个表的节点对象,比如from database.table1,即存储该对象
+  /**
+value是以下子句对应的节点
+a.LOCAL DIRECTORY "path" [tableRowFormat] [tableFileFormat]
+b.DIRECTORY "path"
+c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
+表示最终的结果存储在什么地方
+   */
   private final HashMap<String, ASTNode> nameToDest;//key是目标,value是该目标对应的根节点
-  private final HashMap<String, TableSample> nameToSample;//from的抽样子句,key是table的别名
+  private final HashMap<String, TableSample> nameToSample;//from的抽样子句,key是table的别名,因为from子句可以接抽样信息
   
   private final Map<String, ASTNode> destToSelExpr;//key是目的地,value是SELECT [hintClause] [ALL|DISTINCT] selectList
-  private final Map<ASTNode, String> exprToColumnAlias;//映射select中每一个属性和对应的别名,key是属性节点,value是别名
+  private final Map<ASTNode, String> exprToColumnAlias;//映射select中每一个属性和对应的别名,key是属性节点,value是别名.例如 select name name1,即key是name节点,value是name1别名
   
   private final HashMap<String, ASTNode> destToWhereExpr;//where语句的语法对象为value,key是目标,即谁的where条件
   private final HashMap<String, ASTNode> destToGroupby;//group by语句的语法对象为value,key是目标,即可能包含嵌套的子查询
@@ -56,15 +65,16 @@ public class QBParseInfo {
   private final Set<String> destRollups;//存储有roll by的key目标
   private final Set<String> destCubes;//存储有cube by的key目标
   private final Set<String> destGroupingSets;//存储有groupSet的key目标
+  
+  //解析INSERT INTO TABLE tableName [ PARTITION (name=value,name=value,name) ]中的tableName,即数据最终会添加到哪个表中
   private final HashSet<String> insertIntoTables;//涉及到的insert into 到哪个表集合,该集合内容格式是db.tableName,注意:仅仅针对INSERT INTO语句,如果一个数据库是分桶的,是不允许向该数据库进行insert插入数据的
 
-  //KW_ANALYZE KW_TABLE (parttype=tableOrPartition) KW_COMPUTE KW_STATISTICS ((noscan=KW_NOSCAN) | (partialscan=KW_PARTIALSCAN) | (KW_FOR KW_COLUMNS statsColumnName=columnNameList))? -> ^(TOK_ANALYZE $parttype $noscan? $partialscan? $statsColumnName?)
-  private boolean isAnalyzeCommand; // used for the analyze command (statistics)是否使用了分析命令,视图是不允许使用分析命令的
+  //ANALYZE TABLE tableName [ PARTITION (name=value,name=value,name) ] COMPUTE STATISTICS [NOSCAN]  [PARTIALSCAN]  [FOR COLUMNS "column1","column2"]
+  private boolean isAnalyzeCommand; // used for the analyze command (statistics)是否使用了分析命令,视图是不允许使用分析命令的,true表示使用了ANALYZE TABLE命令
   private boolean isInsertToTable;  // used for insert overwrite command (statistics)
-  private boolean isNoScanAnalyzeCommand; // used for the analyze command (statistics) (noscan)
-  private boolean isPartialScanAnalyzeCommand; // used for the analyze command (statistics)
+  private boolean isNoScanAnalyzeCommand; // used for the analyze command (statistics) (noscan),表示设置了NOSCAN
+  private boolean isPartialScanAnalyzeCommand; // used for the analyze command (statistics),表示设置了PARTIALSCAN
                                                // (partialscan)
-
   private final HashMap<String, tableSpec> tableSpecs; // used for statisticskey为别名,value为分区的table对象
 
   private String tableName;   // used for column statistics
@@ -87,11 +97,12 @@ public class QBParseInfo {
    * SortBy controls the reduce keys, which affects the order of rows that the
    * reducer receives.
    */
-
   private final HashMap<String, ASTNode> destToSortby;//sort by语句的语法对象为value,key是目标,即可能包含嵌套的子查询
 
   /**
    * Maping from table/subquery aliases to all the associated lateral view nodes.
+   * 解析from子句带有 LATERAL VIEW [OUTER] function "tableAlias" [AS identifier,identifier..]
+   * key是tableAlias别名,value是 LATERAL VIEW [OUTER] function "tableAlias" [AS identifier,identifier..]语法对应的对象集合
    */
   private final HashMap<String, ArrayList<ASTNode>> aliasToLateralViews;
 
@@ -182,6 +193,10 @@ public class QBParseInfo {
     insertIntoTables.add(fullName.toLowerCase());
   }
 
+  /**
+   * INSERT INTO TABLE tableName [ PARTITION (name=value,name=value,name) ]中的tableName,即数据最终会添加到哪个表中
+   * 判断给的参数是否是最终要追加数据到指定的表中,true表示是要追加数据到该表中
+   */
   public boolean isInsertIntoTable(String dbName, String table) {
     String fullName = dbName + "." + table;
     return insertIntoTables.contains(fullName.toLowerCase());

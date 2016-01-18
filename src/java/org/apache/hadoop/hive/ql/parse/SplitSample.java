@@ -32,19 +32,6 @@ import org.apache.hadoop.hive.ql.plan.Explain;
  * hive.sample.seednumber
  * 
  * //[dbName.] tableName [(key=value,key=value,key)] [tableSample] [ as Identifier ]
-//注意:
-//1.(此时认为解析成key=null,即不需要value属性值)
-//tableSample函数解析如下
-//1.TABLESAMPLE(数字    PERCENT)
-//2.TABLESAMPLE(数字    ROWS)
-//3.TABLESAMPLE(ByteLengthLiteral)
-//4.TABLESAMPLE(BUCKET 数字    OUT OF 数字  [ ON expression,expression ] )
-tableSource
-@init { gParent.msgs.push("table source"); }
-@after { gParent.msgs.pop(); }
-    : tabname=tableName (props=tableProperties)? (ts=tableSample)? (KW_AS? alias=Identifier)?
-    -> ^(TOK_TABREF $tabname $props? $ts? $alias?)
-    ;
     用于from去抽样提取数据,该类是用于存储以下的:
 //1.TABLESAMPLE(数字    PERCENT)
 //2.TABLESAMPLE(数字    ROWS)
@@ -56,12 +43,13 @@ public class SplitSample implements Serializable{
   private static final long serialVersionUID = 1L;
 
   // only one of belows is not-null
-  private Long totalLength; // total length of sample, prunes splits exceeded 获取多少字节数
-  private Double percent;   // percent to total input, prunes splits exceeded 获取多少百分比
-  private Integer rowCount; // row count per split, do not prune splits 获取多少行
+  private Long totalLength; // total length of sample, prunes splits exceeded 获取多少字节数,用于TABLESAMPLE(ByteLengthLiteral)
+  private Double percent;   // percent to total input, prunes splits exceeded 获取多少百分比,即TABLESAMPLE(数字    PERCENT)
+  private Integer rowCount; // row count per split, do not prune splits 获取多少行,用于TABLESAMPLE(数字    ROWS)
 
   /**
    * The number used to determine which part of the input to sample
+   * 用于TABLESAMPLE(数字    PERCENT),获取百分比的种子随机数
    */
   private int seedNum = 0;
 

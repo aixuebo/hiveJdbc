@@ -180,17 +180,30 @@ import org.apache.hadoop.mapred.InputFormat;
 public class SemanticAnalyzer extends BaseSemanticAnalyzer {
   private HashMap<TableScanOperator, ExprNodeDesc> opToPartPruner;
   private HashMap<TableScanOperator, PrunedPartitionList> opToPartList;
+  /**
+   * key是table的表名,value是对该表要进行哪些操作
+   */
   private HashMap<String, Operator<? extends OperatorDesc>> topOps;
   private HashMap<String, Operator<? extends OperatorDesc>> topSelOps;
+  /**
+   * 每一个操作计划,对应一个操作的上下文,目前该上下文解释了该计划对应的每一行数据如何解析
+   */
   private LinkedHashMap<Operator<? extends OperatorDesc>, OpParseContext> opParseCtx;
   private List<LoadTableDesc> loadTableWork;
   private List<LoadFileDesc> loadFileWork;
   private Map<JoinOperator, QBJoinTree> joinContext;
   private Map<SMBMapJoinOperator, QBJoinTree> smbMapJoinContext;
+  /**
+   * key是表示from中要扫描哪些信息,value表示要扫描哪个表
+   */
   private final HashMap<TableScanOperator, Table> topToTable;
+  /**
+   * key是要扫描的table对象,value是在sql中对该table定义了哪些属性
+   */
+  private final HashMap<TableScanOperator, Map<String, String>> topToTableProps;
+  
   private final Map<FileSinkOperator, Table> fsopToTable;
   private final List<ReduceSinkOperator> reduceSinkOperatorsAddedByEnforceBucketingSorting;
-  private final HashMap<TableScanOperator, Map<String, String>> topToTableProps;
   private QB qb;
   private ASTNode ast;
   private int destTableId;
@@ -201,6 +214,12 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
   /**
    * a map for the split sampling, from ailias to an instance of SplitSample
    * that describes percentage and number.
+   * 用于存储from子句中使用抽样语法的
+   * key是表别名,用于标示该抽样针对哪个from子句,value就是抽样对象
+   * 针对语法:
+   * //1.TABLESAMPLE(数字    PERCENT)
+    //2.TABLESAMPLE(数字    ROWS)
+    //3.TABLESAMPLE(ByteLengthLiteral)
    */
   private final HashMap<String, SplitSample> nameToSplitSample;
   Map<GroupByOperator, Set<String>> groupOpToInputTables;
@@ -228,9 +247,12 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
 
   //KW_ANALYZE KW_TABLE (parttype=tableOrPartition) KW_COMPUTE KW_STATISTICS ((noscan=KW_NOSCAN) | (partialscan=KW_PARTIALSCAN) | (KW_FOR KW_COLUMNS statsColumnName=columnNameList))? -> ^(TOK_ANALYZE $parttype $noscan? $partialscan? $statsColumnName?)
   // flag for no scan during analyze ... compute statistics
+  /**
+   * ANALYZE TABLE tableName [ PARTITION (name=value,name=value,name) ] COMPUTE STATISTICS [NOSCAN]  [PARTIALSCAN]  [FOR COLUMNS "column1","column2"]
+   * 解析[NOSCAN]
+   */
   protected boolean noscan = false;
-
-  //flag for partial scan during analyze ... compute statistics
+  //flag for partial scan during analyze ... compute statistics 解析[PARTIALSCAN]
   protected boolean partialscan = false;
 
   private static class Phase1Ctx {
@@ -325,10 +347,10 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
   }
 
   /**
-   * from子句中的子查询操作
-   * from (xxx) as yyy
-   * @param ast 表示xxx对应的对象
-   * @param qbexpr 表示解析xxx子查询sql后生成的解析对象
+   * 处理 from子句,用于子查询,必须有别名
+   * 解析  from (xxx) yyy
+   * @param ast 表示xxx对应的对象,该对象可以解析成一个QB对象,即一个完整的查询sql
+   * @param qbexpr 表示解析from (xxx) yyy后生成的子查询对象
    * @param id 子查询的父ID
    * @param alias 表示yyy
    * @throws SemanticException
@@ -339,17 +361,20 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
 
     assert (ast.getToken() != null);
     switch (ast.getToken().getType()) {
-    case HiveParser.TOK_QUERY: {
+    case HiveParser.TOK_QUERY: {//一个正常的sql查询
       QB qb = new QB(id, alias, true);
       Phase1Ctx ctx_1 = initPhase1Ctx();
       doPhase1(ast, qb, ctx_1);
 
-      qbexpr.setOpcode(QBExpr.Opcode.NULLOP);
+      qbexpr.setOpcode(QBExpr.Opcode.NULLOP);//设置子查询之间的关系
       qbexpr.setQB(qb);
     }
       break;
-    case HiveParser.TOK_UNION: {
+    case HiveParser.TOK_UNION: {//一个union查询
       qbexpr.setOpcode(QBExpr.Opcode.UNION);
+      
+      //UNION需要两个query组成的sql
+      
       // query 1
       assert (ast.getChild(0) != null);
       QBExpr qbexpr1 = new QBExpr(alias + "-subquery1");
@@ -377,6 +402,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
    * 参数表示为QB对象的目标desc添加聚类函数,例如用于having子句解析
    * 
    * 解析SELECT [hintClause] [ALL|DISTINCT] selectList
+   * 或者having selectList
    */
   private LinkedHashMap<String, ASTNode> doPhase1GetAggregationsFromSelect(
       ASTNode selExpr, QB qb, String dest) throws SemanticException {
@@ -625,7 +651,7 @@ tableSource
         }
       }
     } else if (ssampleIndex >= 0) {
-    	//1.TABLESAMPLE(数字    PERCENT)
+    	//1.TABLESAMPLE(数字    PERCENT) 数字是0-100之间,表示抽样的百分比
     	//2.TABLESAMPLE(数字    ROWS)
     	//3.TABLESAMPLE(ByteLengthLiteral)
       ASTNode sampleClause = (ASTNode) tabref.getChild(ssampleIndex);
@@ -665,6 +691,7 @@ tableSource
         //获取多少字节数
         sample = new SplitSample(length, seedNum);
       }
+      //添加抽样对象与from子句的关联关系
       String alias_id = getAliasId(alias, qb);
       nameToSplitSample.put(alias_id, sample);
     }
@@ -693,12 +720,11 @@ tableSource
   }
 
   /**
-   * from子句,用于子查询,必须有别名
    * @param qb
    * @param subq
    * @return
    * @throws SemanticException
-   * 
+   * 处理 from子句,用于子查询,必须有别名
    * 解析 from (xxx) as yyy
    */
   private String processSubQuery(QB qb, ASTNode subq) throws SemanticException {
@@ -711,6 +737,7 @@ tableSource
     String alias = unescapeIdentifier(subq.getChild(1).getText());//解析yyy别名
 
     // Recursively do the first phase of semantic analysis for the subquery
+    //为子查询创建一个表达式对象,因为该表达式也包含一组QB对象
     QBExpr qbexpr = new QBExpr(alias);
 
     //设置查询语句之间的关系
@@ -755,6 +782,8 @@ tableSource
    * @param qb
    * @param join
    * @throws SemanticException
+   * 解析from 子句格式是FROM fromSource joinToken fromSource [ON expression] joinToken fromSource [ON expression]..
+   * 注意:解析后的是joinToken^ fromSource (KW_ON! expression)?
    */
   @SuppressWarnings("nls")
   private void processJoin(QB qb, ASTNode join) throws SemanticException {
@@ -791,16 +820,16 @@ tableSource
           throw new SemanticException(generateErrorMessage(child,
               "PTF invocation in a Join must have an alias"));
         }
-
       } else if (child.getToken().getType() == HiveParser.TOK_LATERAL_VIEW ||
           child.getToken().getType() == HiveParser.TOK_LATERAL_VIEW_OUTER) {
+    	  //join子句中是不允许使用lateral语法的
         // SELECT * FROM src1 LATERAL VIEW udtf() AS myTable JOIN src2 ...
         // is not supported. Instead, the lateral view must be in a subquery
         // SELECT * FROM (SELECT * FROM src1 LATERAL VIEW udtf() AS myTable) a
         // JOIN src2 ...
         throw new SemanticException(ErrorMsg.LATERAL_VIEW_WITH_JOIN
             .getMsg(join));
-      } else if (isJoinToken(child)) {//是否from子句带有join部分,fromSource ( joinToken^ fromSource (KW_ON! expression)
+      } else if (isJoinToken(child)) {//是否from子句带有join部分,fromSource ( joinToken^ fromSource (KW_ON! expression),多个join语法
         processJoin(qb, child);
       }
     }
@@ -815,8 +844,8 @@ tableSource
    * @param lateralView
    * @return the alias for the table/subquery
    * @throws SemanticException
+   * 解析from子句带有 LATERAL VIEW [OUTER] function "tableAlias" [AS identifier,identifier..]
    */
-
   private String processLateralView(QB qb, ASTNode lateralView)
       throws SemanticException {
     int numChildren = lateralView.getChildCount();
@@ -835,6 +864,7 @@ tableSource
       break;
     case HiveParser.TOK_LATERAL_VIEW:
     case HiveParser.TOK_LATERAL_VIEW_OUTER:
+      //解析from子句带有 LATERAL VIEW [OUTER] function "tableAlias" [AS identifier,identifier..]
       alias = processLateralView(qb, next);
       break;
     default:
@@ -924,17 +954,22 @@ tableSource
         String currentDatabase = SessionState.get().getCurrentDatabase();
         String tab_name = getUnescapedName((ASTNode) ast.getChild(0).getChild(0), currentDatabase);
         qbp.addInsertIntoTable(tab_name);
-
+        //因为还有partition没有被解析,因此没有进行break操作
       case HiveParser.TOK_DESTINATION://目标
     	/**
 a.INSERT OVERWRITE LOCAL DIRECTORY "path" [tableRowFormat] [tableFileFormat] [IF NOT Exists]
 b.INSERT OVERWRITE DIRECTORY "path" [IF NOT Exists]
 c.INSERT OVERWRITE TABLE tableName [ PARTITION (name=value,name=value,name) ] [IF NOT Exists]
+例如:
+insert overwrite local directory '/data11/coohua/logs/csv/csv' 向本地目录存储
+insert overwrite directory '/logs/statistics/report/h_order_5/log_day=${d}' 向HDFS上目录存储
+FROM nginx n INSERT OVERWRITE TABLE shareStatis PARTITION (task = 'share', date = '20150905')  SELECT * from where 向一个表中某个分区内插入数据
     	 */
         ctx_1.dest = "insclause-" + ctx_1.nextNum;
         ctx_1.nextNum++;
 
         // is there a insert in the subquery
+        //子查询不支持insert复杂的语法
         if (qbp.getIsSubQ()) {
           ASTNode ch = (ASTNode) ast.getChild(0);
           if ((ch.getToken().getType() != HiveParser.TOK_DIR)
@@ -943,6 +978,12 @@ c.INSERT OVERWRITE TABLE tableName [ PARTITION (name=value,name=value,name) ] [I
                 .getMsg(ast));
           }
         }
+        /**
+         * 设置(ASTNode) ast.getChild(0)是以下子句对应的节点
+a.LOCAL DIRECTORY "path" [tableRowFormat] [tableFileFormat]
+b.DIRECTORY "path"
+c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
+         */
         qbp.setDestForClause(ctx_1.dest, (ASTNode) ast.getChild(0));
         break;
         
@@ -950,6 +991,8 @@ c.INSERT OVERWRITE TABLE tableName [ PARTITION (name=value,name=value,name) ] [I
     	  /**
 a.FROM fromSource joinToken fromSource [ON expression] joinToken fromSource [ON expression]..
 b.FROM UNIQUEJOIN [PRESERVE] fromSource (expression,expression..)
+注意:
+a.解析后的是joinToken^ fromSource (KW_ON! expression)?
     	   */
         int child_count = ast.getChildCount();
         if (child_count != 1) {
@@ -959,31 +1002,19 @@ b.FROM UNIQUEJOIN [PRESERVE] fromSource (expression,expression..)
 
         // Check if this is a subquery / lateral view
         ASTNode frm = (ASTNode) ast.getChild(0);
-        /**
-//[dbName.] tableName [(key=value,key=value,key)] [tableSample] [ as Identifier ]
-//注意:
-//1.(此时认为解析成key=null,即不需要value属性值)
-//tableSample函数解析如下
-//1.TABLESAMPLE(数字    PERCENT)
-//2.TABLESAMPLE(数字    ROWS)
-//3.TABLESAMPLE(ByteLengthLiteral)
-//4.TABLESAMPLE(BUCKET 数字    OUT OF 数字  [ ON expression,expression ] )
-tableSource
-@init { gParent.msgs.push("table source"); }
-@after { gParent.msgs.pop(); }
-    : tabname=tableName (props=tableProperties)? (ts=tableSample)? (KW_AS? alias=Identifier)?
-    -> ^(TOK_TABREF $tabname $props? $ts? $alias?)
-    ;
-         */
         if (frm.getToken().getType() == HiveParser.TOK_TABREF) {
           //tableName [(keyValueProperty,keyValueProperty,keyProperty,keyProperty)] [tableSample] [ [AS] Identifier ]
+        	//处理带有抽样的from子句
           processTable(qb, frm);
         } else if (frm.getToken().getType() == HiveParser.TOK_SUBQUERY) {//from子句,用于子查询,必须有别名
+        //处理子查询语句,即from (select..) alias
           processSubQuery(qb, frm);
         } else if (frm.getToken().getType() == HiveParser.TOK_LATERAL_VIEW ||
             frm.getToken().getType() == HiveParser.TOK_LATERAL_VIEW_OUTER) {
+        //解析from子句带有 LATERAL VIEW [OUTER] function "tableAlias" [AS identifier,identifier..]
           processLateralView(qb, frm);
         } else if (isJoinToken(frm)) {//incorrect
+        	//from 子句格式是FROM fromSource joinToken fromSource [ON expression] joinToken fromSource [ON expression]..
           queryProperties.setHasJoin(true);
           processJoin(qb, frm);
           qbp.setJoinExpr(frm);
@@ -992,7 +1023,6 @@ tableSource
           processPTF(qb, frm);
         }
         break;
-        
       case HiveParser.TOK_CLUSTERBY:
         // Get the clusterby aliases - these are aliased to the entries in the
         // select list
@@ -1092,13 +1122,13 @@ tableSource
         
       case HiveParser.TOK_HAVING:
         qbp.setHavingExprForClause(ctx_1.dest, ast);
-        //参数表示为QB对象的目标desc添加聚类函数
+        //参数表示为QB对象的目标desc添加聚类函数,解析having所用到的聚合函数
         qbp.addAggregationExprsForClause(ctx_1.dest,
             doPhase1GetAggregationsFromSelect(ast, qb, ctx_1.dest));
         break;
 
       case HiveParser.KW_WINDOW:
-        if (!qb.hasWindowingSpec(ctx_1.dest) ) {
+        if (!qb.hasWindowingSpec(ctx_1.dest) ) {//必须select中有窗口函数,否则不允许有window语法
           throw new SemanticException(generateErrorMessage(ast,
               "Query has no Cluster/Distribute By; but has a Window definition"));
         }
@@ -1111,19 +1141,19 @@ tableSource
 
       case HiveParser.TOK_ANALYZE:
         // Case of analyze command
-//KW_ANALYZE KW_TABLE (parttype=tableOrPartition) KW_COMPUTE KW_STATISTICS ((noscan=KW_NOSCAN) | (partialscan=KW_PARTIALSCAN) | (KW_FOR KW_COLUMNS statsColumnName=columnNameList))? -> ^(TOK_ANALYZE $parttype $noscan? $partialscan? $statsColumnName?)
+//ANALYZE TABLE tableName [ PARTITION (name=value,name=value,name) ] COMPUTE STATISTICS [NOSCAN]  [PARTIALSCAN]  [FOR COLUMNS "column1","column2"]
         String table_name = getUnescapedName((ASTNode) ast.getChild(0).getChild(0));
 
-
+        //设置别名映射关系以及别名集合
         qb.setTabAlias(table_name, table_name);
         qb.addAlias(table_name);
+        
         qb.getParseInfo().setIsAnalyzeCommand(true);
         qb.getParseInfo().setNoScanAnalyzeCommand(this.noscan);
         qb.getParseInfo().setPartialScanAnalyzeCommand(this.partialscan);
         // Allow analyze the whole table and dynamic partitions
         HiveConf.setVar(conf, HiveConf.ConfVars.DYNAMICPARTITIONINGMODE, "nonstrict");
         HiveConf.setVar(conf, HiveConf.ConfVars.HIVEMAPREDMODE, "nonstrict");
-
         break;
         
       case HiveParser.TOK_UNION:
@@ -1214,9 +1244,9 @@ tableSource
 
   private void getMetaData(QBExpr qbexpr, ReadEntity parentInput)
       throws SemanticException {
-    if (qbexpr.getOpcode() == QBExpr.Opcode.NULLOP) {
+    if (qbexpr.getOpcode() == QBExpr.Opcode.NULLOP) {//说明是query操作,即正常的sql:select from where group by等sql语法
       getMetaData(qbexpr.getQB(), parentInput);
-    } else {
+    } else {//说明是union操作
       getMetaData(qbexpr.getQBExpr1(), parentInput);
       getMetaData(qbexpr.getQBExpr2(), parentInput);
     }
@@ -1235,15 +1265,25 @@ tableSource
       // Go over the tables and populate the related structures.
       // We have to materialize the table alias list since we might
       // modify it in the middle for view rewrite.
+      //获取所有的数据库表的别名集合
       List<String> tabAliases = new ArrayList<String>(qb.getTabAliases());
 
       // Keep track of view alias to view name and read entity
       // For eg: for a query like 'select * from V3', where V3 -> V2, V2 -> V1, V1 -> T
       // keeps track of full view name and read entity corresponding to alias V3, V3:V2, V3:V2:V1.
       // This is needed for tracking the dependencies for inputs, along with their parents.
+      //仅仅映射视图需要的table信息,key是别名,value的key是视图表的全名称,value是视图需要的输入
       Map<String, ObjectPair<String, ReadEntity>> aliasToViewInfo =
           new HashMap<String, ObjectPair<String, ReadEntity>>();
-      //循环所有数据库别名,进行校验每一个数据库信息
+      /**
+       * 1.循环所有数据库别名,从而转换成具体的真实的数据库名
+       * 2.进行校验每一个数据库信息
+       * a.数据库表是否存在
+       * b.sql中有INSERT INTO TABLE tableName [ PARTITION (name=value,name=value,name) ]该语法的时候,该tableName不能是使用桶,即tab.getNumBuckets() > 0不允许
+       * c.tab.isOffline()不允许数据库表下线
+       * d.校验table表的读取格式一定是InputFormat的子类,因为table就是HDFS上的一个文件,要对其进行读取,过滤信息,因此一定要InputFormat的子类才能进行读取数据操作
+       * 3.设置校验好的table别名与table对象映射关系
+       */
       for (String alias : tabAliases) {
         String tab_name = qb.getTabNameForAlias(alias);//通过别名找到具体的数据库名字
         Table tab = null;
@@ -1275,10 +1315,10 @@ tableSource
         }
 
         if (tab.isView()) {//如果该table是一个视图
-          if (qb.getParseInfo().isAnalyzeCommand()) {//视图是不支持分析的
+          if (qb.getParseInfo().isAnalyzeCommand()) {//视图是不支持分析的,即视图不支持ANALYZE TABLE tableName语法
             throw new SemanticException(ErrorMsg.ANALYZE_VIEW.getMsg());
           }
-          String fullViewName = tab.getDbName() + "." + tab.getTableName();
+          String fullViewName = tab.getDbName() + "." + tab.getTableName();//表的全名称
           // Prevent view cycles
           if (viewsExpanded.contains(fullViewName)) {
             throw new SemanticException("Recursive view " + fullViewName +
@@ -1306,6 +1346,7 @@ tableSource
         //设置校验好的table别名与table对象映射关系
         qb.getMetaData().setSrcForAlias(alias, tab);
 
+        //使用了以下语法:ANALYZE TABLE tableName [ PARTITION (name=value,name=value,name) ] COMPUTE STATISTICS [NOSCAN]  [PARTIALSCAN]  [FOR COLUMNS "column1","column2"]
         if (qb.getParseInfo().isAnalyzeCommand()) {//需要分析表
           // allow partial partition specification for nonscan since noscan is fast.
           tableSpec ts = new tableSpec(db, conf, (ASTNode) ast.getChild(0), true, this.noscan);
@@ -1323,10 +1364,10 @@ tableSource
           if (qbpi.isPartialScanAnalyzeCommand()) {
             Class<? extends InputFormat> inputFormatClass = null;
             switch (ts.specType) {
-            case TABLE_ONLY:
+            case TABLE_ONLY://仅仅是表
               inputFormatClass = ts.tableHandle.getInputFormatClass();
               break;
-            case STATIC_PARTITION:
+            case STATIC_PARTITION://仅仅看一个partition分区
               inputFormatClass = ts.partHandle.getInputFormatClass();
               break;
             default:
@@ -1337,23 +1378,25 @@ tableSource
               throw new SemanticException(ErrorMsg.ANALYZE_TABLE_PARTIALSCAN_NON_RCFILE.getMsg());
             }
           }
-
           qb.getParseInfo().addTableSpec(alias, ts);
         }
       }
 
       LOG.info("Get metadata for subqueries");
       // Go over the subqueries and getMetaData for these
+      //循环解析所有需要用到的子查询或者视图view需要的table
       for (String alias : qb.getSubqAliases()) {
-        boolean wasView = aliasToViewInfo.containsKey(alias);
+        boolean wasView = aliasToViewInfo.containsKey(alias);//是否是视图
         ReadEntity newParentInput = null;
         if (wasView) {
+          //扩展视图所需要的表名
           viewsExpanded.add(aliasToViewInfo.get(alias).getFirst());
-          newParentInput = aliasToViewInfo.get(alias).getSecond();
+          newParentInput = aliasToViewInfo.get(alias).getSecond();//视图依赖的父输入
         }
+        //视图或者子查询对应的sql对象
         QBExpr qbexpr = qb.getSubqForAlias(alias);
         getMetaData(qbexpr, newParentInput);
-        if (wasView) {
+        if (wasView) {//移除对应的视图
           viewsExpanded.remove(viewsExpanded.size() - 1);
         }
       }
@@ -1369,12 +1412,18 @@ tableSource
 
       //遍历每一个根节点
       //包含TOK_TAB、TOK_LOCAL_DIR、TOK_DIR
+      /**
+       * 解析最终的结果存储在什么地方
+a.LOCAL DIRECTORY "path" [tableRowFormat] [tableFileFormat]
+b.DIRECTORY "path"
+c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
+       */
       for (String name : qbp.getClauseNamesForDest()) {
         ASTNode ast = qbp.getDestForClause(name);
         switch (ast.getToken().getType()) {
-        case HiveParser.TOK_TAB: {
+        case HiveParser.TOK_TAB: {//结果输出到一个table中
           tableSpec ts = new tableSpec(db, conf, ast);
-          if (ts.tableHandle.isView()) {
+          if (ts.tableHandle.isView()) {//视图不允许被用于数据load和insert
             throw new SemanticException(ErrorMsg.DML_AGAINST_VIEW.getMsg());
           }
 
@@ -1407,10 +1456,11 @@ tableSource
           break;
         }
         
+        //结果输出到一个路径中
         case HiveParser.TOK_LOCAL_DIR://设置存储在本地的哪个路径下
         case HiveParser.TOK_DIR: {//设置存储在hdfs的哪个路径下
           // This is a dfs file
-          String fname = stripQuotes(ast.getChild(0).getText());
+          String fname = stripQuotes(ast.getChild(0).getText());//解析最终输出的path
           if ((!qb.getParseInfo().getIsSubQ())
               && (((ASTNode) ast.getChild(0)).getToken().getType() == HiveParser.TOK_TMP_FILE)) {
 
@@ -1508,7 +1558,7 @@ tableSource
   /**
    * 如果该tab是一个视图 
    * @param qb 
-   * @param tab table对象
+   * @param tab 真实的table对象
    * @param tab_name table的真实name名字
    * @param alias table此时使用的别名
    */
@@ -7668,6 +7718,16 @@ tableSource
     return curr;
   }
 
+  /**
+   * 针对union的sql进行计划任务设计
+   * @param unionalias
+   * @param leftalias 第一个union的别名
+   * @param leftOp 第一个union的操作
+   * @param rightalias 第二个union的别名
+   * @param rightOp 第二个union的操作
+   * @return
+   * @throws SemanticException
+   */
   @SuppressWarnings("nls")
   private Operator genUnionPlan(String unionalias, String leftalias,
       Operator leftOp, String rightalias, Operator rightOp)
@@ -7895,18 +7955,22 @@ tableSource
    *          parse expressions are not used
    * @return exprNodeDesc
    * @exception SemanticException
+   * TABLESAMPLE(BUCKET 数字 OUT OF 数字  [ ON expression,expression.. ] )
    */
   private ExprNodeDesc genSamplePredicate(TableSample ts,
       List<String> bucketCols, boolean useBucketCols, String alias,
       RowResolver rwsch, QBMetaData qbm, ExprNodeDesc planExpr)
       throws SemanticException {
 
+	  //设置一个整数类型的表达式
     ExprNodeDesc numeratorExpr = new ExprNodeConstantDesc(
         TypeInfoFactory.intTypeInfo, Integer.valueOf(ts.getNumerator() - 1));
 
+    //设置一个整数类型的表达式
     ExprNodeDesc denominatorExpr = new ExprNodeConstantDesc(
         TypeInfoFactory.intTypeInfo, Integer.valueOf(ts.getDenominator()));
 
+    //设置一个整数类型的表达式
     ExprNodeDesc intMaxExpr = new ExprNodeConstantDesc(
         TypeInfoFactory.intTypeInfo, Integer.valueOf(Integer.MAX_VALUE));
 
@@ -7915,7 +7979,7 @@ tableSource
       args.add(planExpr);
     } else if (useBucketCols) {
       for (String col : bucketCols) {
-        ColumnInfo ci = rwsch.get(alias, col);
+        ColumnInfo ci = rwsch.get(alias, col);//获取列对象
         // TODO: change type to the one in the table schema
         args.add(new ExprNodeColumnDesc(ci.getType(), ci.getInternalName(), ci
             .getTabAlias(), ci.getIsVirtualCol()));
@@ -7953,11 +8017,14 @@ tableSource
     return (qb.getId() == null ? alias : qb.getId() + ":" + alias);
   }
 
+  /**
+   * 通过数据库表进行操作计划设计,即例如from biao,则对该biao进行计划任务操作
+   */
   @SuppressWarnings("nls")
   private Operator genTablePlan(String alias, QB qb) throws SemanticException {
 
     String alias_id = getAliasId(alias, qb);
-    Table tab = qb.getMetaData().getSrcForAlias(alias);
+    Table tab = qb.getMetaData().getSrcForAlias(alias);//获取校验后的数据库表对象
     RowResolver rwsch;
 
     // is the table already present
@@ -7970,6 +8037,7 @@ tableSource
     if (top == null) {
       rwsch = new RowResolver();
       try {
+    	//该表每一行对应的列集合
         StructObjectInspector rowObjectInspector = (StructObjectInspector) tab
             .getDeserializer().getObjectInspector();
         List<? extends StructField> fields = rowObjectInspector
@@ -7981,8 +8049,10 @@ tableSource
           ColumnInfo colInfo = new ColumnInfo(fields.get(i).getFieldName(),
               TypeInfoUtils.getTypeInfoFromObjectInspector(fields.get(i)
                   .getFieldObjectInspector()), alias, false);
+          //设置该列是否是偏移列
           colInfo.setSkewedCol((isSkewedCol(alias, qb, fields.get(i)
               .getFieldName())) ? true : false);
+          //添加该table别名与属性名字,与属性对象三者关系
           rwsch.put(alias, fields.get(i).getFieldName(), colInfo);
         }
       } catch (SerDeException e) {
@@ -7990,6 +8060,7 @@ tableSource
       }
       // Hack!! - refactor once the metadata APIs with types are ready
       // Finally add the partitioning columns
+      //添加该表的分区信息
       for (FieldSchema part_col : tab.getPartCols()) {
         LOG.trace("Adding partition col: " + part_col);
         // TODO: use the right type by calling part_col.getType() instead of
@@ -7998,9 +8069,9 @@ tableSource
             TypeInfoFactory.stringTypeInfo, alias, true));
       }
 
-      // put all virutal columns in RowResolver.
+      // put all virutal columns in RowResolver.添加该表的虚拟列
       Iterator<VirtualColumn> vcs = VirtualColumn.getRegistry(conf).iterator();
-      // use a list for easy cumtomize
+      // use a list for easy cumtomize 定义一些虚拟列集合
       List<VirtualColumn> vcList = new ArrayList<VirtualColumn>();
       while (vcs.hasNext()) {
         VirtualColumn vc = vcs.next();
@@ -8013,7 +8084,7 @@ tableSource
       TableScanDesc tsDesc = new TableScanDesc(alias, vcList);
       setupStats(tsDesc, qb.getParseInfo(), tab, alias, rwsch);
 
-      SplitSample sample = nameToSplitSample.get(alias_id);
+      SplitSample sample = nameToSplitSample.get(alias_id);//获取该表的抽样信息
       if (sample != null && sample.getRowCount() != null) {
         tsDesc.setRowLimit(sample.getRowCount());
         nameToSplitSample.remove(alias_id);
@@ -8028,7 +8099,7 @@ tableSource
 
       // Add a mapping from the table scan operator to Table
       topToTable.put((TableScanOperator) top, tab);
-      Map<String, String> props = qb.getTabPropsForAlias(alias);
+      Map<String, String> props = qb.getTabPropsForAlias(alias);//该表有哪些属性信息
       if (props != null) {
         topToTableProps.put((TableScanOperator) top, props);
       }
@@ -8039,15 +8110,16 @@ tableSource
 
     // check if this table is sampled and needs more than input pruning
     Operator<? extends OperatorDesc> tableOp = top;
-    TableSample ts = qb.getParseInfo().getTabSample(alias);
-    if (ts != null) {
-      int num = ts.getNumerator();
-      int den = ts.getDenominator();
-      ArrayList<ASTNode> sampleExprs = ts.getExprs();
+    TableSample ts = qb.getParseInfo().getTabSample(alias);//获取该表进行抽样的语法,TABLESAMPLE(BUCKET 数字    OUT OF 数字  [ ON expression,expression ] )
+    if (ts != null) {//进行抽样处理
+      int num = ts.getNumerator();//第一个参数
+      int den = ts.getDenominator();//第二个参数
+      ArrayList<ASTNode> sampleExprs = ts.getExprs();//ON表达式集合
 
       // TODO: Do the type checking of the expressions
-      List<String> tabBucketCols = tab.getBucketCols();
-      int numBuckets = tab.getNumBuckets();
+      //CLUSTERED BY (column1,column2) [SORTED BY (column1 desc,column2 desc)] into Number BUCKETS
+      List<String> tabBucketCols = tab.getBucketCols();//在哪些列上建立的桶
+      int numBuckets = tab.getNumBuckets();//该table一共有多少个桶
 
       // If there are no sample cols and no bucket cols then throw an error
       if (tabBucketCols.size() == 0 && sampleExprs.size() == 0) {
@@ -8055,7 +8127,7 @@ tableSource
             + tab.getTableName());
       }
 
-      if (num > den) {
+      if (num > den) {//校验失败
         throw new SemanticException(
             ErrorMsg.BUCKETED_NUMERATOR_BIGGER_DENOMINATOR.getMsg() + " "
                 + tab.getTableName());
@@ -8066,7 +8138,7 @@ tableSource
       // or if input pruning is not possible
 
       // check if the sample columns are the same as the table bucket columns
-      boolean colsEqual = true;
+      boolean colsEqual = true;//校验桶的列与抽样的列要相同,则返回true,不同则返回false,不同包含了列属性个数不同
       if ((sampleExprs.size() != tabBucketCols.size())
           && (sampleExprs.size() != 0)) {
         colsEqual = false;
@@ -8075,7 +8147,7 @@ tableSource
       for (int i = 0; i < sampleExprs.size() && colsEqual; i++) {
         boolean colFound = false;
         for (int j = 0; j < tabBucketCols.size() && !colFound; j++) {
-          if (sampleExprs.get(i).getToken().getType() != HiveParser.TOK_TABLE_OR_COL) {
+          if (sampleExprs.get(i).getToken().getType() != HiveParser.TOK_TABLE_OR_COL) {//必须是字符串
             break;
           }
 
@@ -8087,7 +8159,7 @@ tableSource
         colsEqual = (colsEqual && colFound);
       }
 
-      // Check if input can be pruned
+      // Check if input can be pruned 校验输入源是否可以被修剪一部分
       ts.setInputPruning((sampleExprs == null || sampleExprs.size() == 0 || colsEqual));
 
       // check if input pruning is enough
@@ -8113,7 +8185,7 @@ tableSource
             samplePredicate, true),
             new RowSchema(rwsch.getColumnInfos()), top);
       }
-    } else {
+    } else {//不进行抽样处理
       boolean testMode = conf.getBoolVar(HiveConf.ConfVars.HIVETESTMODE);
       if (testMode) {
         String tabName = tab.getTableName();
@@ -8174,10 +8246,13 @@ tableSource
     return output;
   }
 
+  /**
+   * true 表示检查该属性是否是table中设置偏移的属性
+   */
   private boolean isSkewedCol(String alias, QB qb, String colName) {
     boolean isSkewedCol = false;
-    List<String> skewedCols = qb.getSkewedColumnNames(alias);
-    for (String skewedCol : skewedCols) {
+    List<String> skewedCols = qb.getSkewedColumnNames(alias);//获取该别名对应的table中哪些属性是用于设置偏移
+    for (String skewedCol : skewedCols) {//检查该属性是否是table中设置偏移的属性
       if (skewedCol.equalsIgnoreCase(colName)) {
         isSkewedCol = true;
       }
@@ -8185,19 +8260,28 @@ tableSource
     return isSkewedCol;
   }
 
+  /**
+   * 
+   * @param tsDesc 设置扫描任务的对象
+   * @param qbp
+   * @param tab 该数据库表对象
+   * @param alias 该表的别名
+   * @param rwsch 该表的每一行数据该如何解析
+   * 用于判断是否使用了分析语句,如果使用了,则开启收集状态信息的一些选项
+   */
   private void setupStats(TableScanDesc tsDesc, QBParseInfo qbp, Table tab, String alias,
       RowResolver rwsch)
       throws SemanticException {
 
-    if (!qbp.isAnalyzeCommand()) {
-      tsDesc.setGatherStats(false);
-    } else {
-      tsDesc.setGatherStats(true);
+    if (!qbp.isAnalyzeCommand()) {//没有使用分析语句
+      tsDesc.setGatherStats(false);//不用收集状态信息
+    } else {//使用了分析语句
+      tsDesc.setGatherStats(true);//要收集状态信息
       tsDesc.setStatsReliable(conf.getBoolVar(HiveConf.ConfVars.HIVE_STATS_RELIABLE));
       tsDesc.setMaxStatsKeyPrefixLength(
           conf.getIntVar(HiveConf.ConfVars.HIVE_STATS_KEY_PREFIX_MAX_LENGTH));
 
-      // append additional virtual columns for storing statistics
+      // append additional virtual columns for storing statistics 添加用于统计的虚拟列
       Iterator<VirtualColumn> vcs = VirtualColumn.getStatsRegistry(conf).iterator();
       List<VirtualColumn> vcList = new ArrayList<VirtualColumn>();
       while (vcs.hasNext()) {
@@ -8208,10 +8292,12 @@ tableSource
       }
       tsDesc.addVirtualCols(vcList);
 
+
       String tblName = tab.getTableName();
       tableSpec tblSpec = qbp.getTableSpec(alias);
       Map<String, String> partSpec = tblSpec.getPartSpec();
 
+      //用于分区的属性集合,仅仅用于分析命令中
       if (partSpec != null) {
         List<String> cols = new ArrayList<String>();
         cols.addAll(partSpec.keySet());
@@ -8264,16 +8350,19 @@ tableSource
   public Operator genPlan(QB qb) throws SemanticException {
 
     // First generate all the opInfos for the elements in the from clause
+	//定义最终所有的计划任务集合
     Map<String, Operator> aliasToOpInfo = new HashMap<String, Operator>();
 
     // Recurse over the subqueries to fill the subquery part of the plan
+    //先循环所有的子查询和视图
     for (String alias : qb.getSubqAliases()) {
-      QBExpr qbexpr = qb.getSubqForAlias(alias);
+      QBExpr qbexpr = qb.getSubqForAlias(alias);//获取真正子查询或者视图对应的sql
       aliasToOpInfo.put(alias, genPlan(qbexpr));
       qbexpr.setAlias(alias);
     }
 
     // Recurse over all the source tables
+    //循环每一个用到的数据库表
     for (String alias : qb.getTabAliases()) {
       Operator op = genTablePlan(alias, qb);
       aliasToOpInfo.put(alias, op);
@@ -9788,6 +9877,9 @@ AS selectStatement
    *   ^(TOK_PTBLFUNCTION name alias? partitionTableFunctionSource partitioningSpec? arguments*)
    * - a partitionTableFunctionSource can be a tableReference, a SubQuery or another
    *   PTF invocation.
+   *   
+   *   格式TOK_PTBLFUNCTION name alias? partitionTableFunctionSource partitioningSpec? arguments*
+   *   一个partitionTableFunctionSource可以是一个table、一个子查询、或者其他PTF
    */
   private PartitionedTableFunctionSpec processPTFChain(QB qb, ASTNode ptf)
       throws SemanticException{
@@ -9801,7 +9893,7 @@ AS selectStatement
     ptfSpec.setAstNode(ptf);
 
     /*
-     * name
+     * name 获取name
      */
     ASTNode nameNode = (ASTNode) ptf.getChild(0);
     ptfSpec.setName(nameNode.getText());
@@ -9809,7 +9901,7 @@ AS selectStatement
     int inputIdx = 1;
 
     /*
-     * alias
+     * alias 获取别名
      */
     ASTNode secondChild = (ASTNode) ptf.getChild(1);
     if ( secondChild.getType() == HiveParser.Identifier ) {
@@ -9818,7 +9910,7 @@ AS selectStatement
     }
 
     /*
-     * input
+     * input 获取partitionTableFunctionSource对象
      */
     ASTNode inputNode = (ASTNode) ptf.getChild(inputIdx);
     ptfSpec.setInput(processPTFSource(qb, inputNode));
@@ -9840,6 +9932,7 @@ AS selectStatement
 
     /*
      * arguments
+     * 解析所有参数集合
      */
     for(int i=argStartIdx; i < ptf.getChildCount(); i++)
     {
@@ -9860,6 +9953,7 @@ AS selectStatement
 
     PartitionedTableFunctionSpec ptfSpec = processPTFChain(qb, ptf);
 
+    //添加别名
     if ( ptfSpec.getAlias() != null ) {
       qb.addAlias(ptfSpec.getAlias());
     }

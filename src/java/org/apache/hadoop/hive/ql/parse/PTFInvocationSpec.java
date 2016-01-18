@@ -123,13 +123,14 @@ public class PTFInvocationSpec {
    * - the Partitioning details about its input
    * - its arguments. The ASTNodes representing the arguments are captured here.
    * - a reference to its Input
+   * TOK_PTBLFUNCTION name alias? partitionTableFunctionSource partitioningSpec? arguments*
    */
   public static class PartitionedTableFunctionSpec  extends PTFInputSpec {
     String name;
     String alias;
-    ArrayList<ASTNode> args;
-    PartitioningSpec partitioning;
-    PTFInputSpec input;
+    ArrayList<ASTNode> args;//参数集合
+    PartitioningSpec partitioning;//解析partitioningSpec
+    PTFInputSpec input;//解析partitionTableFunctionSource
     public String getName() {
       return name;
     }

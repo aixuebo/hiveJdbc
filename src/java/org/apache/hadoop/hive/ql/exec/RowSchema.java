@@ -28,6 +28,8 @@ import java.util.ArrayList;
 public class RowSchema implements Serializable {
 
   private static final long serialVersionUID = 1L;
+  
+  //该解析行有哪些属性要去解析
   private ArrayList<ColumnInfo> signature;
 
   public RowSchema() {

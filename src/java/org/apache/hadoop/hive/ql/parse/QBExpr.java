@@ -27,6 +27,9 @@ import org.apache.commons.logging.LogFactory;
  * 
  * QBExpr对象表示一个子查询对象
  * 一个别名对应一个子查询对象,
+ * 
+ * 解析from (select...) alias
+ * 为子查询创建一个表达式对象,因为该表达式也包含一组QB对象
  **/
 public class QBExpr {
 
@@ -37,14 +40,17 @@ public class QBExpr {
    *
    */
   public static enum Opcode {
-    NULLOP, UNION, INTERSECT, DIFF
+    NULLOP,//表示子查询就是正常的一个sql 
+    UNION,//表示子查询中使用了union语法产生的子查询 
+    INTERSECT, DIFF
   };
 
-  private Opcode opcode;
+  private Opcode opcode;//子查询是一个什么逻辑
+  //只有当子查询是UNION时候使用,即UNION表示两个子查询做关联
   private QBExpr qbexpr1;//当为UNION的时候,需要两个查询语句,因此分别是qbexpr1和qbexpr2
   private QBExpr qbexpr2;//当为UNION的时候,需要两个查询语句,因此分别是qbexpr1和qbexpr2
-  private QB qb;//对应的查询sql对象
-  private String alias;//该子查询的别名
+  private QB qb;//解析对应的子查询内的查询sql对象
+  private String alias;//该子查询的别名,即解析from (select...) alias中的alias
 
   public String getAlias() {
     return alias;

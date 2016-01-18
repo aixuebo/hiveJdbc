@@ -20,3 +20,11 @@ select distinct(channel)
 from stat.message
 where log_day = '20160114'
 group by mobile
+
+
+
+
+暂时没办法理解的语法
+case HiveParser.KW_WINDOW:
+TOK_LATERAL_VIEW
+TOK_PTBLFUNCTION

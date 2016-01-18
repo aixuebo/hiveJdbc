@@ -35,26 +35,26 @@ import org.apache.hadoop.hive.ql.exec.RowSchema;
 
 /**
  * Implementation of the Row Resolver.
- *
+ * 实现如何解析一行数据
  */
 public class RowResolver implements Serializable{
   private static final long serialVersionUID = 1L;
-  private  RowSchema rowSchema;
+  private  RowSchema rowSchema;//定义一行有哪些列
   /**
    * table-column-ColumnInfo对象三者关联
-   * key是table名字,value是该table对应的属性集合映射关系
+   * key是table名字,该名字多半是在sql中使用的别名,value是该table对应的属性集合映射关系,key是属性name,value是该属性解析后对应的全部信息
    */
-  private  HashMap<String, LinkedHashMap<String, ColumnInfo>> rslvMap;
+  private HashMap<String, LinkedHashMap<String, ColumnInfo>> rslvMap;
 
   /**
    * table-column-ColumnInfo对象三者关联
    * 属于rslvMap的反向关联
-   * key是ColumnInfo.getInternalName(),value是table-column数组
+   * key是属性在table中真正的属性名称,value是table别名-column别名组成的数组
    */
-  private  HashMap<String, String[]> invRslvMap;
+  private HashMap<String, String[]> invRslvMap;
   
   //存储每一个列的节点作为value,key是列value的toString对象
-  private  Map<String, ASTNode> expressionMap;
+  private Map<String, ASTNode> expressionMap;
 
   // TODO: Refactor this and do in a more object oriented manner
   private boolean isExprResolver;
@@ -100,8 +100,15 @@ public class RowResolver implements Serializable{
   }
 
   /**
+   * 
+   * 
+   */
+  /**
    * table-column-ColumnInfo对象三者关联
    * 设置三者的正反方向关联
+   * @param tab_alias table表名,这里参数表示table在sql中的别名
+   * @param col_alias 属性在table中的属性名
+   * @param colInfo 属性被解析后的对象,该对象表示属性全部信息
    */
   public void put(String tab_alias, String col_alias, ColumnInfo colInfo) {
     if (tab_alias != null) {
@@ -112,6 +119,7 @@ public class RowResolver implements Serializable{
       rowSchema.setSignature(new ArrayList<ColumnInfo>());
     }
 
+    //定义一行有哪些列
     rowSchema.getSignature().add(colInfo);
 
     //设置正方向关联
@@ -129,6 +137,7 @@ public class RowResolver implements Serializable{
     invRslvMap.put(colInfo.getInternalName(), qualifiedAlias);
   }
 
+  //是否存在该别名的表
   public boolean hasTableAlias(String tab_alias) {
     return rslvMap.get(tab_alias.toLowerCase()) != null;
   }
@@ -166,7 +175,7 @@ public class RowResolver implements Serializable{
       }
       ret = f_map.get(col_alias);
     } else {
-    	//不通过表名字查找,而直接通过column查找,那么就要判断是否找到唯一的column,如果column不唯一,要抛异常
+      //不通过表名字查找,而直接通过column查找,那么就要判断是否找到唯一的column,如果column不唯一,要抛异常
       boolean found = false;
       for (LinkedHashMap<String, ColumnInfo> cmap : rslvMap.values()) {
         for (Map.Entry<String, ColumnInfo> cmapEnt : cmap.entrySet()) {

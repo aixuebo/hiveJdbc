@@ -29,34 +29,36 @@ import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoUtils;
  * Implementation for ColumnInfo which contains the internal name for the column
  * (the one that is used by the operator to access the column) and the type
  * (identified by a java class).
+ * 表示一个属性列对象
  **/
-
 public class ColumnInfo implements Serializable {
 
   private static final long serialVersionUID = 1L;
 
-  private String internalName;
+  private String internalName;//属性数据库表中的名字,例如name
 
-  private String alias = null; // [optional] alias of the column (external name
+  private String alias = null;//表示该属性在sql中起的别名 // [optional] alias of the column (external name
   // as seen by the users)
   /**
-   * Indicates whether the column is a skewed column.
+   * Indicates whether the column is a skewed column.true表示该属性是在sql中被设置了偏移
    */
   private boolean isSkewedCol;
 
   /**
    * Store the alias of the table where available.
+   * 该列属于哪个表,在sql中使用的是哪个别名
    */
   private String tabAlias;
 
   /**
    * Indicates whether the column is a virtual column.
+   * true表示该列是虚拟列,即table中不存在该列,false表示该列在table中存在
    */
   private boolean isVirtualCol;
 
-  private transient ObjectInspector objectInspector;
+  private transient ObjectInspector objectInspector;//该列对应的类型
 
-  private boolean isHiddenVirtualCol;
+  private boolean isHiddenVirtualCol;//true表示隐藏虚拟列,例如VirtualColumn表示hive提供的虚拟列
 
   public ColumnInfo() {
   }

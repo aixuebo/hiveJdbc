@@ -162,7 +162,7 @@ public enum ErrorMsg {
   INVALID_AS(10088, "AS clause has an invalid number of aliases"),
   VIEW_COL_MISMATCH(10089, "The number of columns produced by the SELECT clause does not match the "
       + "number of column names specified by CREATE VIEW"),
-  DML_AGAINST_VIEW(10090, "A view cannot be used as target table for LOAD or INSERT"),
+  DML_AGAINST_VIEW(10090, "A view cannot be used as target table for LOAD or INSERT"),//视图不允许被用于数据load和insert
   ANALYZE_VIEW(10091, "ANALYZE is not supported for views"),
   VIEW_PARTITION_TOTAL(10092, "At least one non-partitioning column must be present in view"),
   VIEW_PARTITION_MISMATCH(10093, "Rightmost columns in view output do not match "

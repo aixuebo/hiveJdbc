@@ -29,6 +29,7 @@ import org.apache.hadoop.io.IntWritable;
 
 /**
  * GenericUDF Class for computing hash values.
+ * hash(p1,p2,p3...)依次处理参数,对参数进行hash操作,返回最终的hash值
  */
 @Description(name = "hash", value = "_FUNC_(a1, a2, ...) - Returns a hash value of the arguments")
 public class GenericUDFHash extends GenericUDF {

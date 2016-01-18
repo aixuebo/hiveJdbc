@@ -31,6 +31,7 @@ import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoFactory;
 
 /**
  * A constant expression.
+ * 常量表达式,包含一个值,以及类型
  */
 public class ExprNodeConstantDesc extends ExprNodeDesc implements Serializable {
   private static final long serialVersionUID = 1L;

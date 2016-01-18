@@ -72,7 +72,7 @@ public class GenericUDAFCollectSet extends AbstractGenericUDAFResolver {
   public static class GenericUDAFMkSetEvaluator extends GenericUDAFEvaluator {
     
     // For PARTIAL1 and COMPLETE: ObjectInspectors for original data
-    private PrimitiveObjectInspector inputOI;
+    private PrimitiveObjectInspector inputOI;// ‰»Î¿‡–Õ
     // For PARTIAL2 and FINAL: ObjectInspectors for partial aggregations (list
     // of objs)
     private transient StandardListObjectInspector loi;

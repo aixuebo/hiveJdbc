@@ -40,7 +40,11 @@ public class Entity implements Serializable {
    * The type of the entity.
    */
   public static enum Type {
-    TABLE, PARTITION, DUMMYPARTITION, DFS_DIR, LOCAL_DIR
+    TABLE,//读取一张表 
+    PARTITION,//读取一个partition分区 
+    DUMMYPARTITION,
+    DFS_DIR,//读取一个HDFS路径
+    LOCAL_DIR//读取一个本地路径
   };
 
   /**
@@ -60,7 +64,7 @@ public class Entity implements Serializable {
 
   /**
    * The directory if this is a directory.
-   * 写入的路径
+   * 写入的路径,是HDFS路径或者本地路径
    */
   private String d;
 

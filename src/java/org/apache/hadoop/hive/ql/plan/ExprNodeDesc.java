@@ -28,7 +28,7 @@ import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoUtils;
 
 /**
  * ExprNodeDesc.
- *
+ * 表达式,包含一个类型
  */
 public abstract class ExprNodeDesc implements Serializable, Node {
   private static final long serialVersionUID = 1L;
