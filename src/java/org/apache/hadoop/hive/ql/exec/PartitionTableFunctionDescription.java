@@ -35,6 +35,7 @@ public @interface PartitionTableFunctionDescription
 
 	/**
 	 * if true it is not usable in the language. {@link WindowingTableFunction} is the only internal function.
+	 * true表示该函数是hive内部的函数
 	 */
 	boolean isInternal() default false;
 }

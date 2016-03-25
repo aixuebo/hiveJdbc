@@ -48,6 +48,7 @@ public abstract class GenericUDF implements Closeable {
   /**
    * A Defered Object allows us to do lazy-evaluation and short-circuiting.
    * GenericUDF use DeferedObject to pass arguments.
+   * 延期对象,允许我们去做懒加载
    */
   public static interface DeferredObject {
     void prepare(int version) throws HiveException;
@@ -109,32 +110,45 @@ public abstract class GenericUDF implements Closeable {
    * returned by this UDF will be computed and stored in the
    * ConstantObjectInspector returned.  Otherwise, the function behaves exactly
    * like initialize().
+   * 初始化,并且附加了一些操作,即会将结果缓存起来,因为结果也是常量结果
+   * 1.如果参数都是常量对象ConstantObjectInspector
+   * 2.并且该函数是一个合格的,可以被folded的函数
+   * 3.返回值也是一个常量对象ConstantObjectInspector
+   * 因此这样的自定义函数是会被预先编译,并且存储在返回值常量里面,否则该函数仅仅执行initialize初始化方法,即与initialize方法被调用没有任何区别
    */
   public ObjectInspector initializeAndFoldConstants(ObjectInspector[] arguments)
       throws UDFArgumentException {
 
-    ObjectInspector oi = initialize(arguments);
+    ObjectInspector oi = initialize(arguments);//返回值
 
     // If the UDF depends on any external resources, we can't fold because the
     // resources may not be available at compile time.
+    //如果该函数依赖其他的额外资源,我们不会fold,因为这些资源在编译器还不可用
     if (getRequiredFiles() != null ||
         getRequiredJars() != null) {
       return oi;
     }
 
-    boolean allConstant = true;
+    boolean allConstant = true;//默认所有参数都是常量,如果该值是false,说明其中有任意一个参数不是常量ConstantObjectInspector对象
     for (int ii = 0; ii < arguments.length; ++ii) {
-      if (!ObjectInspectorUtils.isConstantObjectInspector(arguments[ii])) {
+      if (!ObjectInspectorUtils.isConstantObjectInspector(arguments[ii])) {//该对象是否是常量对象
         allConstant = false;
         break;
       }
     }
 
+    /**
+     * 1.如果全部参数都是常量对象ConstantObjectInspector,
+     * 2.返回值并不是常量对象ConstantObjectInspector
+     * 3.
+     */
     if (allConstant &&
         !ObjectInspectorUtils.isConstantObjectInspector(oi) &&
         FunctionRegistry.isDeterministic(this) &&
         !FunctionRegistry.isStateful(this) &&
         ObjectInspectorUtils.supportsConstantObjectInspector(oi)) {
+    	
+    	//将常量参数组装成对象数组
       DeferredObject[] argumentValues =
         new DeferredJavaObject[arguments.length];
       for (int ii = 0; ii < arguments.length; ++ii) {
@@ -142,6 +156,7 @@ public abstract class GenericUDF implements Closeable {
             ((ConstantObjectInspector)arguments[ii]).getWritableConstantValue());
       }
       try {
+    	//执行该函数,并且返回常量对象
         Object constantValue = evaluate(argumentValues);
         oi = ObjectInspectorUtils.getConstantObjectInspector(oi, constantValue);
       } catch (HiveException e) {
@@ -155,11 +170,13 @@ public abstract class GenericUDF implements Closeable {
    * The following two functions can be overridden to automatically include
    * additional resources required by this UDF.  The return types should be
    * arrays of paths.
+   * 该自定义函数可能需要外部jar资源
    */
   public String[] getRequiredJars() {
     return null;
   }
 
+  //该自定义函数可能需要外部文件资源
   public String[] getRequiredFiles() {
     return null;
   }

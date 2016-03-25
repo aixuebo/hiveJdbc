@@ -21,6 +21,7 @@ package org.apache.hadoop.hive.serde2.objectinspector;
  * ConstantObjectInspector.  This interface should be implemented by
  * ObjectInspectors which represent constant values and can return them without
  * an evaluation.
+ * 定义一个常量值
  */
 public interface ConstantObjectInspector extends ObjectInspector {
 

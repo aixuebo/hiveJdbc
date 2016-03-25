@@ -40,6 +40,7 @@ import org.apache.hadoop.util.ReflectionUtils;
  *
  * Note that GenericUDFBridge implements Serializable because the name of the
  * UDF class needs to be serialized with the plan.
+ * 定义一个自定义函数的名字、class全路径以及class对象,支持序列化服务,用于plan计划之间的传输
  *
  */
 public class GenericUDFBridge extends GenericUDF implements Serializable {
@@ -51,6 +52,10 @@ public class GenericUDFBridge extends GenericUDF implements Serializable {
   /**
    * Whether the UDF is an operator or not. This controls how the display string
    * is generated.
+   * 如果该值为true,则函数是以下方式写入的
+   * 1.(param2 udfName param1)
+   * 2.(udfName param1)
+   * 如果该值是false,则函数是正常方式写入的,即udfName(param1,param2,param3)
    */
   boolean isOperator;
 
@@ -127,10 +132,12 @@ public class GenericUDFBridge extends GenericUDF implements Serializable {
   transient ConversionHelper conversionHelper;
   /**
    * The actual udf object.
+   * 通过反射获取自定义函数对象
    */
   transient UDF udf;
   /**
    * The non-deferred real arguments for method invocation.
+   * 用来存储参数
    */
   transient Object[] realArguments;
 
@@ -144,13 +151,15 @@ public class GenericUDFBridge extends GenericUDF implements Serializable {
     }
     udf = (UDF) ReflectionUtils.newInstance(udfClass, null);
 
-    // Resolve for the method based on argument types
+    // Resolve for the method based on argument types获取参数集合
     ArrayList<TypeInfo> argumentTypeInfos = new ArrayList<TypeInfo>(
         arguments.length);
     for (ObjectInspector argument : arguments) {
       argumentTypeInfos.add(TypeInfoUtils
           .getTypeInfoFromObjectInspector(argument));
     }
+    
+    //获取要执行自定义函数类的哪个方法
     udfMethod = udf.getResolver().getEvalMethod(argumentTypeInfos);
     udfMethod.setAccessible(true);
 
@@ -160,7 +169,7 @@ public class GenericUDFBridge extends GenericUDF implements Serializable {
     // Create the non-deferred realArgument
     realArguments = new Object[arguments.length];
 
-    // Get the return ObjectInspector.
+    // Get the return ObjectInspector.获取返回类型
     ObjectInspector returnOI = ObjectInspectorFactory
         .getReflectionObjectInspector(udfMethod.getGenericReturnType(),
         ObjectInspectorOptions.JAVA);
@@ -168,6 +177,7 @@ public class GenericUDFBridge extends GenericUDF implements Serializable {
     return returnOI;
   }
 
+  //执行该函数
   @Override
   public Object evaluate(DeferredObject[] arguments) throws HiveException {
     assert (arguments.length == realArguments.length);
@@ -184,18 +194,24 @@ public class GenericUDFBridge extends GenericUDF implements Serializable {
     return result;
   }
 
+  /**
+   * 参数是自定义函数需要的参数值
+   * 相当于函数的toString方法
+   */
   @Override
   public String getDisplayString(String[] children) {
     if (isOperator) {
+    	//打印(udfName param1)
       if (children.length == 1) {
         // Prefix operator
         return "(" + udfName + " " + children[0] + ")";
-      } else {
+      } else {//打印(param2 udfName param1)
         // Infix operator
         assert children.length == 2;
         return "(" + children[0] + " " + udfName + " " + children[1] + ")";
       }
     } else {
+    	//打印 udfName(param1,param2,param3)
       StringBuilder sb = new StringBuilder();
       sb.append(udfName);
       sb.append("(");

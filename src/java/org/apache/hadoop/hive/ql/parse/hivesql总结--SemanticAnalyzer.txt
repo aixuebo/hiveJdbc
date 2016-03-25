@@ -21,7 +21,12 @@ from stat.message
 where log_day = '20160114'
 group by mobile
 
-
+ * FunctionInfo.
+ * 定义一个函数对象
+ * UDF是自定义函数
+ * UDTF
+ * UDAF是聚合函数
+ * TableFunctionResolver是定义tableFunction
 
 
 暂时没办法理解的语法

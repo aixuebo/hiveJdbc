@@ -48,10 +48,15 @@ import org.apache.hadoop.io.IntWritable;
 		rankingFunction = true,
 		impliesOrder = true
 )
+/**
+ * RANK() OVER(PARTITION BY cookieid ORDER BY pv desc) AS rn1,
+ * 按照 cookieid分组,组内的所有pv进行大小比较,为每一个比较后的值分配唯一的序号,但是注意:如果遇到两个比较值相同的,则会在名次中留下空位
+ */
 public class GenericUDAFRank extends AbstractGenericUDAFResolver
 {
 	static final Log LOG = LogFactory.getLog(GenericUDAFRank.class.getName());
 
+	//校验参数,必须大于1,并且所以参数都必须支持比较
 	@Override
 	public GenericUDAFEvaluator getEvaluator(TypeInfo[] parameters) throws SemanticException
 	{
@@ -61,6 +66,7 @@ public class GenericUDAFRank extends AbstractGenericUDAFResolver
 		}
 		for(int i=0; i<parameters.length; i++)
 		{
+			//每一个参数对象都必须支持可比较
 			ObjectInspector oi = TypeInfoUtils.getStandardJavaObjectInspectorFromTypeInfo(parameters[i]);
 			if (!ObjectInspectorUtils.compareSupported(oi))
 			{

@@ -496,10 +496,10 @@ public class SessionState {
 
   /**
    * ResourceType.
-   *
+   * 该自定义函数依赖的外部资源
    */
   public static enum ResourceType {
-    FILE(new ResourceHook() {
+    FILE(new ResourceHook() {//文件资源
       public String preHook(Set<String> cur, String s) {
         return validateFile(cur, s);
       }
@@ -509,7 +509,7 @@ public class SessionState {
       }
     }),
 
-    JAR(new ResourceHook() {
+    JAR(new ResourceHook() {//jar包资源
       public String preHook(Set<String> cur, String s) {
         String newJar = validateFile(cur, s);
         if (newJar != null) {
@@ -541,6 +541,7 @@ public class SessionState {
     }
   };
 
+  //获取资源ResourceType对象
   public static ResourceType find_resource_type(String s) {
 
     s = s.trim().toUpperCase();

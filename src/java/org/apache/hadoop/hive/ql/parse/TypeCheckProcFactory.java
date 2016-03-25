@@ -605,6 +605,8 @@ public final class TypeCheckProcFactory {
       if (children.size() != 1) {
         return false;
       }
+      
+      //根据节点类型,获取该函数名称
       String funcText = conversionFunctionTextHashMap.get(((ASTNode) expr
           .getChild(0)).getType());
       // not a conversion function
@@ -655,8 +657,9 @@ public final class TypeCheckProcFactory {
     static ExprNodeDesc getFuncExprNodeDescWithUdfData(String udfName, Object udfData,
         ExprNodeDesc... children) throws UDFArgumentException {
 
+    	//通过函数名,找到对应的函数对象,例如&找到与函数
       FunctionInfo fi = FunctionRegistry.getFunctionInfo(udfName);
-      if (fi == null) {
+      if (fi == null) {//抛异常,函数未找到
         throw new UDFArgumentException(udfName + " not found.");
       }
 

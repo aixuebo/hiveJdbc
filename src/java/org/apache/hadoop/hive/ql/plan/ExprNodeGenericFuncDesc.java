@@ -60,13 +60,13 @@ public class ExprNodeGenericFuncDesc extends ExprNodeDesc implements
    * class of genericUDF and creates a new instance when deserialized. This is
    * exactly what we want.
    */
-  private GenericUDF genericUDF;
-  private List<ExprNodeDesc> childExprs;
+  private GenericUDF genericUDF;//自定义函数
+  private List<ExprNodeDesc> childExprs;//自定义函数的参数集合
   /**
    * This class uses a writableObjectInspector rather than a TypeInfo to store
    * the canonical type information for this NodeDesc.
    */
-  private transient ObjectInspector writableObjectInspector;
+  private transient ObjectInspector writableObjectInspector;//函数返回值
   //Is this an expression that should perform a comparison for sorted searches 是否执行一个排序
   private boolean isSortedExpr;
 
@@ -79,6 +79,12 @@ public class ExprNodeGenericFuncDesc extends ExprNodeDesc implements
          genericUDF, children);
   }
 
+  /**
+   * 
+   * @param oi 函数返回值
+   * @param genericUDF 自定义函数
+   * @param children 函数所需要的参数集合
+   */
   public ExprNodeGenericFuncDesc(ObjectInspector oi, GenericUDF genericUDF,
       List<ExprNodeDesc> children) {
     super(TypeInfoUtils.getTypeInfoFromObjectInspector(oi));
@@ -215,8 +221,10 @@ public class ExprNodeGenericFuncDesc extends ExprNodeDesc implements
       }
     }
 
+    //通过参数初始化函数,并且返回函数的返回值
     ObjectInspector oi = genericUDF.initializeAndFoldConstants(childrenOIs);
 
+    //加载自定义函数是否依赖外部资源
     String[] requiredJars = genericUDF.getRequiredJars();
     String[] requiredFiles = genericUDF.getRequiredFiles();
     SessionState ss = SessionState.get();

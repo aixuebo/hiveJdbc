@@ -104,7 +104,6 @@ public final class ObjectInspectorUtils {
   }
 
   /**
-   * 
    * @param oi 原始类型
    * @param objectInspectorOption 期望返回的是java类型还是WRITABLE类型
    * @return
@@ -589,15 +588,17 @@ public final class ObjectInspectorUtils {
   /**
    * Whether comparison is supported for this type.
    * Currently all types that references any map are not comparable.
+   * true表示该类型的对象支持比较大小
    */
   public static boolean compareSupported(ObjectInspector oi) {
     switch (oi.getCategory()) {
     case PRIMITIVE:
       return true;
-    case LIST:
+    case LIST://list内的元素是基础类型,则返回true,表示该list可以进行比较
       ListObjectInspector loi = (ListObjectInspector) oi;
       return compareSupported(loi.getListElementObjectInspector());
     case STRUCT:
+    	//该STRUCT的每一个属性都支持比较,则返回true
       StructObjectInspector soi = (StructObjectInspector) oi;
       List<? extends StructField> fields = soi.getAllStructFieldRefs();
       for (int f = 0; f < fields.size(); f++) {
@@ -606,7 +607,7 @@ public final class ObjectInspectorUtils {
         }
       }
       return true;
-    case MAP:
+    case MAP://map是不支持比较的
       return false;
     case UNION:
       UnionObjectInspector uoi = (UnionObjectInspector) oi;
@@ -1008,6 +1009,9 @@ public final class ObjectInspectorUtils {
     return ((ConstantObjectInspector)oi).getWritableConstantValue();
   }
 
+  /**
+   * 支持常量的类型,仅仅list,map,和基本属性支持常量
+   */
   public static boolean supportsConstantObjectInspector(ObjectInspector oi) {
     switch (oi.getCategory()) {
       case PRIMITIVE:
@@ -1019,6 +1023,9 @@ public final class ObjectInspectorUtils {
     }
   }
 
+  /**
+   * 该对象是否是常量对象
+   */
   public static boolean isConstantObjectInspector(ObjectInspector oi) {
     return (oi instanceof ConstantObjectInspector);
   }

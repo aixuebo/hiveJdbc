@@ -7990,8 +7990,10 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
       }
     }
 
+    //((hash(expressions) & Integer.MAX_VALUE) % denominator) == numerator
     ExprNodeDesc equalsExpr = null;
     {
+    	//返回int类型的,hash(param1,param2)函数
       ExprNodeDesc hashfnExpr = new ExprNodeGenericFuncDesc(
           TypeInfoFactory.intTypeInfo, new GenericUDFHash(), args);
       assert (hashfnExpr != null);

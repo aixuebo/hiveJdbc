@@ -38,6 +38,7 @@ public class UDF {
 
   /**
    * The resolver to use for method resolution.
+   * 获取要执行自定义函数类的哪个方法,即通过参数类型,返回执行哪个方法
    */
   private UDFMethodResolver rslv;
 
@@ -75,11 +76,13 @@ public class UDF {
   /**
    * These can be overriden to provide the same functionality as the
    * correspondingly named methods in GenericUDF.
+   * 该自定义函数所依赖的外部资源
    */
   public String[] getRequiredJars() {
     return null;
   }
 
+  //该自定义函数所依赖的外部资源
   public String[] getRequiredFiles() {
     return null;
   }

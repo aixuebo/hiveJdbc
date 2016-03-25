@@ -25,25 +25,32 @@ import org.apache.hadoop.hive.ql.udf.generic.GenericUDFBridge;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDTF;
 import org.apache.hadoop.hive.ql.udf.ptf.TableFunctionResolver;
 import org.apache.hadoop.hive.ql.udf.ptf.WindowingTableFunction;
+import org.apache.hadoop.hive.ql.udf.ptf.NoopWithMap.NoopWithMapResolver;
 
 /**
  * FunctionInfo.
  * 定义一个函数对象
+ * UDF是自定义函数
+ * UDTF
+ * UDAF是聚合函数
+ * TableFunctionResolver是定义tableFunction
+ * 定义一个函数信息
  */
 public class FunctionInfo {
 
-  private final boolean isNative;
+  private final boolean isNative;//true表示hive自身提高的函数
 
-  private final boolean isInternalTableFunction;
+  private final boolean isInternalTableFunction;//true表示内部table函数,不能被外界使用,例如WindowingTableFunction
 
-  private final String displayName;
+  private final String displayName;//给用户看的名字,一般是functionName的小写形式
 
-  private GenericUDF genericUDF;
+  private GenericUDF genericUDF;//udf函数
 
-  private GenericUDTF genericUDTF;
+  private GenericUDTF genericUDTF;//udtf函数,例如  registerGenericUDTF("parse_url_tuple", GenericUDTFParseUrlTuple.class);
 
-  private GenericUDAFResolver genericUDAFResolver;
+  private GenericUDAFResolver genericUDAFResolver;//定义聚合函数UDAF,例如registerGenericUDAF("max", new GenericUDAFMax());
 
+//registerTableFunction(NOOP_MAP_TABLE_FUNCTION, NoopWithMapResolver.class);定义table函数
   private Class<? extends TableFunctionResolver>  tableFunctionResolver;
 
   public FunctionInfo(boolean isNative, String displayName,
@@ -70,6 +77,12 @@ public class FunctionInfo {
     this.isInternalTableFunction = false;
   }
 
+  /**
+   * registerTableFunction(NOOP_MAP_TABLE_FUNCTION, NoopWithMapResolver.class);
+   * 定义table函数
+   * @param displayName
+   * @param tFnCls
+   */
   public FunctionInfo(String displayName, Class<? extends TableFunctionResolver> tFnCls)
   {
     this.displayName = displayName;
@@ -155,6 +168,7 @@ public class FunctionInfo {
 
   /**
    * Internal table functions cannot be used in the language.
+   * 内部方法,不能被外界使用,例如WindowingTableFunction
    * {@link WindowingTableFunction}
    */
   public boolean isInternalTableFunction() {
@@ -163,6 +177,7 @@ public class FunctionInfo {
 
   /**
    * @return TRUE if the function is a GenericUDF
+   * 是UDF函数
    */
   public boolean isGenericUDF() {
     return null != genericUDF;
@@ -170,6 +185,7 @@ public class FunctionInfo {
 
   /**
    * @return TRUE if the function is a GenericUDAF
+   * 是否是聚合函数UDAF
    */
   public boolean isGenericUDAF() {
     return null != genericUDAFResolver;

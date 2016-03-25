@@ -178,21 +178,19 @@ public final class FunctionRegistry {
    */
   static Map<String, FunctionInfo> mFunctions = Collections.synchronizedMap(new LinkedHashMap<String, FunctionInfo>());
 
+  //窗口函数集合
+  static Map<String, WindowFunctionInfo> windowFunctions = Collections.synchronizedMap(new LinkedHashMap<String, WindowFunctionInfo>());
+  
   /*
    * PTF variables
    * */
-
   public static final String LEAD_FUNC_NAME = "lead";
   public static final String LAG_FUNC_NAME = "lag";
   public static final String LAST_VALUE_FUNC_NAME = "last_value";
 
-
   public static final String WINDOWING_TABLE_FUNCTION = "windowingtablefunction";
   public static final String NOOP_TABLE_FUNCTION = "noop";
   public static final String NOOP_MAP_TABLE_FUNCTION = "noopwithmap";
-
-  static Map<String, WindowFunctionInfo> windowFunctions = Collections.synchronizedMap(new LinkedHashMap<String, WindowFunctionInfo>());
-
 
   static {
     registerGenericUDF("concat", GenericUDFConcat.class);
@@ -364,7 +362,7 @@ public final class FunctionRegistry {
     registerGenericUDF(serdeConstants.VARCHAR_TYPE_NAME,
         GenericUDFToVarchar.class);
 
-    // Aggregate functions
+    // Aggregate functions聚合函数
     registerGenericUDAF("max", new GenericUDAFMax());
     registerGenericUDAF("min", new GenericUDAFMin());
 
@@ -481,6 +479,14 @@ public final class FunctionRegistry {
     registerUDF(true, functionName, UDFClass, isOperator, displayName);
   }
 
+  /**
+   * "substr", UDFSubstr.class, false
+   * @param isNative true表示hive自身提高的函数
+   * @param functionName 函数名称,比如substr
+   * @param UDFClass 函数的全路径UDFSubstr的class路径
+   * @param isOperator,true表示用以下方式定义函数a funcName b或者 funcName b,false定义函数为funcName(param1,param2)
+   * @param displayName 给用户看的名字,一般是functionName的小写形式
+   */
   public static void registerUDF(boolean isNative, String functionName,
       Class<? extends UDF> UDFClass, boolean isOperator, String displayName) {
     if (UDF.class.isAssignableFrom(UDFClass)) {
@@ -503,6 +509,12 @@ public final class FunctionRegistry {
     registerGenericUDF(true, functionName, genericUDFClass);
   }
 
+  /**
+   * registerGenericUDF("encode", GenericUDFEncode.class);
+   * @param isNative true表示hive自身提高的函数
+   * @param functionName,表示函数名字,例如encode
+   * @param genericUDFClass 表示函数对应的class对象
+   */
   public static void registerGenericUDF(boolean isNative, String functionName,
       Class<? extends GenericUDF> genericUDFClass) {
     if (GenericUDF.class.isAssignableFrom(genericUDFClass)) {
@@ -525,6 +537,13 @@ public final class FunctionRegistry {
     registerGenericUDTF(true, functionName, genericUDTFClass);
   }
 
+  /**
+   * registerGenericUDTF("parse_url_tuple", GenericUDTFParseUrlTuple.class);
+   * 定义UDTF
+   * @param isNative true表示hive自身提高的函数
+   * @param functionName,表示parse_url_tuple函数名称
+   * @param genericUDTFClass,表示函数对应的class类
+   */
   public static void registerGenericUDTF(boolean isNative, String functionName,
       Class<? extends GenericUDTF> genericUDTFClass) {
     if (GenericUDTF.class.isAssignableFrom(genericUDTFClass)) {
@@ -537,6 +556,7 @@ public final class FunctionRegistry {
     }
   }
 
+  //通过函数名查找对应的函数的对象
   public static FunctionInfo getFunctionInfo(String functionName) {
     return mFunctions.get(functionName.toLowerCase());
   }
@@ -546,6 +566,7 @@ public final class FunctionRegistry {
    * command "SHOW FUNCTIONS;"
    *
    * @return set of strings contains function names
+   * 返回所有的函数名
    */
   public static Set<String> getFunctionNames() {
     return mFunctions.keySet();
@@ -559,6 +580,7 @@ public final class FunctionRegistry {
    * @param funcPatternStr
    *          regular expression of the interested function names
    * @return set of strings contains function names
+   * 参数是正则表达式,查找匹配该正则表达式的函数集合
    */
   public static Set<String> getFunctionNames(String funcPatternStr) {
     Set<String> funcNames = new TreeSet<String>();
@@ -580,18 +602,21 @@ public final class FunctionRegistry {
    * Returns the set of synonyms of the supplied function.
    *
    * @param funcName
-   *          the name of the function
+   *          the name of the function 函数名称
    * @return Set of synonyms for funcName
-   * 返回同义的功能集合,即同一个FunctionClass函数,名字不同的集合
+   * 1.根据函数名称,查找函数对象,找到对应的函数class
+   * 2.循环所有的函数,查找与参数class相同的,名称不同的函数集合 
    */
   public static Set<String> getFunctionSynonyms(String funcName) {
     Set<String> synonyms = new HashSet<String>();
 
+    //根据函数名称,查找函数对象,找到对应的函数class
     FunctionInfo funcInfo = getFunctionInfo(funcName);
     if (null == funcInfo) {
       return synonyms;
     }
 
+    //循环所有的函数,查找与参数class相同的,名称不同的函数集合 
     Class<?> funcClass = funcInfo.getFunctionClass();
     for (String name : mFunctions.keySet()) {
       if (name.equals(funcName)) {
@@ -609,8 +634,10 @@ public final class FunctionRegistry {
   // are common/convertible to one another. Probably better to rely on the
   // ordering explicitly defined here than to assume that the enum values
   // that were arbitrarily assigned in PrimitiveCategory work for our purposes.
+  //枚举每一个基础类型对应的int值映射关系
   static EnumMap<PrimitiveCategory, Integer> numericTypes =
       new EnumMap<PrimitiveCategory, Integer>(PrimitiveCategory.class);
+  //支持的所有基础类型集合
   static List<PrimitiveCategory> numericTypeList = new ArrayList<PrimitiveCategory>();
 
   static void registerNumericType(PrimitiveCategory primitiveCategory, int level) {
@@ -960,6 +987,13 @@ public final class FunctionRegistry {
     registerGenericUDAF(true, functionName, genericUDAFResolver);
   }
 
+  /**
+   * registerGenericUDAF("max", new GenericUDAFMax());
+   * 定义聚合函数UDAF
+   * @param isNative
+   * @param functionName
+   * @param genericUDAFResolver
+   */
   public static void registerGenericUDAF(boolean isNative, String functionName,
       GenericUDAFResolver genericUDAFResolver) {
     mFunctions.put(functionName.toLowerCase(), new FunctionInfo(isNative,
@@ -1634,6 +1668,7 @@ public final class FunctionRegistry {
    * @param name
    * @param wFn
    * @param registerAsUDAF
+   * 定义窗口函数,例如registerWindowFunction("rank", new GenericUDAFRank());
    */
   public static void registerWindowFunction(String name, GenericUDAFResolver wFn, boolean registerAsUDAF)
   {
@@ -1697,6 +1732,7 @@ public final class FunctionRegistry {
     }
   }
 
+  //true表示函数name是hive内部的table函数
   public static boolean isTableFunction(String name)
   {
     FunctionInfo tFInfo = mFunctions.get(name.toLowerCase());
@@ -1722,6 +1758,12 @@ public final class FunctionRegistry {
     return getTableFunctionResolver(NOOP_TABLE_FUNCTION);
   }
 
+  /**
+   *  registerTableFunction(NOOP_MAP_TABLE_FUNCTION, NoopWithMapResolver.class);
+   *  注册table函数
+   * @param name
+   * @param tFnCls
+   */
   public static void registerTableFunction(String name, Class<? extends TableFunctionResolver> tFnCls)
   {
     FunctionInfo tInfo = new FunctionInfo(name, tFnCls);
