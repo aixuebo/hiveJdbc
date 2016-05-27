@@ -2327,7 +2327,7 @@ c.INSERT OVERWRITE TABLE tableName [ PARTITION (name=value,name=value,name) ] [I
 d.INSERT INTO TABLE tableName [ PARTITION (name=value,name=value,name) ]
 注意:path必须是单引号或者双引号包裹
 例如:
-insert overwrite local directory '/data11/coohua/logs/csv/csv' 向本地目录存储
+insert overwrite local directory '/data11/xuebo/logs/csv/csv' 向本地目录存储
 insert overwrite directory '/logs/statistics/report/h_order_5/log_day=${d}' 向HDFS上目录存储
 FROM nginx n INSERT OVERWRITE TABLE shareStatis PARTITION (task = 'share', date = '20150905')  SELECT * from where 向一个表中某个分区内插入数据
 insertClause

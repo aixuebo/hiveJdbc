@@ -1,6 +1,6 @@
 from子句
 1.from stat.nginx as u
-2.from stat.nginx TABLESAMPLE(BUCKET 1 OUT OF 2 ON coohua_id) as u
+2.from stat.nginx TABLESAMPLE(BUCKET 1 OUT OF 2 ON xuebo_id) as u
 3.from (select * from biao) table
   注意
   from (select * from biao) as table是错的,不允许有as,但是Hive的高版本的时候是可以允许有as的
@@ -260,7 +260,7 @@ c.INSERT OVERWRITE TABLE tableName [ PARTITION (name=value,name=value,name) ] [I
 d.INSERT INTO TABLE tableName [ PARTITION (name=value,name=value,name) ]
 注意:path必须是单引号或者双引号包裹
 例如:
-insert overwrite local directory '/data11/coohua/logs/csv/csv' 向本地目录存储
+insert overwrite local directory '/data11/xuebo/logs/csv/csv' 向本地目录存储
 insert overwrite directory '/logs/statistics/report/h_order_5/log_day=${d}' 向HDFS上目录存储
 FROM nginx n INSERT OVERWRITE TABLE shareStatis PARTITION (task = 'share', date = '20150905')  SELECT * from where 向一个表中某个分区内插入数据
 15.truncateTableStatement 截断表内数据
