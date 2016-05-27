@@ -25,10 +25,13 @@ import org.apache.hadoop.hive.metastore.api.Schema;
  * <code>CommandProcessor</code> interfaace. Typically <code>errorMessage</code>
  * and <code>SQLState</code> will only be set if the <code>responseCode</code>
  * is not 0.
+ * 该类表示CommandProcessor的返回值
+ * responseCode 不是0的时候,errorMessage和SQLState才会有值
+ *
  */
 public class CommandProcessorResponse {
-  private int responseCode;
-  private String errorMessage;
+  private int responseCode;//返回状态码,0表示正常退出,其他表示异常退出
+  private String errorMessage;//异常信息
   private String SQLState;
   private Schema resSchema;
 

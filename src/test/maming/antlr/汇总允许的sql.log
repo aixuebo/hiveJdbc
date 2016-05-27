@@ -177,9 +177,9 @@ f.precedenceOrExpression 规则太复杂了
 
 
 3.fromClause
-a.FROM d_user TABLESAMPLE(BUCKET 1 OUT OF 2 ON coohua_id) u
+a.FROM d_user TABLESAMPLE(BUCKET 1 OUT OF 2 ON xuebo_id) u
    别名u放在最后,而不是放在d_user后面
- BUCKET 1 OUT OF 2 表示按照coohuaId排序后,抽取二分之一的数据
+ BUCKET 1 OUT OF 2 表示按照xueboId排序后,抽取二分之一的数据
  
 4.lateralView
 //1.LATERAL VIEW OUTER function tableAlias [ as xxx | as xxx,xxx,xxx]

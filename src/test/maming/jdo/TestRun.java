@@ -45,9 +45,9 @@ public class TestRun {
 		
 		//重新设置数据库属性信息
 		prop.setProperty("javax.jdo.option.ConnectionDriverName","com.mysql.jdbc.Driver");
-		prop.setProperty("javax.jdo.option.ConnectionURL","jdbc:mysql://192.168.10.50:3306/passport?rewriteBatchedStatements=true&amp;useUnicode=true&amp;characterEncoding=utf8");
-		prop.setProperty("javax.jdo.option.ConnectionUserName","coohua");
-		prop.setProperty("javax.jdo.option.ConnectionPassword","coohua#007");
+		prop.setProperty("javax.jdo.option.ConnectionURL","jdbc:mysql://ip:3306/database?rewriteBatchedStatements=true&amp;useUnicode=true&amp;characterEncoding=utf8");
+		prop.setProperty("javax.jdo.option.ConnectionUserName","xuebo");
+		prop.setProperty("javax.jdo.option.ConnectionPassword","xuebo");
 		//prop.list(System.out);
 		System.out.println(prop.getProperty("javax.jdo.option.ConnectionURL"));
 		pmf = JDOHelper.getPersistenceManagerFactory(prop);

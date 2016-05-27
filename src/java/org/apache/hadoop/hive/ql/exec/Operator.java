@@ -66,6 +66,7 @@ public abstract class Operator<T extends OperatorDesc> implements Serializable,C
    * List of counter names associated with the operator. It contains the
    * following default counters NUM_INPUT_ROWS NUM_OUTPUT_ROWS TIME_TAKEN
    * Individual operators can add to this list via addToCounterNames methods.
+   * 与该操作相关联的计数器name,包含默认的几项
    */
   protected ArrayList<String> counterNames;
 
@@ -78,7 +79,7 @@ public abstract class Operator<T extends OperatorDesc> implements Serializable,C
 
   private transient ExecMapperContext execContext;
 
-  private static AtomicInteger seqId;//全局唯一的ID,自增长ID
+  private static AtomicInteger seqId;
 
   // It can be optimized later so that an operator operator (init/close) is performed
   // only after that operation has been performed on all the parents. This will require
@@ -101,7 +102,7 @@ public abstract class Operator<T extends OperatorDesc> implements Serializable,C
 
   protected transient State state = State.UNINIT;
 
-  static transient boolean fatalError = false; // fatalError is shared acorss,true表示期间遇到了异常导致的失败
+  static transient boolean fatalError = false; // fatalError is shared acorss,
   // all operators
 
   static {
@@ -176,7 +177,7 @@ public abstract class Operator<T extends OperatorDesc> implements Serializable,C
   }
 
   protected T conf;
-  protected boolean done;//true表示已经成功结束
+  protected boolean done;//true锟斤拷示锟窖撅拷锟缴癸拷锟斤拷锟斤拷
 
   public void setConf(T conf) {
     this.conf = conf;
@@ -187,7 +188,7 @@ public abstract class Operator<T extends OperatorDesc> implements Serializable,C
     return conf;
   }
 
-  //成功完成了,或者失败了,都是属于已经完成
+  //锟缴癸拷锟斤拷锟斤拷锟?锟斤拷锟斤拷失锟斤拷锟斤拷,锟斤拷锟斤拷锟斤拷锟斤拷锟窖撅拷锟斤拷锟?
   public boolean getDone() {
     return done || fatalError;
   }
@@ -196,7 +197,7 @@ public abstract class Operator<T extends OperatorDesc> implements Serializable,C
     this.done = done;
   }
 
-  // non-bean fields needed during compilation定义一行有哪些列
+  // non-bean fields needed during compilation锟斤拷锟斤拷一锟斤拷锟斤拷锟斤拷些锟斤拷
   private transient RowSchema rowSchema;
 
   public void setSchema(RowSchema rowSchema) {
@@ -215,9 +216,9 @@ public abstract class Operator<T extends OperatorDesc> implements Serializable,C
   protected transient boolean isLogInfoEnabled = LOG.isInfoEnabled();
   protected transient String alias;
   protected transient Reporter reporter;
-  protected transient String id;//当该对象创建的时候,会根据seqId属性,创建一个ID
+  protected transient String id;//锟斤拷锟矫讹拷锟襟创斤拷锟斤拷时锟斤拷,锟斤拷锟斤拷seqId锟斤拷锟斤拷,锟斤拷锟斤拷一锟斤拷ID
   // object inspectors for input rows
-  // We will increase the size of the array on demand 输入行集合
+  // We will increase the size of the array on demand 锟斤拷锟斤拷锟叫硷拷锟斤拷
   protected transient ObjectInspector[] inputObjInspectors = new ObjectInspector[1];
   // for output rows of this operator
   protected transient ObjectInspector outputObjInspector;
@@ -297,7 +298,7 @@ public abstract class Operator<T extends OperatorDesc> implements Serializable,C
    *
    * @return true if there are no parents or all parents are initialized. false
    *         otherwise
-   * 确定全部父类任务都已经初始化完成,则返回true
+   * 确锟斤拷全锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟窖撅拷锟斤拷始锟斤拷锟斤拷锟?锟津返伙拷true
    */
   protected boolean areAllParentsInitialized() {
     if (parentOperators == null) {
@@ -333,7 +334,7 @@ public abstract class Operator<T extends OperatorDesc> implements Serializable,C
 
     this.configuration = hconf;
     this.out = null;
-    //必须先初始化父类job
+    //锟斤拷锟斤拷锟饺筹拷始锟斤拷锟斤拷锟斤拷job
     if (!areAllParentsInitialized()) {
       return;
     }
@@ -1148,10 +1149,10 @@ public abstract class Operator<T extends OperatorDesc> implements Serializable,C
    */
   private static int lastEnumUsed;
 
-  protected transient long inputRows = 0;//已经输入多少行
+  protected transient long inputRows = 0;//锟窖撅拷锟斤拷锟斤拷锟斤拷锟斤拷锟?
   protected transient long outputRows = 0;
   protected transient long beginTime = 0;
-  protected transient long totalTime = 0;//计算消耗总时间
+  protected transient long totalTime = 0;//锟斤拷锟斤拷锟斤拷锟斤拷锟绞憋拷锟?
 
   protected transient Object groupKeyObject;
 
@@ -1381,7 +1382,7 @@ public abstract class Operator<T extends OperatorDesc> implements Serializable,C
    */
   public void augmentPlan() {
   }
-
+    
   public ExecMapperContext getExecContext() {
     return execContext;
   }

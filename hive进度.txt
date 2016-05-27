@@ -145,3 +145,5 @@
 3900:D:\workspaceHive\hiveJdbc\java\org\apache\hadoop\hive\metastore\HiveMetaStore.java
 5269:D:\workspaceHive\hiveJdbc\java\org\apache\hadoop\hive\metastore\ObjectStore.java
 count:51314
+
+在构建代码的时候,file---project structure--modules---将thrift、java、custom设置为源代码根目录即可

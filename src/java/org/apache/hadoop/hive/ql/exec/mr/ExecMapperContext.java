@@ -31,6 +31,7 @@ public class ExecMapperContext {
 
   // lastInputFile should be changed by the root of the operator tree ExecMapper.map()
   // but kept unchanged throughout the operator tree for one row
+    //
   private String lastInputFile = null;
 
   // currentInputFile will be updated only by inputFileChanged(). If inputFileChanged()

@@ -55,9 +55,9 @@ windows--preferences--maven--installations--默认是选择embedded内嵌的,只需要add添
 3.测试代码放在src/test/java目录下
 4.主代码的package以pom文件的groupId和artifactId开头
  demo
-      <groupId>com.coohua</groupId>
+      <groupId>com.xuebo</groupId>
       <artifactId>dataPlatform</artifactId>
- package为com.coohua.dataPlatform
+ package为com.xuebo.dataPlatform
  二、编译过程
  执行mvn clean compile
  1.clean:clean任务,删除target目录

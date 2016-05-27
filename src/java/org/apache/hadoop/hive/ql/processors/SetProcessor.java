@@ -220,7 +220,7 @@ public class SetProcessor implements CommandProcessor {
       return new CommandProcessorResponse(0, null, null, getSchema());
     }
   }
-
+//
   public CommandProcessorResponse run(String command) {
     SessionState ss = SessionState.get();
     Schema sch = getSchema();

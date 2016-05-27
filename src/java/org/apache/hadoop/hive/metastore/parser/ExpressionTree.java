@@ -104,10 +104,10 @@ public class ExpressionTree {
 
   }
 
-  public static interface TreeVisitor {
-    void visit(TreeNode node) throws MetaException;
-    void visit(LeafNode node) throws MetaException;
-  }
+      public static interface TreeVisitor {
+        void visit(TreeNode node) throws MetaException;
+        void visit(LeafNode node) throws MetaException;
+      }
 
   /**
    * The Class representing a Node in the ExpressionTree.
@@ -234,7 +234,7 @@ public class ExpressionTree {
         value = value.toString();
       } else {
         throw new MetaException("Invalid key name in filter.  " +
-          "Use constants from org.apache.hadoop.hive.metastore.api");
+                  "Use constants from org.apache.hadoop.hive.metastore.api");
       }
       return generateJDOFilterGeneral(params);
     }

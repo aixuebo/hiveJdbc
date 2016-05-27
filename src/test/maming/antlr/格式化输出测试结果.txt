@@ -74,7 +74,7 @@ TOK_QUERY(
 		)
 		(<EOF>)
 	)
-三、select * from biao TABLESAMPLE(BUCKET 1 OUT OF 2 ON coohua_id) biao right join biao1 on biao1.id = biao.id and name = 'xxx'
+三、select * from biao TABLESAMPLE(BUCKET 1 OUT OF 2 ON xuebo_id) biao right join biao1 on biao1.id = biao.id and name = 'xxx'
 (
 	nil(
 	TOK_QUERY(
@@ -84,7 +84,7 @@ TOK_QUERY(
 				TOK_TABNAME(biao)
 			)
 			(
-			TOK_TABLEBUCKETSAMPLE(1)(2)(TOK_TABLE_OR_COL(coohua_id))
+			TOK_TABLEBUCKETSAMPLE(1)(2)(TOK_TABLE_OR_COL(xuebo_id))
 			)(biao)
 		)
 		(
@@ -100,7 +100,7 @@ TOK_QUERY(
 
 四、两个join,表示biao和bian1先进行right链接,然后结果集再与biao2进行left链接
 		command.append("select * from biao ")
-		       .append(" TABLESAMPLE(BUCKET 1 OUT OF 2 ON coohua_id) biao right join biao1 on biao1.id = biao.id ")
+		       .append(" TABLESAMPLE(BUCKET 1 OUT OF 2 ON xuebo_id) biao right join biao1 on biao1.id = biao.id ")
 		       .append(" left join biao2 on biao2.id = biao1.id ")
 		       .append(" and name = 'xxx'");
 
@@ -112,7 +112,7 @@ TOK_QUERY(
 					TOK_RIGHTOUTERJOIN(
 						TOK_TABREF(TOK_TABNAME(biao))
 						(
-							TOK_TABLEBUCKETSAMPLE(1)(2)(TOK_TABLE_OR_COL(coohua_id))
+							TOK_TABLEBUCKETSAMPLE(1)(2)(TOK_TABLE_OR_COL(xuebo_id))
 						)(biao)
 					)
 					(
