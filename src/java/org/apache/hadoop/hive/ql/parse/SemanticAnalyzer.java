@@ -1637,7 +1637,7 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
       String tableOrCol = unescapeIdentifier(condn.getChild(0).getText()
           .toLowerCase());
       unparseTranslator.addIdentifierTranslation((ASTNode) condn.getChild(0));
-      
+      //
       //查看tableOrCol别名是左边还是右边树里面的别名
       if (isPresent(joinTree.getLeftAliases(), tableOrCol)) {
         if (!leftAliases.contains(tableOrCol)) {

@@ -829,6 +829,7 @@ public abstract class BaseSemanticAnalyzer {
           ASTNode partspec_val = (ASTNode) partspec.getChild(i);
           String val = null;
           String colName = unescapeIdentifier(partspec_val.getChild(0).getText().toLowerCase());
+          //insert overwrite table partition_test partition(stat_date='20110728',province) 表示动态分区,因此province只有key,没有value
           if (partspec_val.getChildCount() < 2) { // DP in the form of T partition (ds, hr) 仅仅设置了属性name,而没有设置值,因此是属于动态分区
             if (allowDynamicPartitionsSpec) {//必须允许动态分区存在
               ++numDynParts;
@@ -850,7 +851,7 @@ public abstract class BaseSemanticAnalyzer {
         // check if the partition spec is valid
         if (numDynParts > 0) {//说明是动态分区
           List<FieldSchema> parts = tableHandle.getPartitionKeys();//总分区字段数
-          int numStaPart = parts.size() - numDynParts;//有多少静态分区
+          int numStaPart = parts.size() - numDynParts;//有多少静态分区,即总分区数量-动态的,就是静态的
           //严格要求时,要求至少要有一个静态分区,因此不允许numStaPart=0,即numStaPart=0说明全都是动态分区
           if (numStaPart == 0 &&
               conf.getVar(HiveConf.ConfVars.DYNAMICPARTITIONINGMODE).equalsIgnoreCase("strict")) {
@@ -865,7 +866,7 @@ public abstract class BaseSemanticAnalyzer {
           //分区的顺序必须一致,以及分区的属性必须一致,即不仅仅是数量一致的就可以了
           Iterator<String> itrPsKeys = partSpec.keySet().iterator();
           for (FieldSchema fs: parts) {
-            if (!itrPsKeys.next().toLowerCase().equals(fs.getName().toLowerCase())) {
+            if (!itrPsKeys.next().toLowerCase().equals(fs.getName().toLowerCase())) {//说明顺序不一致
               ErrorPartSpec(partSpec, parts);
             }
           }
@@ -1262,6 +1263,7 @@ create table T (c1 string, c2 string) skewed by (c1,c2) on (('x11','x21'),('x12'
     for (Node childNode : astNode.getChildren()) {
       ASTNode childASTNode = (ASTNode)childNode;
 
+      //HiveParser.TOK_PARTVAL 表示 key=value或者key
       if (childASTNode.getType() != HiveParser.TOK_PARTVAL) {
         getPartExprNodeDesc(childASTNode, astExprNodeMap);
       } else {
@@ -1269,7 +1271,7 @@ create table T (c1 string, c2 string) skewed by (c1,c2) on (('x11','x21'),('x12'
           throw new HiveException("This is dynamic partitioning");
         }
 
-        ASTNode partValASTChild = (ASTNode)childASTNode.getChildren().get(1);
+        ASTNode partValASTChild = (ASTNode)childASTNode.getChildren().get(1);//获取value
         astExprNodeMap.put((ASTNode)childASTNode.getChildren().get(0),
             TypeCheckProcFactory.genExprNode(partValASTChild, typeCheckCtx).get(partValASTChild));
       }
@@ -1298,7 +1300,10 @@ create table T (c1 string, c2 string) skewed by (c1,c2) on (('x11','x21'),('x12'
       } catch (HiveException e) {
         return;
       }
+
+      //获取该table的分区信息
       List<FieldSchema> parts = tbl.getPartitionKeys();
+      //该table每一个分区name与分区的类型
       Map<String, String> partCols = new HashMap<String, String>(parts.size());
       for (FieldSchema col : parts) {
         partCols.put(col.getName(), col.getType().toLowerCase());
@@ -1309,7 +1314,7 @@ create table T (c1 string, c2 string) skewed by (c1,c2) on (('x11','x21'),('x12'
         if (astExprNodePair.getKey().getType() == HiveParser.Identifier) {
           astKeyName = stripIdentifierQuotes(astKeyName);
         }
-        String colType = partCols.get(astKeyName);
+        String colType = partCols.get(astKeyName);//获取该key对应的类型
         ObjectInspector inputOI = astExprNodePair.getValue().getWritableObjectInspector();
 
         TypeInfo expectedType =

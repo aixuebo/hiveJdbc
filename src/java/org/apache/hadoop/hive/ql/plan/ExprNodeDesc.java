@@ -38,11 +38,11 @@ public abstract class ExprNodeDesc implements Serializable, Node {
   }
 
   public ExprNodeDesc(TypeInfo typeInfo) {
-    this.typeInfo = typeInfo;
-    if (typeInfo == null) {
-      throw new RuntimeException("typeInfo cannot be null!");
+        this.typeInfo = typeInfo;
+        if (typeInfo == null) {
+            throw new RuntimeException("typeInfo cannot be null!");
+        }
     }
-  }
 
   @Override
   public abstract ExprNodeDesc clone();
