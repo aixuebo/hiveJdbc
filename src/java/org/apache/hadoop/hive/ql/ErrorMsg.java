@@ -93,7 +93,7 @@ public enum ErrorMsg {
   //CLUSTERED BY (column1,column2) [SORTED BY (column1 desc,column2 desc)] into Number BUCKETS语法中必须存在into Number BUCKETS语句,并且Number一定要大于1
   INVALID_BUCKET_NUMBER(10037, "Bucket number should be bigger than zero"),
   COLUMN_REPEATED_IN_CLUSTER_SORT(10038, "Same column cannot appear in CLUSTER BY and SORT BY"),
-  SAMPLE_RESTRICTION(10039, "Cannot SAMPLE on more than two columns"),
+  SAMPLE_RESTRICTION(10039, "Cannot SAMPLE on more than two columns"),//抽样的列不能超过两列
   SAMPLE_COLUMN_NOT_FOUND(10040, "SAMPLE column not found"),
   NO_PARTITION_PREDICATE(10041, "No partition predicate found"),
   INVALID_DOT(10042, ". Operator is only supported on struct or list of struct types"),

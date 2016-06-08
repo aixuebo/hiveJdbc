@@ -37,14 +37,14 @@ public class TableSample {
 
   /**
    * The numerator of the TABLESAMPLE clause.
-   * 第一个参数
+   * 第一个参数,抽样需要第几组数据
    * 解析TABLESAMPLE(BUCKET 数字    OUT OF 数字  [ ON expression,expression ] )的第一个数字参数
    */
   private int numerator;
 
   /**
    * The denominator of the TABLESAMPLE clause.
-   * 第二个参数
+   * 第二个参数,一共分成多少组
    * 解析TABLESAMPLE(BUCKET 数字    OUT OF 数字  [ ON expression,expression ] )的第二个数字参数
    */
   private int denominator;
@@ -57,6 +57,7 @@ public class TableSample {
    * In case the table does not have any clustering column, the usage of a table
    * sample clause without an ON part is disallowed by the compiler
    * on后面的表达式集合,仅仅用于TABLESAMPLE(BUCKET 数字    OUT OF 数字  [ ON expression,expression ] )子句
+   * 基于什么表达式进行抽样,如果是基于列的,只能是一个列
    */
   private ArrayList<ASTNode> exprs;
 

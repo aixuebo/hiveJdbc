@@ -17,7 +17,6 @@
  */
 
 package org.apache.hadoop.hive.ql.parse;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -636,14 +635,14 @@ tableSource
       if (sampleCols.size() > 2) {
         throw new SemanticException(generateErrorMessage(
             (ASTNode) tabref.getChild(0),
-            ErrorMsg.SAMPLE_RESTRICTION.getMsg()));
+            ErrorMsg.SAMPLE_RESTRICTION.getMsg()));//抽样的列不能超过两列
       }
       qb.getParseInfo().setTabSample(
           alias,
           new TableSample(
-              unescapeIdentifier(sampleClause.getChild(0).getText()),
-              unescapeIdentifier(sampleClause.getChild(1).getText()),
-              sampleCols));
+              unescapeIdentifier(sampleClause.getChild(0).getText()),//抽样第几组
+              unescapeIdentifier(sampleClause.getChild(1).getText()),//一共多少组
+              sampleCols));//基于那个列拆分
       if (unparseTranslator.isEnabled()) {
         for (ASTNode sampleCol : sampleCols) {
           unparseTranslator.addIdentifierTranslation((ASTNode) sampleCol
@@ -656,9 +655,9 @@ tableSource
     	//3.TABLESAMPLE(ByteLengthLiteral)
       ASTNode sampleClause = (ASTNode) tabref.getChild(ssampleIndex);
 
-      Tree type = sampleClause.getChild(0);//类型PERCENT、ROWS、ByteLengthLiteral
+      Tree type = sampleClause.getChild(0);//类型PERCENT、ROWS、ByteLengthLiteral 按照字节、row行数、输入源的总大小的百分比不同类型进行分类
       Tree numerator = sampleClause.getChild(1);
-      String value = unescapeIdentifier(numerator.getText());//数字或者字符串
+      String value = unescapeIdentifier(numerator.getText());//数字或者字符串,具体分类的值
 
 
       SplitSample sample;
@@ -9321,7 +9320,7 @@ b.CREATE [EXTERNAL] TABLE [IF NOT Exists] tableName [(columnNameTypeList)]
     	//解析TBLPROPERTIES (keyValueProperty,keyValueProperty,keyProperty,keyProperty)
         tblProps = DDLSemanticAnalyzer.getProps((ASTNode) child.getChild(0));
         break;
-      case HiveParser.TOK_TABLESERIALIZER:
+      case HiveParser.TOK_TABLESERIALIZER://比如hdfs上的输入源是csv格式的,存储格式是Text,那么hive是读取后没办法解析的,因此定义一个class全路径,是解析一行数据的,该 class会需要一些参数,则添加到属性中即可
     	//解析ROW FORMAT SERDE "class全路径" [WHIN SERDEPROPERTIES TBLPROPERTIES (key=value,key=value,key)]
         child = (ASTNode) child.getChild(0);
         shared.serde = unescapeSQLString(child.getChild(0).getText());
