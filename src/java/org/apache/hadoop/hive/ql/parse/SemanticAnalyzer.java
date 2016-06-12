@@ -1237,24 +1237,30 @@ a.解析后的是joinToken^ fromSource (KW_ON! expression)?
     return phase1Result;
   }
 
+  //处理子查询的元数据
   private void getMetaData(QBExpr qbexpr) throws SemanticException {
     getMetaData(qbexpr, null);
   }
 
+  //处理子查询的元数据,即不断的迭代查找所有的子查询的元数据
   private void getMetaData(QBExpr qbexpr, ReadEntity parentInput)
       throws SemanticException {
-    if (qbexpr.getOpcode() == QBExpr.Opcode.NULLOP) {//说明是query操作,即正常的sql:select from where group by等sql语法
-      getMetaData(qbexpr.getQB(), parentInput);
+    if (qbexpr.getOpcode() == QBExpr.Opcode.NULLOP) {//说明子查询是正常的query操作,即正常的sql:select from where group by等sql语法
+      getMetaData(qbexpr.getQB(), parentInput);//对sql进行查询元数据
     } else {//说明是union操作
-      getMetaData(qbexpr.getQBExpr1(), parentInput);
+      getMetaData(qbexpr.getQBExpr1(), parentInput);//说明子查询是union,union里面的sql不是正常的sql,可能还是一个子查询,因此继续迭代
       getMetaData(qbexpr.getQBExpr2(), parentInput);
     }
   }
 
+  //上面两个getMetaData最终都会一个简单的sql进入该方法进行元数据查询
   public void getMetaData(QB qb) throws SemanticException {
     getMetaData(qb, null);
   }
 
+    /**
+     * 上面三个getMetaData最终都会一个简单的sql进入该方法进行元数据查询
+     */
   @SuppressWarnings("nls")
   public void getMetaData(QB qb, ReadEntity parentInput) throws SemanticException {
     try {
