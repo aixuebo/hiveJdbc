@@ -25,7 +25,7 @@ package org.apache.hadoop.hive.ql.parse;
 public class JoinCond {
   private int left;
   private int right;
-  private JoinType joinType;
+  private JoinType joinType;//比如left join还是什么
   private boolean preserved;
 
   public JoinCond() {

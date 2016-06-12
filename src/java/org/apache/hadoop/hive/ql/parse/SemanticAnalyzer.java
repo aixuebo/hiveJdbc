@@ -483,9 +483,9 @@ functionName格式为:IF | ARRAY | MAP | STRUCT | UNIONTYPE | String
   private void doPhase1GetAllAggregations(ASTNode expressionTree,
       HashMap<String, ASTNode> aggregations, List<ASTNode> wdwFns) throws SemanticException {
     int exprTokenType = expressionTree.getToken().getType();
-    if (exprTokenType == HiveParser.TOK_FUNCTION
-        || exprTokenType == HiveParser.TOK_FUNCTIONDI
-        || exprTokenType == HiveParser.TOK_FUNCTIONSTAR) {
+    if (exprTokenType == HiveParser.TOK_FUNCTION //函数
+        || exprTokenType == HiveParser.TOK_FUNCTIONDI //count(dinstinct(column)) 用dinstinct嵌套的函数
+        || exprTokenType == HiveParser.TOK_FUNCTIONSTAR) {//*
       assert (expressionTree.getChildCount() != 0);
       if (expressionTree.getChild(expressionTree.getChildCount()-1).getType()
           == HiveParser.TOK_WINDOWSPEC) {//解析OVER window_specification,说明最后一个位置是窗口函数
@@ -1343,7 +1343,7 @@ a.解析后的是joinToken^ fromSource (KW_ON! expression)?
         }
 
         //设置校验好的table别名与table对象映射关系
-        qb.getMetaData().setSrcForAlias(alias, tab);
+        qb.getMetaData().setSrcForAlias(alias, tab);//设置一个别名和具体的table表对象
 
         //使用了以下语法:ANALYZE TABLE tableName [ PARTITION (name=value,name=value,name) ] COMPUTE STATISTICS [NOSCAN]  [PARTIALSCAN]  [FOR COLUMNS "column1","column2"]
         if (qb.getParseInfo().isAnalyzeCommand()) {//需要分析表
@@ -1750,14 +1750,21 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
     }
   }
 
+    /**
+     *
+     * @param joinTree 里面包含了左边join和右边join的内容,还有left还是right join关联
+     * @param joinCond 这个是join on 后面追加的表达式,以什么方式进行关联
+     * @param leftSrc
+     * @throws SemanticException
+     */
   private void parseJoinCondition(QBJoinTree joinTree, ASTNode joinCond, List<String> leftSrc)
       throws SemanticException {
     if (joinCond == null) {
       return;
     }
-    JoinCond cond = joinTree.getJoinCond()[0];
+    JoinCond cond = joinTree.getJoinCond()[0];//如何join的,是left join?还是其他
 
-    JoinType type = cond.getJoinType();
+    JoinType type = cond.getJoinType();//如何join的,是left join?还是其他
     parseJoinCondition(joinTree, joinCond, leftSrc, type);
 
     List<ArrayList<ASTNode>> filters = joinTree.getFilters();
@@ -1780,12 +1787,13 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
    * support AND i.e ORs are not supported currently as their semantics are not
    * very clear, may lead to data explosion and there is no usecase.
    *
-   * @param joinTree
+   * @param joinTree 里面包含了左边join和右边join的内容,还有left还是right join关联
    *          jointree to be populated
-   * @param joinCond
+   * @param joinCond 这个是join on 后面追加的表达式,以什么方式进行关联
    *          join condition
    * @param leftSrc
    *          left sources
+   *  @param type 表示是left还是right join关联
    * @throws SemanticException
    */
   private void parseJoinCondition(QBJoinTree joinTree, ASTNode joinCond,
@@ -1794,25 +1802,25 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
       return;
     }
 
-    switch (joinCond.getToken().getType()) {
+    switch (joinCond.getToken().getType()) {//过滤join on的符号
     case HiveParser.KW_OR://OR
       throw new SemanticException(ErrorMsg.INVALID_JOIN_CONDITION_3
           .getMsg(joinCond));
 
-    case HiveParser.KW_AND://AND
+    case HiveParser.KW_AND://AND 继续对and左右两边的表达式进一步解析
       parseJoinCondition(joinTree, (ASTNode) joinCond.getChild(0), leftSrc, type);
       parseJoinCondition(joinTree, (ASTNode) joinCond.getChild(1), leftSrc, type);
       break;
 
-    case HiveParser.EQUAL_NS://<=>
-    case HiveParser.EQUAL://'=' | '=='
-      ASTNode leftCondn = (ASTNode) joinCond.getChild(0);
+    case HiveParser.EQUAL_NS://<=> 不等于符号
+    case HiveParser.EQUAL://'=' | '==' //等于
+      ASTNode leftCondn = (ASTNode) joinCond.getChild(0);//符号左边
       ArrayList<String> leftCondAl1 = new ArrayList<String>();
       ArrayList<String> leftCondAl2 = new ArrayList<String>();
       parseJoinCondPopulateAlias(joinTree, leftCondn, leftCondAl1, leftCondAl2,
           null);
 
-      ASTNode rightCondn = (ASTNode) joinCond.getChild(1);
+      ASTNode rightCondn = (ASTNode) joinCond.getChild(1);//符号右边
       ArrayList<String> rightCondAl1 = new ArrayList<String>();
       ArrayList<String> rightCondAl2 = new ArrayList<String>();
       parseJoinCondPopulateAlias(joinTree, rightCondn, rightCondAl1,
@@ -6292,6 +6300,7 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
     return rsOp;
   }
 
+    //join关联操作
   private Operator genJoinOperator(QB qb, QBJoinTree joinTree,
       Map<String, Operator> map) throws SemanticException {
     QBJoinTree leftChild = joinTree.getJoinSrc();
@@ -6699,8 +6708,8 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
 
     joinTree.setJoinCond(condn);
 
-    ASTNode left = (ASTNode) joinParseTree.getChild(0);
-    ASTNode right = (ASTNode) joinParseTree.getChild(1);
+    ASTNode left = (ASTNode) joinParseTree.getChild(0);//左边的节点
+    ASTNode right = (ASTNode) joinParseTree.getChild(1);//右边的节点
 
     if ((left.getToken().getType() == HiveParser.TOK_TABREF)//eg:[dbName.] tableName [(key=value,key=value,key)] [tableSample] [ as Identifier ]
         || (left.getToken().getType() == HiveParser.TOK_SUBQUERY) //eg: (queryStatementExpression) identifier
@@ -6715,10 +6724,10 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
       alias = (left.getToken().getType() == HiveParser.TOK_PTBLFUNCTION) ?
           unescapeIdentifier(left.getChild(1).getText().toLowerCase()) :
             alias;
-      joinTree.setLeftAlias(alias);
+      joinTree.setLeftAlias(alias);//设置左边的别名
       String[] leftAliases = new String[1];
       leftAliases[0] = alias;
-      joinTree.setLeftAliases(leftAliases);
+      joinTree.setLeftAliases(leftAliases);//设置左边的别名集合
       String[] children = new String[2];
       children[0] = alias;
       joinTree.setBaseSrc(children);
@@ -6792,7 +6801,7 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
     filtersForPushing.add(new ArrayList<ASTNode>());
     joinTree.setFiltersForPushing(filtersForPushing);
 
-    ASTNode joinCond = (ASTNode) joinParseTree.getChild(2);
+    ASTNode joinCond = (ASTNode) joinParseTree.getChild(2);//是什么join操作条件信息,即join  on 后面的信息
     ArrayList<String> leftSrc = new ArrayList<String>();
     parseJoinCondition(joinTree, joinCond, leftSrc);
     if (leftSrc.size() == 1) {
@@ -7035,6 +7044,7 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
   // in a join tree ((A-B)-C)-D where C is not mergeable with A-B,
   // D can be merged with A-B into single join If and only if C and D has same join type
   // In this case, A-B-D join will be executed first and ABD-C join will be executed in next
+    //如果c和d的join 类型相同,比如都是and,那么a-b join之后,c是不能与之进行join的,那么应该先让ab -d去join,然后结果在与c进行join
   private void mergeJoinTree(QB qb) {
     QBJoinTree tree = qb.getQbJoinTree();
     if (tree.getJoinSrc() == null) {
@@ -8410,9 +8420,9 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
         QBJoinTree joinTree = genUniqueJoinTree(qb, joinExpr, aliasToOpInfo);
         qb.setQbJoinTree(joinTree);
       } else {
-        QBJoinTree joinTree = genJoinTree(qb, joinExpr, aliasToOpInfo);
-        qb.setQbJoinTree(joinTree);
-        mergeJoinTree(qb);
+        QBJoinTree joinTree = genJoinTree(qb, joinExpr, aliasToOpInfo);//处理join信息
+        qb.setQbJoinTree(joinTree);//设置join结果集
+        mergeJoinTree(qb);//合并两个表的join
       }
 
       // if any filters are present in the join tree, push them on top of the
@@ -9403,7 +9413,7 @@ b.CREATE [EXTERNAL] TABLE [IF NOT Exists] tableName [(columnNameTypeList)]
       // database.
       SessionState.get().setCommandType(HiveOperation.CREATETABLE);
       rootTasks.add(TaskFactory.get(new DDLWork(getInputs(), getOutputs(),
-          crtTblDesc), conf));
+          crtTblDesc), conf));//因为DDL工作是创建表,因此输入和输出都是空的是对的
       break;
 
     case CTLT: // create table like <tbl_name> 使用like方式创建表

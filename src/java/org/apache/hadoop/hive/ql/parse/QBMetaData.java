@@ -29,7 +29,7 @@ import org.apache.hadoop.hive.ql.plan.DynamicPartitionCtx;
 
 /**
  * Implementation of the metadata information related to a query block.
- * 查询对应的元数据信息
+ * 查询对应的元数据信息,即在hive中已经存在的table元数据信息
  **/
 public class QBMetaData {
 
@@ -45,7 +45,7 @@ public class QBMetaData {
   private final HashMap<String, Partition> nameToDestPartition;
   private final HashMap<String, String> nameToDestFile;
   private final HashMap<String, Integer> nameToDestType;
-  private final HashMap<String, Map<String, String>> aliasToPartSpec;
+  private final HashMap<String, Map<String, String>> aliasToPartSpec;//key是table,value是该table的分区信息
   private final HashMap<String, DynamicPartitionCtx> aliasToDPCtx;
 
   @SuppressWarnings("unused")

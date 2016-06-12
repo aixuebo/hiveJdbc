@@ -35,12 +35,12 @@ import org.apache.hadoop.hive.ql.plan.OperatorDesc;
 public class QBJoinTree implements Serializable{
   private static final long serialVersionUID = 1L;
   private String leftAlias;//左边的查询表别名
-  private String[] rightAliases;//右边的查询表别名
-  private String[] leftAliases;//左边的查询表别名
-  private QBJoinTree joinSrc;
-  private String[] baseSrc;//第一个是左边表的别名,第二个是右边表的别名
+  private String[] rightAliases;//右边的查询表别名,可以是多个别名,但是没意义
+  private String[] leftAliases;//左边的查询表别名,可以是多个别名,但是没意义
+  private QBJoinTree joinSrc;//关联的可能又是一个join操作结果
+  private String[] baseSrc;//第一个是左边表的别名,第二个是右边表的别名,
   private int nextTag;
-  private JoinCond[] joinCond;
+  private JoinCond[] joinCond;//通过该字段可以知道两个表到底是什么join,比如是left join 还是right什么的
   private boolean noOuterJoin;//true表示JOIN 、INNER JOIN    false表示LEFT [OUTER] JOIN 、RIGHT [OUTER] JOIN 、FULL [OUTER] JOIN
   private boolean noSemiJoin;//false表示LEFT SEMI JOIN
   private Map<String, Operator<? extends OperatorDesc>> aliasToOpInfo;

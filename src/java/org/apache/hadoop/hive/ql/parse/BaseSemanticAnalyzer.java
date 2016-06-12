@@ -184,7 +184,7 @@ public abstract class BaseSemanticAnalyzer {
 
   /**
    * 输入/输出的格式化类型
-   * 
+   *
    */
   class StorageFormat {
     String inputFormat = null;

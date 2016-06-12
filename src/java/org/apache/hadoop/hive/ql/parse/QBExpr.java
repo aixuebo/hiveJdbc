@@ -30,6 +30,8 @@ import org.apache.commons.logging.LogFactory;
  * 
  * 解析from (select...) alias
  * 为子查询创建一个表达式对象,因为该表达式也包含一组QB对象
+ *
+ * 表示一个子查询,每一个子查询都有一个QB,因此该类主要的是内容是QB
  **/
 public class QBExpr {
 
@@ -42,7 +44,8 @@ public class QBExpr {
   public static enum Opcode {
     NULLOP,//表示子查询就是正常的一个sql 
     UNION,//表示子查询中使用了union语法产生的子查询 
-    INTERSECT, DIFF
+    INTERSECT,//交集,暂时不知道用在哪里了
+    DIFF//不同,暂时不知道用在哪里了
   };
 
   private Opcode opcode;//子查询是一个什么逻辑
