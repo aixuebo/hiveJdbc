@@ -37,7 +37,8 @@ public class TestRun {
 	@Test
 	public void test2(){
 		String command = "select count(distinct (aa)),cc from biao";
-		command = "select count(distinct (aa)),cc ,ROW_NUMBER() OVER (PARTITION BY userid order by find_in_set(iseffective,'1') desc,lastupdatetime asc) as rn from biao";
+		//command = "select count(distinct (aa)),cc ,ROW_NUMBER() OVER (PARTITION BY userid order by find_in_set(iseffective,'1') desc,lastupdatetime asc) as rn from biao";
+		command = "select * from biao b left join biao2 b2 on b.id = b2.id and b.name = b2.name ";
 		try {
 			ASTNode node = new ParseDriver().parse(command);
 			System.out.println(node.dump());

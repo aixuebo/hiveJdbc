@@ -771,14 +771,18 @@ public abstract class BaseSemanticAnalyzer {
 
   /**
    * tableSpec.
+   * 解析insert overwrite table ods_jlc_first.user_info partition(log_day='${d}')节点信息
    */
   public static class tableSpec {
     public String tableName;//table表名字
     public Table tableHandle;//table对象
-    public Map<String, String> partSpec; // has to use LinkedHashMap to enforce order按照设置分区的顺序,进行排序分区,key是属性,value是分区值
-    public Partition partHandle;
+
+    public Map<String, String> partSpec; // has to use LinkedHashMap to enforce order按照设置分区的顺序,进行排序分区,key是属性,value是分区值,即导出到哪个partition中
     public int numDynParts; // number of dynamic partition columns多少个动态分区属性
-    public List<Partition> partitions; // involved partitions in TableScanOperator/FileSinkOperator
+    public List<Partition> partitions; // involved partitions in TableScanOperator/FileSinkOperator 静态分区的时候,用于存储每一个分区的信息
+
+    public Partition partHandle;//动态分区的时候,该值是null,静态分区的时候,该值是
+
     public static enum SpecType {TABLE_ONLY, STATIC_PARTITION, DYNAMIC_PARTITION};//没有分区的数据库表,静态分区,动态分区
     public SpecType specType;
 
@@ -807,7 +811,7 @@ public abstract class BaseSemanticAnalyzer {
               + tableName;
         }
         //非创建table
-        if (ast.getToken().getType() != HiveParser.TOK_CREATETABLE) {
+        if (ast.getToken().getType() != HiveParser.TOK_CREATETABLE) {//如果table不是临时要创建的,则从数据库中查询该table信息
           tableHandle = db.getTable(tableName);
         }
       } catch (InvalidTableException ite) {
@@ -819,7 +823,7 @@ public abstract class BaseSemanticAnalyzer {
       }
 
       // get partition metadata if partition specified 设置分区属性如果存在分区属性的话
-      if (ast.getChildCount() == 2 && ast.getToken().getType() != HiveParser.TOK_CREATETABLE) {
+      if (ast.getChildCount() == 2 && ast.getToken().getType() != HiveParser.TOK_CREATETABLE) {//获取导入到哪个partition中
         childIndex = 1;
         ASTNode partspec = (ASTNode) ast.getChild(1);
         partitions = new ArrayList<Partition>();
@@ -851,16 +855,16 @@ public abstract class BaseSemanticAnalyzer {
 
         // check if the partition spec is valid
         if (numDynParts > 0) {//说明是动态分区
-          List<FieldSchema> parts = tableHandle.getPartitionKeys();//总分区字段数
+          List<FieldSchema> parts = tableHandle.getPartitionKeys();//总分区字段内容
           int numStaPart = parts.size() - numDynParts;//有多少静态分区,即总分区数量-动态的,就是静态的
           //严格要求时,要求至少要有一个静态分区,因此不允许numStaPart=0,即numStaPart=0说明全都是动态分区
           if (numStaPart == 0 &&
-              conf.getVar(HiveConf.ConfVars.DYNAMICPARTITIONINGMODE).equalsIgnoreCase("strict")) {
+              conf.getVar(HiveConf.ConfVars.DYNAMICPARTITIONINGMODE).equalsIgnoreCase("strict")) {//不允许全都是动态分区,必须要有静态分区存在
             throw new SemanticException(ErrorMsg.DYNAMIC_PARTITION_STRICT_MODE.getMsg());
           }
 
           // check the partitions in partSpec be the same as defined in table schema分区数量一定是要匹配的
-          if (partSpec.keySet().size() != parts.size()) {
+          if (partSpec.keySet().size() != parts.size()) {//说明table的分区数量与创建目的地的分区数量不一致,要抛异常
             ErrorPartSpec(partSpec, parts);
           }
           
@@ -881,7 +885,7 @@ public abstract class BaseSemanticAnalyzer {
                     ErrorMsg.PARTITION_DYN_STA_ORDER.getMsg(ast.getChild(childIndex)));
               }
               break;
-            } else {
+            } else {//说明存在一个该分区的key是静态的
               --numStaPart;
             }
           }
@@ -890,7 +894,7 @@ public abstract class BaseSemanticAnalyzer {
         } else {//说明是静态分区
           try {
             if (allowPartialPartitionsSpec) {//允许并行分区执行
-              partitions = db.getPartitions(tableHandle, partSpec);
+              partitions = db.getPartitions(tableHandle, partSpec);//获取该table的这些key-value分区的集合
             } else {
               // this doesn't create partition.创建每一个分区的处理对象
               partHandle = db.getPartition(tableHandle, partSpec, false);

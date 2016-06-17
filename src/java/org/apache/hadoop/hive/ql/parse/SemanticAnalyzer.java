@@ -239,6 +239,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
   // keeps track of aliases for V3, V3:V2, V3:V2:V1.
   // This is used when T is added as an input for the query, the parents of T is
   // derived from the alias V3:V2:V1:T
+  //映射别名和该视图view的输入源
   private final Map<String, ReadEntity> viewAliasToInput = new HashMap<String, ReadEntity>();
 
   // Max characters when auto generating the column name with func name
@@ -1432,7 +1433,7 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
             throw new SemanticException(ErrorMsg.DML_AGAINST_VIEW.getMsg());
           }
 
-          Class<?> outputFormatClass = ts.tableHandle.getOutputFormatClass();
+          Class<?> outputFormatClass = ts.tableHandle.getOutputFormatClass();//表的输出格式
           if (!HiveOutputFormat.class.isAssignableFrom(outputFormatClass)) {
             throw new SemanticException(ErrorMsg.INVALID_OUTPUT_FORMAT_TYPE
                 .getMsg(ast, "The class is " + outputFormatClass.toString()));
@@ -1441,14 +1442,14 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
           // tableSpec ts is got from the query (user specified),
           // which means the user didn't specify partitions in their query,
           // but whether the table itself is partitioned is not know.
-          if (ts.specType != SpecType.STATIC_PARTITION) {
+          if (ts.specType != SpecType.STATIC_PARTITION) {//不是静态的,那么就是动态或者无分区的
             // This is a table or dynamic partition
             qb.getMetaData().setDestForAlias(name, ts.tableHandle);
             // has dynamic as well as static partitions
             if (ts.partSpec != null && ts.partSpec.size() > 0) {
               qb.getMetaData().setPartSpecForAlias(name, ts.partSpec);
             }
-          } else {
+          } else {//静态分区
             // This is a partition
             qb.getMetaData().setDestForAlias(name, ts.partHandle);
           }
@@ -1622,11 +1623,11 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
   }
 
   /**
-   * 解析join后面的on表达式需要的数据库节点属于左边树还是右边树的 
+   * 解析join后面的on表达式的关联部分,比如 on a.id = b.id 则这部分解析的是a.id或者b.id
    * @param joinTree
-   * @param condn
-   * @param leftAliases 左边树则添加到该集合
-   * @param rightAliases 右边树则添加到该集合
+   * @param condn a.id
+   * @param leftAliases 空集合
+   * @param rightAliases 空集合
    * @param fields
    * @throws SemanticException
    */
@@ -1762,6 +1763,11 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
      * @param joinCond 这个是join on 后面追加的表达式,以什么方式进行关联
      * @param leftSrc
      * @throws SemanticException
+    select * from biao b left join biao2 b2 on b.id = b2.id and b.name = b2.name
+    (nil(TOK_QUERY(TOK_FROM(TOK_LEFTOUTERJOIN(TOK_TABREF(TOK_TABNAME(biao))(b))(TOK_TABREF(TOK_TABNAME(biao2))(b2))
+    (and(=(.(TOK_TABLE_OR_COL(b))(id))(.(TOK_TABLE_OR_COL(b2))(id)))
+    (=(.(TOK_TABLE_OR_COL(b))(name))(.(TOK_TABLE_OR_COL(b2))(name))))))
+    (TOK_INSERT(TOK_DESTINATION(TOK_DIR(TOK_TMP_FILE)))(TOK_SELECT(TOK_SELEXPR(TOK_ALLCOLREF)))))(<EOF>))
      */
   private void parseJoinCondition(QBJoinTree joinTree, ASTNode joinCond, List<String> leftSrc)
       throws SemanticException {
@@ -1809,7 +1815,7 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
     }
 
     switch (joinCond.getToken().getType()) {//过滤join on的符号
-    case HiveParser.KW_OR://OR
+    case HiveParser.KW_OR://OR  on b.id = bb.id or b.id = 1 on后面是不支持or语法的
       throw new SemanticException(ErrorMsg.INVALID_JOIN_CONDITION_3
           .getMsg(joinCond));
 
@@ -2161,6 +2167,7 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
     return (end == -1) ? "" : cmd.substring(end, cmd.length());
   }
 
+  //返回列的序号
   private static int getPositionFromInternalName(String internalName) {
     return HiveConf.getPositionFromInternalName(internalName);
   }

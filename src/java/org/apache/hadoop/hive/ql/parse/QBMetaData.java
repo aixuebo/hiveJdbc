@@ -41,10 +41,10 @@ public class QBMetaData {
   public static final int DEST_LOCAL_FILE = 5;
 
   private final HashMap<String, Table> aliasToTable;//记录校验好的数据库table对象的别名作为key,value是对应的table对象
-  private final HashMap<String, Table> nameToDestTable;
+  private final HashMap<String, Table> nameToDestTable;//记录每一个key别名 对应那个表
   private final HashMap<String, Partition> nameToDestPartition;
   private final HashMap<String, String> nameToDestFile;
-  private final HashMap<String, Integer> nameToDestType;
+  private final HashMap<String, Integer> nameToDestType;//记录每一个key别名是对应什么类型,是表还是分区还是文件还是什么
   private final HashMap<String, Map<String, String>> aliasToPartSpec;//key是table,value是该table的分区信息
   private final HashMap<String, DynamicPartitionCtx> aliasToDPCtx;
 
