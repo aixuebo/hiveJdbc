@@ -45,6 +45,10 @@ import org.apache.hadoop.hive.serde2.objectinspector.primitive.PrimitiveObjectIn
  * The input is a single double value or an array of double values representing the quantiles
  * requested. The output, corresponding to the input, is either an single double value or an
  * array of doubles that are the quantile values.
+ *
+ * 会对id列的值进行分桶,分到第三个桶中,获取10分位数中百分比是3%,30%,50%最接近的数值,得到的结果与自己知道的概率比较,看看差距是否很大,差距越大,越说明异常值较多
+ * select percentile_approx(id, array(0.03,0.3,0.5), 10) from dim_temporary.test;
+ *
  */
 @Description(name = "percentile_approx",
     value = "_FUNC_(expr, pc, [nb]) - For very large data, computes an approximate percentile " +
@@ -288,8 +292,8 @@ public class GenericUDAFPercentileApprox extends AbstractGenericUDAFResolver {
   public abstract static class GenericUDAFPercentileApproxEvaluator extends GenericUDAFEvaluator {
     // For PARTIAL1 and COMPLETE: ObjectInspectors for original data
     protected PrimitiveObjectInspector inputOI;
-    protected double quantiles[];
-    protected Integer nbins = 10000;
+    protected double quantiles[];//第二个参数
+    protected Integer nbins = 10000;//第三个参数
 
     // For PARTIAL2 and FINAL: ObjectInspectors for partial aggregations (list of doubles)
     protected transient StandardListObjectInspector loi;
