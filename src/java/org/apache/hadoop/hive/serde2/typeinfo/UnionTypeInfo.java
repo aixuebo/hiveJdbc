@@ -31,6 +31,7 @@ import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector.Category;
  *
  * Always use the TypeInfoFactory to create new TypeInfo objects, instead of
  * directly creating an instance of this class.
+ * union与array不同在于,union存储的元素可以是任意类型,union可以理解成是scala的cuple元组,可以存储任意类型
  */
 public class UnionTypeInfo extends TypeInfo implements Serializable {
 

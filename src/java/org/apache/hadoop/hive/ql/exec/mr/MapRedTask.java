@@ -95,22 +95,22 @@ public class MapRedTask extends ExecDriver implements Serializable {
         ctxCreated = true;
       }
 
-      // estimate number of reducers
+      // estimate number of reducers 设置reduce的数量
       setNumberOfReducers();
 
-      // auto-determine local mode if allowed
+      // auto-determine local mode if allowed 自动决定是否使用本地模式
       if (!ctx.isLocalOnlyExecutionMode() &&
           conf.getBoolVar(HiveConf.ConfVars.LOCALMODEAUTO)) {
 
-        if (inputSummary == null) {
+        if (inputSummary == null) {//预估输入源文件的大小
           inputSummary = Utilities.getInputSummary(driverContext.getCtx(), work.getMapWork(), null);
         }
 
         // set the values of totalInputFileSize and totalInputNumFiles, estimating them
         // if percentage block sampling is being used
-        double samplePercentage = Utilities.getHighestSamplePercentage(work.getMapWork());
-        totalInputFileSize = Utilities.getTotalInputFileSize(inputSummary, work.getMapWork(), samplePercentage);
-        totalInputNumFiles = Utilities.getTotalInputNumFiles(inputSummary, work.getMapWork(), samplePercentage);
+        double samplePercentage = Utilities.getHighestSamplePercentage(work.getMapWork());//返回最大的抽样比例
+        totalInputFileSize = Utilities.getTotalInputFileSize(inputSummary, work.getMapWork(), samplePercentage);//根据抽样百分比,获取抽样后大概的输入源的文件大小
+        totalInputNumFiles = Utilities.getTotalInputNumFiles(inputSummary, work.getMapWork(), samplePercentage);//根据抽样百分比,获取抽样后大概的输入源的文件个数
 
         // at this point the number of reducers is precisely defined in the plan
         int numReducers = work.getReduceWork() == null ? 0 : work.getReduceWork().getNumReduceTasks();
@@ -121,6 +121,7 @@ public class MapRedTask extends ExecDriver implements Serializable {
                     + numReducers);
         }
 
+        //不允许使用本地模式的原因
         String reason = MapRedTask.isEligibleForLocalMode(conf, numReducers,
             totalInputFileSize, totalInputNumFiles);
         if (reason == null) {
@@ -128,8 +129,8 @@ public class MapRedTask extends ExecDriver implements Serializable {
           cloneConf();
           ShimLoader.getHadoopShims().setJobLauncherRpcAddress(conf, "local");
           console.printInfo("Selecting local mode for task: " + getId());
-          this.setLocalMode(true);
-        } else {
+          this.setLocalMode(true);//设置本地模式
+        } else {//设置不允许本地模式
           console.printInfo("Cannot run job locally: " + reason);
           this.setLocalMode(false);
         }
@@ -385,6 +386,7 @@ public class MapRedTask extends ExecDriver implements Serializable {
 
   /**
    * Set the number of reducers for the mapred work.
+   * 设置reduce的数量
    */
   private void setNumberOfReducers() throws IOException {
     ReduceWork rWork = work.getReduceWork();
@@ -404,18 +406,21 @@ public class MapRedTask extends ExecDriver implements Serializable {
         console
             .printInfo("Number of reduce tasks not specified. Defaulting to jobconf value of: "
             + reducers);
-      } else {
+      } else {//通过输入源的大小,预估reduce的数量
         if (inputSummary == null) {
           inputSummary =  Utilities.getInputSummary(driverContext.getCtx(), work.getMapWork(), null);
         }
+
+        //通过输入源的字节大小,判断reduce的数量
         int reducers = Utilities.estimateNumberOfReducers(conf, inputSummary, work.getMapWork(), 
                                                           work.isFinalMapRed());
         rWork.setNumReduceTasks(reducers);
         console
             .printInfo("Number of reduce tasks not specified. Estimated from input data size: "
-            + reducers);
+            + reducers);//根据输入数据源的大小预估了reduce的数量
 
       }
+      //输出提示 设置一个reduce平均负责加载多少字节、允许设置最多设置多少个reduce和默认reduce数量 三个配置key信息
       console
           .printInfo("In order to change the average load for a reducer (in bytes):");
       console.printInfo("  set " + HiveConf.ConfVars.BYTESPERREDUCER.varname
@@ -437,6 +442,10 @@ public class MapRedTask extends ExecDriver implements Serializable {
    * @param inputLength the size of the input
    * @param inputFileCount the number of files of input
    * @return String null if job is eligible for local mode, reason otherwise
+   * 不允许使用本地模式的原因
+   * 1.文件的输入源大小 > 最大值,不允许本地模式
+   * 2.文件的输入源数量 > 最大值,不允许本地模式
+   * 3.配置的reduce>1,不允许使用本地模式
    */
   public static String isEligibleForLocalMode(HiveConf conf,
                                               int numReducers,

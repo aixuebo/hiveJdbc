@@ -1,0 +1,269 @@
+* List、map、union、struct都是由原始类型组成的,因此这几个种类的TypeInfo实现比较简单,只需要递归即可
+ * 原始类型的TypeInfo就比较复杂了，包括typeName(即设计数据库时候指定的,比如decimal(10, 2)) 参数类型(10, 2))
+ * 因此有了typeName,就可以获取该原始类型对应的小分类,即decimal,以及对该类java如何序列化,hadoop如何序列化等都可以查找到
+
+ 原始类型的小分类:
+   public static enum PrimitiveCategory {
+    VOID, BOOLEAN, BYTE, SHORT, INT, LONG, FLOAT, DOUBLE, STRING,
+    DATE, TIMESTAMP, BINARY, DECIMAL, VARCHAR, UNKNOWN
+  };
+
+   public static enum PrimitiveCategory {
+
+DECIMAL, VARCHAR, UNKNOWN
+  };
+
+schema的定义是struct<name:TypeInfo,name:TypeInfo>
+schema定义map<TypeInfo,TypeInfo>
+schema定义array<TypeInfo>
+schema定义uniontype<TypeInfo,TypeInfo>
+原始类型定义TypeInfo--比如decimal(20,1)
+
+TypeInfo表示类型的schema
+objectinspector 表示具体的实例
+
+
+objectinspector包下
+一、primitive包 将原始类型分成若干种不同的形式
+get接口
+set接口settable
+WritableConstant
+java
+hadoop
+以及6个抽象的类
+
+
+   * PrimitiveObjectInspector 描述具体的类型的信息
+   * o1表示的是此时具体的值的对象,因此需要根据类型不同,转换成不同的值
+   */
+  public static boolean comparePrimitiveObjects(Object o1,
+      PrimitiveObjectInspector oi1, Object o2, PrimitiveObjectInspector oi2) {
+
+PrimitiveObjectInspector 描述具体类型的信息
+1.获取大分类 Category getCategory();
+2.获取小分类PrimitiveCategory getPrimitiveCategory();
+3.获取类型的参数信息 BaseTypeParams getTypeParams();
+4.获取类型字符串名字 String getTypeName();
+5.获取序列化的方式--java和hadoop两种方式
+使用hadoop序列化类 Class<?> getPrimitiveWritableClass();
+使用java序列化进行的class对象  Class<?> getJavaPrimitiveClass();
+6.更喜欢用java还是hadoop序列化  boolean preferWritable();
+
+
+  /**
+   * Return the data in an instance of primitive writable Object. If the Object
+   * is already a primitive writable Object, just return o.
+   * 使用hadoop序列化对象
+   */
+  Object getPrimitiveWritableObject(Object o);
+
+  /**
+   * Get the Java Primitive object.
+   * 使用java序列化进行序列化
+   */
+  Object getPrimitiveJavaObject(Object o);
+
+  /**
+   * Get a copy of the Object in the same class, so the return value can be
+   * stored independently of the parameter.
+   *
+   * If the Object is a Primitive Java Object, we just return the parameter
+   * since Primitive Java Object is immutable.
+   */
+  Object copyObject(Object o);
+
+
+get接口
+1.ShortObjectInspector extends PrimitiveObjectInspector
+short get(Object o); 返回一个short的java type类型的数据值
+同理DoubleObjectInspector、FloatObjectInspector、IntObjectInspector、LongObjectInspector、BooleanObjectInspector、
+ByteObjectInspector、
+比如:double get(Object o);
+2.DateObjectInspector extends PrimitiveObjectInspector
+  DateWritable getPrimitiveWritableObject(Object o);
+  Date getPrimitiveJavaObject(Object o);
+即将一个object实例转换成java类型的Date和hadoop类型的DateWritable
+该方法与父类的方法一样,只是返回值更具体了
+同理:
+TimestampObjectInspector
+  TimestampWritable getPrimitiveWritableObject(Object o);
+  Timestamp getPrimitiveJavaObject(Object o);
+HiveVarcharObjectInspector
+  HiveVarcharWritable getPrimitiveWritableObject(Object o);
+  HiveVarchar getPrimitiveJavaObject(Object o);
+StringObjectInspector
+  Text getPrimitiveWritableObject(Object o);
+  String getPrimitiveJavaObject(Object o);
+
+BinaryObjectInspector
+  byte[] getPrimitiveJavaObject(Object o);
+  BytesWritable getPrimitiveWritableObject(Object o);
+
+HiveDecimalObjectInspector
+  HiveDecimalWritable getPrimitiveWritableObject(Object o);
+  HiveDecimal getPrimitiveJavaObject(Object o);
+
+
+
+set接口
+1.interface SettableBooleanObjectInspector extends BooleanObjectInspector
+  Object set(Object o, boolean value);
+  Object create(boolean value);
+创建一个新的值,以及对一个存在的值进行更改
+2.同理
+SettableDoubleObjectInspector
+  Object set(Object o, double value);
+  Object create(double value);
+
+SettableFloatObjectInspector
+  Object set(Object o, float value);
+  Object create(float value);
+
+SettableByteObjectInspector
+  Object set(Object o, byte value);
+  Object create(byte value);
+
+SettableShortObjectInspector
+  Object set(Object o, short value);
+  Object create(short value);
+
+SettableIntObjectInspector
+  Object set(Object o, int value);
+  Object create(int value);
+
+SettableLongObjectInspector
+  Object set(Object o, long value);
+  Object create(long value);
+
+3.Date
+SettableDateObjectInspector
+  Object set(Object o, Date d);
+  Object set(Object o, DateWritable d);
+  Object create(Date d);
+在修改的时候,针对接收的参数可能是java的，也可能是hadoop的
+
+SettableTimestampObjectInspector
+  Object set(Object o, byte[] bytes, int offset);
+  Object set(Object o, Timestamp t);
+  Object set(Object o, TimestampWritable t);
+  Object create(byte[] bytes, int offset);
+  Object create (Timestamp t);
+4.针对可以用java和hadoop进行创建和修改
+SettableBinaryObjectInspector
+  Object set(Object o, byte[] bb);
+  Object set(Object o, BytesWritable bw);
+  Object create(byte[] bb);
+  Object create(BytesWritable bw);
+
+SettableStringObjectInspector
+  Object set(Object o, Text value);
+  Object set(Object o, String value);
+  Object create(Text value);
+  Object create(String value);
+
+SettableHiveVarcharObjectInspector
+  Object set(Object o, HiveVarchar value);
+  Object set(Object o, String value);
+  Object create(HiveVarchar value);
+
+SettableHiveDecimalObjectInspector
+  Object set(Object o, byte[] bytes, int scale);
+  Object set(Object o, HiveDecimal t);
+  Object set(Object o, HiveDecimalWritable t);
+  Object create(byte[] bytes, int scale);
+  Object create (HiveDecimal t);
+
+抽象类
+AbstractPrimitiveWritableObjectInspector
+因为该抽象类是hadoop的类,因此默认实现
+public Object getPrimitiveWritableObject(Object o) {
+    return o;
+  }
+因为参数o就是hadoop的类,但是java的类是没有实现的,因为需要具体子类重写
+
+AbstractPrimitiveJavaObjectInspector
+因为该抽象类是java的类,因此默认实现
+  public Object getPrimitiveJavaObject(Object o) {
+    return o;
+  }
+
+  public Object copyObject(Object o) {
+    return o;
+  }
+因为参数object就是java的对象,但是hadoop的方法没有实现。子类去实现
+
+
+java版本的实现
+主要完成的就是给定一个java对象,如何转换成hadoop对象,以及如何更新和获取该java对象
+1.JavaBooleanObjectInspector 继承get和set接口
+  @Override
+  public Object getPrimitiveWritableObject(Object o) {//需要将java对象转换成hadoop对象
+    return o == null ? null : new BooleanWritable(((Boolean) o).booleanValue());
+  }
+
+  @Override
+  public boolean get(Object o) {//因为get方法接收的参数就是java对象
+    return ((Boolean) o).booleanValue();
+  }
+
+  @Override
+  public Object create(boolean value) {
+    return value ? Boolean.TRUE : Boolean.FALSE;
+  }
+
+  @Override
+  public Object set(Object o, boolean value) {
+    return value ? Boolean.TRUE : Boolean.FALSE;
+  }
+注意:此时接收的参数都是java类型的参数
+2.同理
+JavaDoubleObjectInspector、JavaFloatObjectInspector、
+JavaByteObjectInspector、JavaShortObjectInspector、JavaIntObjectInspector、JavaLongObjectInspector
+我们可以看到set和create方法都是一样的,即set没有使用传入进来的object对象
+
+
+hadoop
+1.参数都是hadoop类型的,主要是获取java type
+public class WritableByteObjectInspector extends
+    AbstractPrimitiveWritableObjectInspector implements
+    SettableByteObjectInspector {
+
+  @Override
+  public byte get(Object o) {//参数是hadoop的,转换成java type
+    return ((ByteWritable) o).get();
+  }
+
+  @Override
+  public Object copyObject(Object o) {//参数是hadoop类型的,copy的结果也是hadoop类型的
+    return o == null ? null : new ByteWritable(((ByteWritable) o).get());
+  }
+
+  @Override
+  public Object getPrimitiveJavaObject(Object o) { 返回java类型
+    return o == null ? null : Byte.valueOf(((ByteWritable) o).get());
+  }
+
+  @Override
+  public Object create(byte value) {//创建hadoop类型
+    return new ByteWritable(value);
+  }
+
+  @Override
+  public Object set(Object o, byte value) { //此时的object一定是hadoop类型
+    ((ByteWritable) o).set(value);
+    return o;
+  }
+
+WritableConstantDateObjectInspector 常量类,是构造函数传入了一个hadoop对象
+有一个方法专门返回传入的对象
+  private DateWritable value;
+
+  WritableConstantDateObjectInspector(DateWritable value) {
+    super();
+    this.value = value;
+  }
+
+  public DateWritable getWritableConstantValue() {
+    return value;
+  }
+

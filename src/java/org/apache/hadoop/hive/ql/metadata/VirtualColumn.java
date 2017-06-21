@@ -31,6 +31,9 @@ import org.apache.hadoop.hive.serde2.objectinspector.primitive.PrimitiveObjectIn
 import org.apache.hadoop.hive.serde2.typeinfo.PrimitiveTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoFactory;
 
+/**
+ * 虚拟列,hive提供的列,不允许用户设置该名字的属性
+ */
 public class VirtualColumn implements Serializable {
 
   private static final long serialVersionUID = 1L;

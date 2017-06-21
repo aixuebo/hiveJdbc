@@ -1,7 +1,10 @@
 /bin
+/target
 /lib
 /.classpath
 /.project
 /.settings
 /.idea
 /src/hiveJdbc.iml
+*.iml
+*.bak

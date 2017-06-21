@@ -51,6 +51,11 @@ import org.apache.hadoop.io.Writable;
 
 /**
  * A simple generic udf to call java functions via reflection.
+与reflect方法不同的是,reflect方法要求第一个参数一定是一个类,而字段内容是该类的一个参数,
+但是如果要针对某一个字段内容进行操作,则没办法.因此有了reflect2方法,第一个参数可以是字段内容,该字段类型是java基础类型的即可
+ demo:将所有的空格替换成|字符
+select reflect2("aaa		aa", "replaceAll","\\s+","|");
+select reflect2(source, "replaceAll","\\s+","|");
  */
 @Description(name = "reflect2",
   value = "_FUNC_(arg0,method[,arg1[,arg2..]]) calls method of arg0 with reflection",

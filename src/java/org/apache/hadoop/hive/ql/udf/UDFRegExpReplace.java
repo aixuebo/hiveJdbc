@@ -30,6 +30,7 @@ import org.apache.hadoop.io.Text;
  * 将全部符合正则表达式的地方都替换成指定值
  * 
  * regexp_replace('100-200', '(\\d+)', 'num') 返回值num-num,将所有的整数替换成num字符串
+ select regexp_replace('Android|TencentMarket                   |1.0|863908023110224|MI 2S|89860112819017265751|863908023110224|wifi', '\\s+','|') 将\t转换成|
  */
 @Description(name = "regexp_replace",
     value = "_FUNC_(str, regexp, rep) - replace all substrings of str that "

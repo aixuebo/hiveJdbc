@@ -63,6 +63,7 @@ public class VarcharTypeParams extends BaseTypeParams implements Serializable {
     }
   }
 
+    //仅仅表示参数部分的输出,即(length)
   @Override
   public String toString() {
     StringBuffer sb = new StringBuffer();

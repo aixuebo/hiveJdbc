@@ -35,6 +35,11 @@ import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * A simple generic udf to call java static functions via reflection.
+ 反射的方法执行java的类
+ 参数函数声明,类全路径,方法名称,[所需要的参数数组集合]
+demo:
+select reflect("java.net.URLDecoder", "decode",column) from biao;
+SELECT reflect("java.net.URLDecoder", "decode", "%E6%B2%A1%E4%BB%80%E4%B9%88%E6%83%B3%E8%AF%B4%E7%9A%84%E5%B0%B1%E6%83%B3%E6%94%925%E4%B8%87%E5%9D%97%E9%92%B1");
  */
 @Description(name = "reflect",
   value = "_FUNC_(class,method[,arg1[,arg2..]]) calls method with reflection",
@@ -65,14 +70,15 @@ public class GenericUDFReflect extends AbstractGenericUDFReflect {
             + " should be string.");
       }
     }
-    inputClassNameOI = (StringObjectInspector) arguments[0];
-    inputMethodNameOI = (StringObjectInspector) arguments[1];
+    inputClassNameOI = (StringObjectInspector) arguments[0];//类全路径
+    inputMethodNameOI = (StringObjectInspector) arguments[1];//方法
 
     classNameOI = (StringObjectInspector)
         ObjectInspectorUtils.getStandardObjectInspector(arguments[0]);
     methodNameOI = (StringObjectInspector)
         ObjectInspectorUtils.getStandardObjectInspector(arguments[1]);
 
+	//设置方法需要的参数集合
     setupParameterOIs(arguments, 2);
 
     return PrimitiveObjectInspectorFactory.getPrimitiveJavaObjectInspector(

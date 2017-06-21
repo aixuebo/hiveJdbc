@@ -31,8 +31,11 @@ public interface PrimitiveObjectInspector extends ObjectInspector, PrimitiveType
    * The primitive types supported by Hive.
    */
   public static enum PrimitiveCategory {
-    VOID, BOOLEAN, BYTE, SHORT, INT, LONG, FLOAT, DOUBLE, STRING,
-    DATE, TIMESTAMP, BINARY, DECIMAL, VARCHAR, UNKNOWN
+    VOID, BOOLEAN, BYTE,//一个字节
+    SHORT, INT, LONG, FLOAT, DOUBLE, STRING,
+    DATE, TIMESTAMP,
+    BINARY,//存储字节数组
+    DECIMAL, VARCHAR, UNKNOWN
   };
 
   /**

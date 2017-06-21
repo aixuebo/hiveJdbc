@@ -1845,7 +1845,7 @@ public final class Utilities {
 
   /**
    * Calculate the total size of input files.
-   *
+   * 计算输入源文件的总字节大小
    * @param ctx
    *          the hadoop job context
    * @param work
@@ -1854,14 +1854,17 @@ public final class Utilities {
    *          filter to apply to the input paths before calculating size
    * @return the summary of all the input paths.
    * @throws IOException
+   * 预估输入源的大小
    */
   public static ContentSummary getInputSummary(Context ctx, MapWork work, PathFilter filter)
       throws IOException {
     PerfLogger perfLogger = PerfLogger.getPerfLogger();
     perfLogger.PerfLogBegin(LOG, PerfLogger.INPUT_SUMMARY);
 
+    //文件总字节大小、文件数量、文件夹数量
     long[] summary = {0, 0, 0};
 
+    //需要去计算path路径的资源的占用空间预估情况
     List<String> pathNeedProcess = new ArrayList<String>();
 
     // Since multiple threads could call this method concurrently, locking
@@ -1880,14 +1883,15 @@ public final class Utilities {
           if (path == null) {
             continue;
           }
-          pathNeedProcess.add(path);
-        } else {
+          pathNeedProcess.add(path);//说明没有计算过,因此要去计算
+        } else {//说明已经已经计算过了
           summary[0] += cs.getLength();
           summary[1] += cs.getFileCount();
           summary[2] += cs.getDirectoryCount();
         }
       }
 
+      //多线程去计算没有计算过的路径对应的资源
       // Process the case when name node call is needed
       final Map<String, ContentSummary> resultMap = new ConcurrentHashMap<String, ContentSummary>();
       ArrayList<Future<?>> results = new ArrayList<Future<?>>();
@@ -2613,6 +2617,7 @@ public final class Utilities {
    * has not specified the number of reducers to use.
    *
    * @return the number of reducers.
+   * 通过输入源的字节大小,判断reduce的数量
    */
   public static int estimateNumberOfReducers(HiveConf conf, ContentSummary inputSummary,
                                              MapWork work, boolean finalMapRed) throws IOException {
@@ -2667,8 +2672,9 @@ public final class Utilities {
    *
    * @param inputSummary
    * @param work
-   * @param highestSamplePercentage
+   * @param highestSamplePercentage 最大的抽样百分比
    * @return estimated total input size for job
+   * 根据抽样百分比,获取抽样后大概的输入源的文件大小
    */
   public static long getTotalInputFileSize (ContentSummary inputSummary, MapWork work,
       double highestSamplePercentage) {
@@ -2691,8 +2697,9 @@ public final class Utilities {
    *
    * @param inputSummary
    * @param work
-   * @param highestSamplePercentage
+   * @param highestSamplePercentage 文件抽样的百分比
    * @return
+   * 根据抽样百分比,获取抽样后大概的输入源的文件个数
    */
   public static long getTotalInputNumFiles (ContentSummary inputSummary, MapWork work,
       double highestSamplePercentage) {
@@ -2711,6 +2718,7 @@ public final class Utilities {
 
   /**
    * Returns the highest sample percentage of any alias in the given MapWork
+   * 返回最大的抽样比例
    */
   public static double getHighestSamplePercentage (MapWork work) {
     double highestSamplePercentage = 0;
