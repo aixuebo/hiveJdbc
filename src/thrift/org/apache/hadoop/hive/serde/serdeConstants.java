@@ -47,7 +47,7 @@ public class serdeConstants {
   /**
 字段意义说明
 CREATE TABLE escape2 (id STRING, name STRING) 
-ROW FORMAT DELIMITED FIELDS TERMINATED BY '"'; 
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '"';
 
 LOAD DATA LOCAL INPATH '/home/tianzhao/book/escape2.txt' 
 OVERWRITE INTO TABLE escape2; 
@@ -117,6 +117,13 @@ Hank 2"3333"44
 
   public static final String BINARY_TYPE_NAME = "binary";
 
+    /**
+     schema的定义是struct<name:TypeInfo,name:TypeInfo>
+     schema定义map<TypeInfo,TypeInfo>
+     schema定义array<TypeInfo>
+     schema定义uniontype<TypeInfo,TypeInfo>
+     原始类型定义TypeInfo--比如decimal(20,1)
+     */
   public static final String LIST_TYPE_NAME = "array";
 
   public static final String MAP_TYPE_NAME = "map";

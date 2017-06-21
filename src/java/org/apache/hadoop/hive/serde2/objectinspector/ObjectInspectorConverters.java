@@ -52,6 +52,8 @@ public final class ObjectInspectorConverters {
    * 给定参数是object,输出也是object,因此需要根据参数类型,做相应的转换
    */
   public static interface Converter {
+    //当知道input的具体值以及input的类型,以及知道返回值的具体类型的时候
+      //完全可以根据各种判断获取具体的值
     Object convert(Object input);
   }
 

@@ -44,44 +44,45 @@ public final class TypeInfoFactory {
     // prevent instantiation
   }
 
+    //参数是基本类型,比如 decimal(10, 2).或者decimal
   public static TypeInfo getPrimitiveTypeInfo(String typeName) {
 	
 	//根据数据类型的字符串形式,转换成具体的数据类型  
     PrimitiveTypeEntry typeEntry = PrimitiveObjectInspectorUtils
-        .getTypeEntryFromTypeName(TypeInfoUtils.getBaseName(typeName));
+        .getTypeEntryFromTypeName(TypeInfoUtils.getBaseName(typeName));//获取基本类型的具体对象 decimal对象
     if (null == typeEntry) {
-      throw new RuntimeException("Cannot getPrimitiveTypeInfo for " + typeName);
+      throw new RuntimeException("Cannot getPrimitiveTypeInfo for " + typeName);//说明不支持该基本类型
     }
     
     TypeInfo result = cachedPrimitiveTypeInfo.get(typeName);
     if (result == null) {
       TypeInfoUtils.PrimitiveParts parts = TypeInfoUtils.parsePrimitiveParts(typeName);
       // Create params if there are any
-      if (parts.typeParams != null && parts.typeParams.length > 0) {
+      if (parts.typeParams != null && parts.typeParams.length > 0) {//说明基础类型有参数
         // The type string came with parameters.  Parse and add to TypeInfo
         try {
           BaseTypeParams typeParams = PrimitiveTypeEntry.createTypeParams(
-              parts.typeName, parts.typeParams);
+              parts.typeName, parts.typeParams);//创建参数对象
           result = new PrimitiveTypeInfo(typeName);
-          ((PrimitiveTypeInfo) result).setTypeParams(typeParams);
+          ((PrimitiveTypeInfo) result).setTypeParams(typeParams);//设置参数对象
         } catch (Exception err) {
           LOG.error(err);
           throw new RuntimeException("Error creating type parameters for " + typeName
               + ": " + err, err);
         }
-      } else {
+      } else {//说明基础类型没有参数
         // No type params
 
         // Prevent creation of varchar TypeInfo with no length specification.
         // This can happen if an old-style UDF uses a varchar type either as an
         // argument or return type in an evaluate() function, or other instances
         // of using reflection-based methods for retrieving a TypeInfo.
-        if (typeEntry.primitiveCategory == PrimitiveCategory.VARCHAR) {
+        if (typeEntry.primitiveCategory == PrimitiveCategory.VARCHAR) {//verchar必须要有参数
           LOG.error("varchar type used with no type params");
           throw new RuntimeException("varchar type used with no type params");
         }
 
-        result = new PrimitiveTypeInfo(parts.typeName);
+        result = new PrimitiveTypeInfo(parts.typeName);//因为没有参数,则该对象没有设置参数
       }
 
       cachedPrimitiveTypeInfo.put(typeName, result);
@@ -89,6 +90,7 @@ public final class TypeInfoFactory {
     return result;
   }
 
+    //定义基本类型
   public static final TypeInfo voidTypeInfo = getPrimitiveTypeInfo(serdeConstants.VOID_TYPE_NAME);
   public static final TypeInfo booleanTypeInfo = getPrimitiveTypeInfo(serdeConstants.BOOLEAN_TYPE_NAME);
   public static final TypeInfo intTypeInfo = getPrimitiveTypeInfo(serdeConstants.INT_TYPE_NAME);
@@ -107,6 +109,7 @@ public final class TypeInfoFactory {
 
   public static final TypeInfo unknownTypeInfo = getPrimitiveTypeInfo("unknown");
 
+  //通过hadoop原始类型或者包装类型,获取hive对应的typeName
   public static TypeInfo getPrimitiveTypeInfoFromPrimitiveWritable(
       Class<?> clazz) {
     String typeName = PrimitiveObjectInspectorUtils
@@ -118,14 +121,17 @@ public final class TypeInfoFactory {
     return getPrimitiveTypeInfo(typeName);
   }
 
+  //通过java原始类型或者包装类型,获取hive对应的typeName
   public static TypeInfo getPrimitiveTypeInfoFromJavaPrimitive(Class<?> clazz) {
     return getPrimitiveTypeInfo(PrimitiveObjectInspectorUtils
         .getTypeNameFromPrimitiveJava(clazz));
   }
 
+    //key以及对应的类型映射---作为缓存
   static ConcurrentHashMap<ArrayList<List<?>>, TypeInfo> cachedStructTypeInfo =
     new ConcurrentHashMap<ArrayList<List<?>>, TypeInfo>();
 
+    //struct持有两个集合,一个是属性集合,一个是属性对应的类型集合
   public static TypeInfo getStructTypeInfo(List<String> names,
       List<TypeInfo> typeInfos) {
     ArrayList<List<?>> signature = new ArrayList<List<?>>(2);
@@ -142,6 +148,7 @@ public final class TypeInfoFactory {
   static ConcurrentHashMap<List<?>, TypeInfo> cachedUnionTypeInfo =
     new ConcurrentHashMap<List<?>, TypeInfo>();
 
+    //union持有一个类型集合
   public static TypeInfo getUnionTypeInfo(List<TypeInfo> typeInfos) {
     TypeInfo result = cachedUnionTypeInfo.get(typeInfos);
     if (result == null) {
@@ -153,6 +160,7 @@ public final class TypeInfoFactory {
 
   static ConcurrentHashMap<TypeInfo, TypeInfo> cachedListTypeInfo = new ConcurrentHashMap<TypeInfo, TypeInfo>();
 
+    //array或者list持有一个对象
   public static TypeInfo getListTypeInfo(TypeInfo elementTypeInfo) {
     TypeInfo result = cachedListTypeInfo.get(elementTypeInfo);
     if (result == null) {
@@ -165,6 +173,7 @@ public final class TypeInfoFactory {
   static ConcurrentHashMap<ArrayList<TypeInfo>, TypeInfo> cachedMapTypeInfo =
     new ConcurrentHashMap<ArrayList<TypeInfo>, TypeInfo>();
 
+    //map持有两个对象,一个是key对象,一个是value对象,即2种类型
   public static TypeInfo getMapTypeInfo(TypeInfo keyTypeInfo,
       TypeInfo valueTypeInfo) {
     ArrayList<TypeInfo> signature = new ArrayList<TypeInfo>(2);

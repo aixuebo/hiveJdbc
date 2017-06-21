@@ -69,6 +69,7 @@ import org.apache.hadoop.io.WritableUtils;
 public final class PrimitiveObjectInspectorUtils {
   private static Log LOG = LogFactory.getLog(PrimitiveObjectInspectorUtils.class);
 
+  //-开始描述一个类型是在java type 、java class 、hadoop class中如何表达的,即给定一个java type、java class、hadoop class就可以确定一个原始对象的描述类PrimitiveTypeEntry的过程-------------------------------------------------------------------------------------------
   /**
    * TypeEntry stores information about a Hive Primitive TypeInfo.
    * 该对象表示一个属性的类型具体分类,以及java类型和包装类型、hadoop针对该类型的序列化对象
@@ -80,7 +81,7 @@ public final class PrimitiveObjectInspectorUtils {
     /**
      * The category of the PrimitiveType.
      */
-    public PrimitiveObjectInspector.PrimitiveCategory primitiveCategory;
+    public PrimitiveObjectInspector.PrimitiveCategory primitiveCategory;//原始类型的具体小分类
 
     /**
      * primitiveJavaType refers to java types like int, double, etc.
@@ -102,10 +103,19 @@ public final class PrimitiveObjectInspectorUtils {
     /**
      * typeName is the name of the type as in DDL.
      */
-    public String typeName;
+    public String typeName;//类型名字,比如decimal
     public Class<?> typeParamsClass;//参数的class类
     public BaseTypeParams typeParams;//参数对象
 
+      /**
+       *
+       * @param primitiveCategory
+       * @param typeName 类型名字,比如decimal
+       * @param primitiveType 原始java类型,比如int,double
+       * @param javaClass 原始的java类型的包装类,比如Integer,Double,String等
+       * @param hiveClass hadoop的序列化原始类,比如IntWritable、Text
+       * @param paramsClass
+       */
     PrimitiveTypeEntry(
         PrimitiveObjectInspector.PrimitiveCategory primitiveCategory,
         String typeName, Class<?> primitiveType, Class<?> javaClass,
@@ -114,7 +124,7 @@ public final class PrimitiveObjectInspectorUtils {
       primitiveJavaType = primitiveType;
       primitiveJavaClass = javaClass;
       primitiveWritableClass = hiveClass;
-      typeParamsClass = paramsClass;
+      typeParamsClass = paramsClass;//参数类
       this.typeName = typeName;
     }
 
@@ -161,6 +171,7 @@ public final class PrimitiveObjectInspectorUtils {
       }
     }
 
+      //设置参数值
     public PrimitiveTypeEntry addParameters(String[] parameters) {
       if (parameters == null || parameters.length == 0) {
         return this;
@@ -168,14 +179,14 @@ public final class PrimitiveObjectInspectorUtils {
 
       PrimitiveTypeEntry result;
       try {
-        BaseTypeParams newTypeParams = (BaseTypeParams)typeParamsClass.newInstance();
-        newTypeParams.set(parameters);
-        String typeNameWithParams = this.typeName + newTypeParams.toString();
+        BaseTypeParams newTypeParams = (BaseTypeParams)typeParamsClass.newInstance();//创建参数对象
+        newTypeParams.set(parameters);//设置参数,进行校验参数操作
+        String typeNameWithParams = this.typeName + newTypeParams.toString();//获取类型名字以及参数信息,比如decimal(20,2)
         if (typeNameToTypeEntry.containsKey(typeNameWithParams)) {
           return typeNameToTypeEntry.get(typeNameWithParams);
         }
         result = (PrimitiveTypeEntry)this.clone();
-        result.typeParams = newTypeParams;
+        result.typeParams = newTypeParams;//设置参数的实例化的对象
 
         PrimitiveObjectInspectorUtils.addParameterizedType(result);
 
@@ -211,6 +222,7 @@ public final class PrimitiveObjectInspectorUtils {
       return typeName;
     }
 
+      //将基础类型以及对应的参数集合,创建参数对象BaseTypeParams
     public static BaseTypeParams createTypeParams(String typeName, String[] parameters)
         throws SerDeException {
       try {
@@ -352,7 +364,9 @@ public final class PrimitiveObjectInspectorUtils {
 
   /**
    * Whether the class is a Java Primitive type or a Java Primitive class.
-   * 判断类型是否是java的八个基本类型,true返回是
+   * 判断类型是否是java的可以用java的类型表示,true返回是
+   *
+   * 即原声类型存在 或者 包装类型存在
    */
   public static boolean isPrimitiveJava(Class<?> clazz) {
     return primitiveJavaTypeToTypeEntry.get(clazz) != null
@@ -361,7 +375,7 @@ public final class PrimitiveObjectInspectorUtils {
 
   /**
    * Whether the class is a Java Primitive type.
-   * 判断参数是否是java的八个基本类型,不包含包装类型
+   * 判断参数是否是java的基本类型,不包含包装类型
    */
   public static boolean isPrimitiveJavaType(Class<?> clazz) {
     return primitiveJavaTypeToTypeEntry.get(clazz) != null;
@@ -369,7 +383,7 @@ public final class PrimitiveObjectInspectorUtils {
 
   /**
    * Whether the class is a Java Primitive class.
-   * 判断参数是否是java的八个包装类型
+   * 判断参数是否是java的包装类型
    */
   public static boolean isPrimitiveJavaClass(Class<?> clazz) {
     return primitiveJavaClassToTypeEntry.get(clazz) != null;
@@ -415,6 +429,7 @@ public final class PrimitiveObjectInspectorUtils {
 
   /**
    * Get the TypeEntry for a Java Primitive Type or Java PrimitiveClass.
+   * 通过java的type或者class 找到对应的PrimitiveTypeEntry对象
    */
   public static PrimitiveTypeEntry getTypeEntryFromPrimitiveJava(Class<?> clazz) {
     PrimitiveTypeEntry t = primitiveJavaTypeToTypeEntry.get(clazz);
@@ -426,6 +441,7 @@ public final class PrimitiveObjectInspectorUtils {
 
   /**
    * Get the TypeEntry for a Java Primitive Type or Java PrimitiveClass.
+   * 通过java的type找到对应的PrimitiveTypeEntry对象
    */
   public static PrimitiveTypeEntry getTypeEntryFromPrimitiveJavaType(
       Class<?> clazz) {
@@ -434,6 +450,7 @@ public final class PrimitiveObjectInspectorUtils {
 
   /**
    * Get the TypeEntry for a Java Primitive Type or Java PrimitiveClass.
+   * 通过java的class 找到对应的PrimitiveTypeEntry对象
    */
   public static PrimitiveTypeEntry getTypeEntryFromPrimitiveJavaClass(
       Class<?> clazz) {
@@ -442,6 +459,7 @@ public final class PrimitiveObjectInspectorUtils {
 
   /**
    * Get the TypeEntry for a Primitive Writable Class.
+   * 通过hadoop的class 找到对应的PrimitiveTypeEntry对象
    */
   public static PrimitiveTypeEntry getTypeEntryFromPrimitiveWritableClass(
       Class<?> clazz) {
@@ -450,11 +468,13 @@ public final class PrimitiveObjectInspectorUtils {
 
   /**
    * Get the TypeEntry for a Primitive Writable Class.
+   * 通过字段类型找到对应的PrimitiveTypeEntry
    */
   public static PrimitiveTypeEntry getTypeEntryFromTypeName(String typeName) {
     return typeNameToTypeEntry.get(typeName);
   }
 
+    //根据类型和参数获取对应的PrimitiveTypeEntry
   public static PrimitiveTypeEntry getTypeEntryFromTypeSpecs(
       PrimitiveCategory primitiveCategory,
       BaseTypeParams typeParams) {
@@ -467,7 +487,7 @@ public final class PrimitiveObjectInspectorUtils {
     String typeString = primitiveCategory.toString().toLowerCase();
     typeString += typeParams.toString();
     PrimitiveTypeEntry typeEntry = getTypeEntryFromTypeName(typeString);
-    if (typeEntry == null) {
+    if (typeEntry == null) {//说明参数对应的PrimitiveTypeEntry类型不存在,则创建一个并且缓存起来
       // Parameterized type doesn't exist yet, create now.
       typeEntry = 
           (PrimitiveTypeEntry) getTypeEntryFromPrimitiveCategory(primitiveCategory).clone();
@@ -482,10 +502,14 @@ public final class PrimitiveObjectInspectorUtils {
     return typeEntry;
   }
 
+    //--如何对实例化的对象进行处理------------------------------------------------------------------------------------------
   /**
    * Compare 2 primitive objects. Conversion not allowed. Note that NULL does
    * not equal to NULL according to SQL standard.
    * 比较值是否相同
+   *
+   * PrimitiveObjectInspector 描述具体的类型的信息
+   * o1和o2表示的是此时具体的值的对象,判断这两个值转换后是否相同
    */
   public static boolean comparePrimitiveObjects(Object o1,
       PrimitiveObjectInspector oi1, Object o2, PrimitiveObjectInspector oi2) {
@@ -499,7 +523,7 @@ public final class PrimitiveObjectInspectorUtils {
     }
     
     switch (oi1.getPrimitiveCategory()) {
-    case BOOLEAN: {
+    case BOOLEAN: {//将具体的o1和o2进行比较
       return ((BooleanObjectInspector) oi1).get(o1) == ((BooleanObjectInspector) oi2)
           .get(o2);
     }
@@ -527,7 +551,7 @@ public final class PrimitiveObjectInspectorUtils {
       return ((DoubleObjectInspector) oi1).get(o1) == ((DoubleObjectInspector) oi2)
           .get(o2);
     }
-    case STRING: {
+    case STRING: {//其实比较java的还是hadoop的都无所谓,他们的具体的值都是一样的,只是类型不一样而已,但是值的内容是一样的
       Writable t1 = ((StringObjectInspector) oi1)
           .getPrimitiveWritableObject(o1);
       Writable t2 = ((StringObjectInspector) oi2)
@@ -563,6 +587,9 @@ public final class PrimitiveObjectInspectorUtils {
    * Convert a primitive object to double.
    * 将值转换为double的
    * 将o的值,转换成double类型返回
+   *
+   * 注意:o是具体的值,而o的类型是oi来确定的
+   * 因此可以根据oi的类型,将o的值转换成double
    */
   public static double convertPrimitiveToDouble(Object o, PrimitiveObjectInspector oi) {
     switch (oi.getPrimitiveCategory()) {
@@ -589,13 +616,16 @@ public final class PrimitiveObjectInspectorUtils {
       return ((HiveDecimalObjectInspector) oi).getPrimitiveJavaObject(o).doubleValue();
     case DATE:  // unsupported conversion
     default:
-      throw new NumberFormatException();
+      throw new NumberFormatException();//格式错误
     }
   }
 
   /**
    * Compare 2 Primitive Objects with their Object Inspector, conversions
    * allowed. Note that NULL does not equal to NULL according to SQL standard.
+   * 比较两个不同类型的对象是否相同
+   *
+   * 注意:如果类型不同,只能比较数字类型的,非数字是不能比较的,会抛类型转换失败异常
    */
   public static boolean comparePrimitiveObjectsWithConversion(Object o1,
       PrimitiveObjectInspector oi1, Object o2, PrimitiveObjectInspector oi2) {
@@ -604,11 +634,12 @@ public final class PrimitiveObjectInspectorUtils {
     }
 
     if (oi1.getPrimitiveCategory() == oi2.getPrimitiveCategory()) {
-      return comparePrimitiveObjects(o1, oi1, o2, oi2);
+      return comparePrimitiveObjects(o1, oi1, o2, oi2);//类型相同进行比较
     }
 
     // If not equal, convert all to double and compare
     try {
+        //将他们转换成double进行比较
       return convertPrimitiveToDouble(o1, oi1) == convertPrimitiveToDouble(o2,
           oi2);
     } catch (NumberFormatException e) {
@@ -620,6 +651,12 @@ public final class PrimitiveObjectInspectorUtils {
    * Get the boolean value out of a primitive object. Note that
    * NullPointerException will be thrown if o is null. Note that
    * NumberFormatException will be thrown if o is not a valid number.
+   * 参数o表示具体的实例值,但是此时该值可以是任意类型
+   * 参数oi表示o对象对应的真正的原始类型
+   *
+   * 返回值就是将o转换成boolean
+   *
+   * 实现逻辑就是将o对象根据不同类型,判断如何转换成boolean
    */
   public static boolean getBoolean(Object o, PrimitiveObjectInspector oi) {
     boolean result = false;
@@ -739,7 +776,7 @@ public final class PrimitiveObjectInspectorUtils {
         result = LazyInteger.parseInt(t.getBytes(), 0, t.getLength());
       } else {
         String s = soi.getPrimitiveJavaObject(o);
-        result = Integer.parseInt(s);
+        result = Integer.parseInt(s);//s不是数字时候会抛异常
       }
       break;
     }
@@ -1084,9 +1121,9 @@ public final class PrimitiveObjectInspectorUtils {
     case VARCHAR: {
       try {
         String val = getString(o, oi).trim();
-        result = Date.valueOf(val);
+        result = Date.valueOf(val);//该字符串必须是能在这里面不抛异常
       } catch (IllegalArgumentException e) {
-        result = null;
+        result = null;//即使转换失败也无所谓,他会转换成null,而不是出错
       }
       break;
     }
@@ -1181,6 +1218,7 @@ public final class PrimitiveObjectInspectorUtils {
     return result;
   }
 
+    //-获取该对象的java类---------------------------------------------
   public static Class<?> getJavaPrimitiveClassFromObjectInspector(ObjectInspector oi) {
     if (oi.getCategory() != Category.PRIMITIVE) {
       return null;
@@ -1193,6 +1231,7 @@ public final class PrimitiveObjectInspectorUtils {
 
   /**
    * Provide a general grouping for each primitive data type.
+   * 对数据类型进行分组
    */
   public static enum PrimitiveGrouping {
     NUMERIC_GROUP, STRING_GROUP, BOOLEAN_GROUP, DATE_GROUP, BINARY_GROUP,
@@ -1205,6 +1244,7 @@ public final class PrimitiveObjectInspectorUtils {
    * @param primitiveCategory Primitive category of the type
    * @return PrimitveGrouping corresponding to the PrimitiveCategory,
    *         or UNKNOWN_GROUP if the type does not match to a grouping.
+   * 判断数据类型属于哪个分组
    */
   public static PrimitiveGrouping getPrimitiveGrouping(PrimitiveCategory primitiveCategory) {
     switch (primitiveCategory) {
@@ -1240,6 +1280,7 @@ public final class PrimitiveObjectInspectorUtils {
   /**
    * Helper class to store parameterized primitive object inspectors, which can be
    * used by the various object inspector factory methods.
+   * 每一个小分类下,不同参数的对应一个原始对象作为缓存
    */
   public static class ParameterizedObjectInspectorMap {
     HashMap<PrimitiveCategory, HashMap<String, PrimitiveObjectInspector>> entries;

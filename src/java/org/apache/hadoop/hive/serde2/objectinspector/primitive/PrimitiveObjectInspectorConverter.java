@@ -42,23 +42,25 @@ public class PrimitiveObjectInspectorConverter {
    * A converter for the byte type.
    */
   public static class BooleanConverter implements Converter {
-    PrimitiveObjectInspector inputOI;
-    SettableBooleanObjectInspector outputOI;
+    PrimitiveObjectInspector inputOI;//输入是原始类型即可---该参数只是类型,没有具体的值
+    SettableBooleanObjectInspector outputOI;//输出一定是boolean类型的,因为要对其进行set
     Object r;
 
     public BooleanConverter(PrimitiveObjectInspector inputOI,
         SettableBooleanObjectInspector outputOI) {
       this.inputOI = inputOI;
       this.outputOI = outputOI;
-      r = outputOI.create(false);
+      r = outputOI.create(false);//默认值是false
     }
 
+      //进行真正的转换,传入的参数是任意类型
     @Override
     public Object convert(Object input) {
       if (input == null) {
         return null;
       }
       try {
+        //具体的参数值以及参数值对应的类型作为参数,将其转换成boolean类型
         return outputOI.set(r, PrimitiveObjectInspectorUtils.getBoolean(input,
             inputOI));
       } catch (NumberFormatException e) {
@@ -338,10 +340,11 @@ public class PrimitiveObjectInspectorConverter {
 
   /**
    * A helper class to convert any primitive to Text.
+   * 因为是转换成Text,而Text比较特别,他就相当于任意对象调用toString,因此无所谓,所以不需要给他Text的输出对象
    */
   public static class TextConverter implements Converter {
-    private final PrimitiveObjectInspector inputOI;
-    private final Text t = new Text();
+    private final PrimitiveObjectInspector inputOI;//参数值对应的类型
+    private final Text t = new Text();//转换后的输出
     private final ByteStream.Output out = new ByteStream.Output();
 
     private static byte[] trueBytes = {'T', 'R', 'U', 'E'};
@@ -362,7 +365,7 @@ public class PrimitiveObjectInspectorConverter {
         return null;
       case BOOLEAN:
         t.set(((BooleanObjectInspector) inputOI).get(input) ? trueBytes
-            : falseBytes);
+            : falseBytes);//如果返回true,则设置true的字节数组
         return t;
       case BYTE:
         out.reset();
@@ -371,7 +374,7 @@ public class PrimitiveObjectInspectorConverter {
         return t;
       case SHORT:
         out.reset();
-        LazyInteger.writeUTF8NoException(out, ((ShortObjectInspector) inputOI).get(input));
+        LazyInteger.writeUTF8NoException(out, ((ShortObjectInspector) inputOI).get(input));//将short的值转换成字节数组
         t.set(out.getData(), 0, out.getCount());
         return t;
       case INT:

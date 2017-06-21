@@ -32,12 +32,16 @@ import org.apache.hadoop.hive.serde2.objectinspector.primitive.PrimitiveObjectIn
  * Always use the TypeInfoFactory to create new TypeInfo objects, instead of
  * directly creating an instance of this class.
  * 基础类型,包含基础类型的参数对象
+ *
+ * List、map、union、struct都是由原始类型组成的,因此这几个种类的TypeInfo实现比较简单,只需要递归即可
+ * 原始类型的TypeInfo就比较复杂了，包括typeName(即设计数据库时候指定的,比如decimal(10, 2)) 参数类型(10, 2))
+ * 因此有了typeName,就可以获取该原始类型对应的小分类,即decimal,以及对该类java如何序列化,hadoop如何序列化等都可以查找到
  */
 public class PrimitiveTypeInfo extends TypeInfo implements Serializable, PrimitiveTypeSpec {
 
   private static final long serialVersionUID = 1L;
 
-  protected String typeName;//基础类型字符串名称
+  protected String typeName;//基础类型字符串名称--比如decimal 不带有参数信息
   protected BaseTypeParams typeParams;//基础类型的参数,比如字符串类型的需要设置最大长度
 
   /**
@@ -61,6 +65,7 @@ public class PrimitiveTypeInfo extends TypeInfo implements Serializable, Primiti
     return Category.PRIMITIVE;
   }
 
+    //通过具体的原始类型,可以得到原始类型分类对象
   public PrimitiveCategory getPrimitiveCategory() {
     return getPrimitiveTypeEntry().primitiveCategory;
   }

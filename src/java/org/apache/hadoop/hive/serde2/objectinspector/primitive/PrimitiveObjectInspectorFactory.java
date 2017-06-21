@@ -114,6 +114,7 @@ public final class PrimitiveObjectInspectorFactory {
   public static final WritableHiveDecimalObjectInspector writableHiveDecimalObjectInspector =
       new WritableHiveDecimalObjectInspector();
 
+    //类型和hadoop方式的映射
   private static HashMap<PrimitiveCategory, AbstractPrimitiveWritableObjectInspector> cachedPrimitiveWritableInspectorCache =
       new HashMap<PrimitiveCategory, AbstractPrimitiveWritableObjectInspector>();
   static {
@@ -147,6 +148,7 @@ public final class PrimitiveObjectInspectorFactory {
         writableHiveDecimalObjectInspector);
   }
 
+    //类型和java方式的映射
   private static HashMap<PrimitiveCategory, AbstractPrimitiveJavaObjectInspector> cachedPrimitiveJavaInspectorCache =
       new HashMap<PrimitiveCategory, AbstractPrimitiveJavaObjectInspector>();
   static {
