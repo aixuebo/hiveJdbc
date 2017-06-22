@@ -20,6 +20,12 @@ package org.apache.hadoop.hive.serde2.objectinspector;
 public interface MapEqualComparer {
   /*
    * Compare the two map objects for equality.
+     * 比较两个map对象的大小
+     * @param o1 map1对象的具体实例内容
+     * @param moi1 map1对象存储的key和value类型的描述
+     * @param o2 map2对象的具体实例内容
+     * @param moi2 map2对象存储的key和value类型的描述
+     * @return
    */
   public int compare(Object o1, MapObjectInspector moi1,
       Object o2, MapObjectInspector moi2);

@@ -68,7 +68,7 @@ Hank 2"3333"44
    */
   public static final String SERIALIZATION_LAST_COLUMN_TAKES_REST = "serialization.last.column.takes.rest";//该值是true或者其他,只有true才是最关键的属性,其他都认为是false
 
-  public static final String SERIALIZATION_SORT_ORDER = "serialization.sort.order";
+  public static final String SERIALIZATION_SORT_ORDER = "serialization.sort.order";//每一个列的位置是-表示该列倒排序,该内容存储+-符号
 
   public static final String SERIALIZATION_USE_JSON_OBJECTS = "serialization.use.json.object";
 

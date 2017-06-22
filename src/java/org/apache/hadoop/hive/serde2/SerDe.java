@@ -28,6 +28,7 @@ package org.apache.hadoop.hive.serde2;
  *
  * All serdes should extend the abstract class AbstractSerDe, and eventually SerDe interface
  * should be removed
+ * 序列化和反序列化接口
  */
 @Deprecated
 public interface SerDe extends Deserializer, Serializer {

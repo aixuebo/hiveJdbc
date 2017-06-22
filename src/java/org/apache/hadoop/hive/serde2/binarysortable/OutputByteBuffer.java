@@ -22,11 +22,12 @@ import java.util.Arrays;
 /**
  * This class is much more efficient than ByteArrayOutputStream because none of
  * the methods are synchronized.
+ * 将字节内容输出到data中--存储一行数据
  */
 public class OutputByteBuffer {
 
-  byte[] data = new byte[128];
-  int length;
+  byte[] data = new byte[128];//存储输出的字节数组
+  int length;//存储了多少个有效字节的长度
 
   /**
    * Reset the byte buffer.
@@ -44,9 +45,10 @@ public class OutputByteBuffer {
    * 
    * @param invert
    *          whether we want to invert all the bits.
+   * 写入一个字节
    */
   public final void write(byte b, boolean invert) {
-    if (length == data.length) {
+    if (length == data.length) {//说明写满了,要扩容
       data = Arrays.copyOf(data, data.length * 2);
     }
     if (invert) {

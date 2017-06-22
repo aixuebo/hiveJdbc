@@ -30,6 +30,7 @@ import org.apache.hadoop.io.Writable;
  * to have a ctor that takes a single 'Table' object as argument.
  * All serializers should extend the abstract class AbstractSerializer, and eventually
  * Serializer interface should be removed
+ * 序列化
  */
 @Deprecated
 public interface Serializer {
@@ -58,7 +59,8 @@ public interface Serializer {
    * constant since the function will reuse the Writable object. If the client
    * wants to keep a copy of the Writable, the client needs to clone the
    * returned value.
-   * 将obj对象进行序列化,根据序列化class,getSerializedClass
+   * 将一个属性值进行序列化,序列化成hadoop的结果
+   * obj是具体的值,objInspector是obj的列对应的类型
    */
   Writable serialize(Object obj, ObjectInspector objInspector) throws SerDeException;
 

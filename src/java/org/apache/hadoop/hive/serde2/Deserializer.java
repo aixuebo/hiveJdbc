@@ -33,6 +33,7 @@ import org.apache.hadoop.io.Writable;
  * function).
  * All deserializers should extend the abstract class AbstractDeserializer, and eventually
  * Deserializer interface should be removed
+ * ∑¥–Ú¡–ªØ
  */
 @Deprecated
 public interface Deserializer {

@@ -64,6 +64,7 @@ import org.apache.hadoop.io.Writable;
  * more efficient implementation should use UTF-8 encoded Text and
  * writableStringObjectInspector. We should switch to that when we have a UTF-8
  * based Regex library.
+ * 表示一行数据如何反序列化
  */
 public class RegexSerDe extends AbstractSerDe {
 
@@ -76,7 +77,7 @@ public class RegexSerDe extends AbstractSerDe {
   StructObjectInspector rowOI;//每行的每一列的name和属性类型等映射信息
   List<Object> row;//每行的数据解析后的值
   
-  int numColumns;//属性个数
+  int numColumns;//列个数
   List<TypeInfo> columnTypes;//每一个列属性对应的类型
   
   Object[] outputFields;//输出的每一列的值
@@ -93,10 +94,10 @@ public class RegexSerDe extends AbstractSerDe {
 
     // Read the configuration parameters
     inputRegex = tbl.getProperty("input.regex");
-    String columnNameProperty = tbl.getProperty(serdeConstants.LIST_COLUMNS);
-    String columnTypeProperty = tbl.getProperty(serdeConstants.LIST_COLUMN_TYPES);
+    String columnNameProperty = tbl.getProperty(serdeConstants.LIST_COLUMNS);//列集合
+    String columnTypeProperty = tbl.getProperty(serdeConstants.LIST_COLUMN_TYPES);//列的类型
     boolean inputRegexIgnoreCase = "true".equalsIgnoreCase(tbl
-        .getProperty("input.regex.case.insensitive"));
+        .getProperty("input.regex.case.insensitive"));//是否忽略大小写
 
     // output format string is not supported anymore, warn user of deprecation
     if (null != tbl.getProperty("output.format.string")) {
@@ -123,7 +124,7 @@ public class RegexSerDe extends AbstractSerDe {
     /* Constructing the row ObjectInspector:
      * The row consists of some set of primitive columns, each column will
      * be a java object of primitive type.
-     * 根据该属性类型,设置处理属性的对象
+     * 根据该属性类型,设置处理属性的序列化对象---此时使用java的序列化方法
      */
     List<ObjectInspector> columnOIs = new ArrayList<ObjectInspector>(columnNames.size());
     for (int c = 0; c < numColumns; c++) {
@@ -164,6 +165,7 @@ public class RegexSerDe extends AbstractSerDe {
      }
 
     // StandardStruct uses ArrayList to store the row.
+      //建立一行数据对象
     rowOI = ObjectInspectorFactory.getStandardStructObjectInspector(
         columnNames, columnOIs);
 

@@ -243,7 +243,7 @@ public final class ObjectInspectorUtils {
    * copy一个对象,即创建新的对象
    * @param o 目前的对象
    * @param oi 对象类型
-   * @param objectInspectorOption期望的类型
+   * @param objectInspectorOption 期望的类型
    */
   public static Object copyToStandardObject(Object o, ObjectInspector oi,
       ObjectInspectorCopyOption objectInspectorOption) {
@@ -630,12 +630,19 @@ public final class ObjectInspectorUtils {
     return compare(o1, oi1, o2, oi2, new FullMapEqualComparer());
   }
 
-  /**
-   * Compare two objects with their respective ObjectInspectors.
-   */
+    /**
+     * Compare two objects with their respective ObjectInspectors.
+     * 比较两个对象的大小
+     * @param o1 map中的具体的value值
+     * @param oi1 map中的具体的value值对应的对象类型
+     * @param o2 map中的具体的value值
+     * @param oi2 map中的具体的value值对应的对象类型
+     * @param mapEqualComparer  map对象的比较器
+     * @return
+     */
   public static int compare(Object o1, ObjectInspector oi1, Object o2,
       ObjectInspector oi2, MapEqualComparer mapEqualComparer) {
-    if (oi1.getCategory() != oi2.getCategory()) {
+    if (oi1.getCategory() != oi2.getCategory()) {//比较分类
       return oi1.getCategory().compareTo(oi2.getCategory());
     }
 
@@ -645,15 +652,16 @@ public final class ObjectInspectorUtils {
       return 1;
     }
 
+      //相同分类下
     switch (oi1.getCategory()) {
-    case PRIMITIVE: {
+    case PRIMITIVE: {//如果是原始分类
       PrimitiveObjectInspector poi1 = ((PrimitiveObjectInspector) oi1);
       PrimitiveObjectInspector poi2 = ((PrimitiveObjectInspector) oi2);
-      if (poi1.getPrimitiveCategory() != poi2.getPrimitiveCategory()) {
+      if (poi1.getPrimitiveCategory() != poi2.getPrimitiveCategory()) {//比较小类别
         return poi1.getPrimitiveCategory().compareTo(
             poi2.getPrimitiveCategory());
       }
-      switch (poi1.getPrimitiveCategory()) {
+      switch (poi1.getPrimitiveCategory()) {//小列别相同情况下,则比较具体的值
       case VOID:
         return 0;
       case BOOLEAN: {
@@ -742,17 +750,17 @@ public final class ObjectInspectorUtils {
       }
       }
     }
-    case STRUCT: {
+    case STRUCT: {//比较两个STRUCT对象
       StructObjectInspector soi1 = (StructObjectInspector) oi1;
       StructObjectInspector soi2 = (StructObjectInspector) oi2;
-      List<? extends StructField> fields1 = soi1.getAllStructFieldRefs();
+      List<? extends StructField> fields1 = soi1.getAllStructFieldRefs();//属性集合
       List<? extends StructField> fields2 = soi2.getAllStructFieldRefs();
       int minimum = Math.min(fields1.size(), fields2.size());
       for (int i = 0; i < minimum; i++) {
         int r = compare(soi1.getStructFieldData(o1, fields1.get(i)), fields1
             .get(i).getFieldObjectInspector(), soi2.getStructFieldData(o2,
             fields2.get(i)), fields2.get(i).getFieldObjectInspector(),
-            mapEqualComparer);
+            mapEqualComparer);//比较属性值
         if (r != 0) {
           return r;
         }
@@ -767,7 +775,7 @@ public final class ObjectInspectorUtils {
         int r = compare(loi1.getListElement(o1, i), loi1
             .getListElementObjectInspector(), loi2.getListElement(o2, i), loi2
             .getListElementObjectInspector(),
-            mapEqualComparer);
+            mapEqualComparer);//比较属性值
         if (r != 0) {
           return r;
         }

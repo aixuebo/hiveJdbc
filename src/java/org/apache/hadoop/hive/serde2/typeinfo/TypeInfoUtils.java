@@ -318,7 +318,7 @@ public final class TypeInfoUtils {
     private int iToken;//计数器,记录已经解析到哪个token了
 
     //说明参数不是一个类型,而是由,或者;或者:组成的若干个类型
-      //将若干个类型进行解析,组合成一个集合数组返回
+      //将若干个类型进行解析,组合成一个集合数组返回,用于创建schema的时候使用,表示一组列的类型集合,详细参见BinarySortableSerDe类
     public ArrayList<TypeInfo> parseTypeInfos() {
       typeInfos = new ArrayList<TypeInfo>();
       iToken = 0;

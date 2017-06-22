@@ -42,7 +42,7 @@ public abstract class TypedSerDe extends AbstractSerDe {
     this.objectType = objectType;
     if (objectType instanceof Class) {
       objectClass = (Class<?>) objectType;
-    } else if (objectType instanceof ParameterizedType) {
+    } else if (objectType instanceof ParameterizedType) {//·ºÐÍ
       objectClass = (Class<?>) (((ParameterizedType) objectType).getRawType());
     } else {
       throw new SerDeException("Cannot create TypedSerDe with type "

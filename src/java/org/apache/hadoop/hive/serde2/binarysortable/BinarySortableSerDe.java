@@ -108,19 +108,20 @@ import org.apache.hadoop.io.Writable;
  * field should be sorted ascendingly, and "-" means descendingly. The sub
  * fields in the same top-level field will have the same sort order.
  *
+ * 将一行数据,根据列的不同,转换成字节数组,存储到hadoop中以字节数组形式存储
  */
 public class BinarySortableSerDe extends AbstractSerDe {
 
   public static final Log LOG = LogFactory.getLog(BinarySortableSerDe.class
       .getName());
 
-  List<String> columnNames;
-  List<TypeInfo> columnTypes;
+  List<String> columnNames;//属性集合
+  List<TypeInfo> columnTypes;//属性对应的类型集合
 
-  TypeInfo rowTypeInfo;
-  StructObjectInspector rowObjectInspector;
+  TypeInfo rowTypeInfo;//由属性和类型组成的一个Struct对象类型
+  StructObjectInspector rowObjectInspector;//由属性和类型组成的一个Struct对象类型
 
-  boolean[] columnSortOrderIsDesc;
+  boolean[] columnSortOrderIsDesc;//存储每一个列的排序,是倒排序则返回true,正排序则false
 
   private static byte[] decimalBuffer = null;
   private static Charset decimalCharSet = Charset.forName("US-ASCII");
@@ -130,8 +131,8 @@ public class BinarySortableSerDe extends AbstractSerDe {
       throws SerDeException {
 
     // Get column names and sort order
-    String columnNameProperty = tbl.getProperty(serdeConstants.LIST_COLUMNS);
-    String columnTypeProperty = tbl.getProperty(serdeConstants.LIST_COLUMN_TYPES);
+    String columnNameProperty = tbl.getProperty(serdeConstants.LIST_COLUMNS);//解析属性name集合
+    String columnTypeProperty = tbl.getProperty(serdeConstants.LIST_COLUMN_TYPES);//解析属性类型集合
     if (columnNameProperty.length() == 0) {
       columnNames = new ArrayList<String>();
     } else {
@@ -146,21 +147,23 @@ public class BinarySortableSerDe extends AbstractSerDe {
     assert (columnNames.size() == columnTypes.size());
 
     // Create row related objects
+    //由属性和类型组成的一个Struct对象类型
     rowTypeInfo = TypeInfoFactory.getStructTypeInfo(columnNames, columnTypes);
     rowObjectInspector = (StructObjectInspector) TypeInfoUtils
         .getStandardWritableObjectInspectorFromTypeInfo(rowTypeInfo);
-    row = new ArrayList<Object>(columnNames.size());
+
+    row = new ArrayList<Object>(columnNames.size());//存储一行数据的具体内容,即每一个列的值对应一个元素
     for (int i = 0; i < columnNames.size(); i++) {
-      row.add(null);
+      row.add(null);//设置默认值
     }
 
     // Get the sort order
     String columnSortOrder = tbl
         .getProperty(serdeConstants.SERIALIZATION_SORT_ORDER);
-    columnSortOrderIsDesc = new boolean[columnNames.size()];
+    columnSortOrderIsDesc = new boolean[columnNames.size()];//存储每一个列的排序,是倒排序则返回true,正排序则false
     for (int i = 0; i < columnSortOrderIsDesc.length; i++) {
       columnSortOrderIsDesc[i] = (columnSortOrder != null && columnSortOrder
-          .charAt(i) == '-');
+          .charAt(i) == '-');//每一个列的位置是-表示该列倒排序
     }
   }
 
@@ -169,21 +172,23 @@ public class BinarySortableSerDe extends AbstractSerDe {
     return BytesWritable.class;
   }
 
+  //表示该struct对象的对象
   @Override
   public ObjectInspector getObjectInspector() throws SerDeException {
     return rowObjectInspector;
   }
 
-  ArrayList<Object> row;
+  ArrayList<Object> row;//存储一行数据的具体内容,即每一个列的值对应一个元素
   InputByteBuffer inputByteBuffer = new InputByteBuffer();
 
+  //反序列化
   @Override
   public Object deserialize(Writable blob) throws SerDeException {
     BytesWritable data = (BytesWritable) blob;
     inputByteBuffer.reset(data.getBytes(), 0, data.getLength());
 
     try {
-      for (int i = 0; i < columnNames.size(); i++) {
+      for (int i = 0; i < columnNames.size(); i++) {//设置一行的数据
         row.set(i, deserialize(inputByteBuffer, columnTypes.get(i),
             columnSortOrderIsDesc[i], row.get(i)));
       }
@@ -194,17 +199,26 @@ public class BinarySortableSerDe extends AbstractSerDe {
     return row;
   }
 
+    /**
+     * 从buffer中反序列化一个列对应的值
+     * @param buffer
+     * @param type 列类型
+     * @param invert 是否倒序
+     * @param reuse 将值存储在reuse中
+     * @return
+     * @throws IOException
+     */
   static Object deserialize(InputByteBuffer buffer, TypeInfo type,
       boolean invert, Object reuse) throws IOException {
 
     // Is this field a null?
-    byte isNull = buffer.read(invert);
-    if (isNull == 0) {
+    byte isNull = buffer.read(invert);//读取一个字节
+    if (isNull == 0) {//0就表示null
       return null;
     }
-    assert (isNull == 1);
+    assert (isNull == 1);//说明有值
 
-    switch (type.getCategory()) {
+    switch (type.getCategory()) {//查看该数据类型
     case PRIMITIVE: {
       PrimitiveTypeInfo ptype = (PrimitiveTypeInfo) type;
       switch (ptype.getPrimitiveCategory()) {
@@ -214,7 +228,7 @@ public class BinarySortableSerDe extends AbstractSerDe {
       case BOOLEAN: {
         BooleanWritable r = reuse == null ? new BooleanWritable()
             : (BooleanWritable) reuse;
-        byte b = buffer.read(invert);
+        byte b = buffer.read(invert);//再次读取一个字节
         assert (b == 1 || b == 2);
         r.set(b == 2);
         return r;
@@ -222,7 +236,7 @@ public class BinarySortableSerDe extends AbstractSerDe {
       case BYTE: {
         ByteWritable r = reuse == null ? new ByteWritable()
             : (ByteWritable) reuse;
-        r.set((byte) (buffer.read(invert) ^ 0x80));
+        r.set((byte) (buffer.read(invert) ^ 0x80));//0x80为1000 0000
         return r;
       }
       case SHORT: {
@@ -603,14 +617,15 @@ public class BinarySortableSerDe extends AbstractSerDe {
     return serializeBytesWritable;
   }
 
+  //序列化一个对象
   static void serialize(OutputByteBuffer buffer, Object o, ObjectInspector oi,
       boolean invert) throws SerDeException {
     // Is this field a null?
     if (o == null) {
-      buffer.write((byte) 0, invert);
+      buffer.write((byte) 0, invert);//表示是null
       return;
     }
-    // This field is not a null.
+    // This field is not a null.表示不是null
     buffer.write((byte) 1, invert);
 
     switch (oi.getCategory()) {
@@ -620,7 +635,7 @@ public class BinarySortableSerDe extends AbstractSerDe {
       case VOID: {
         return;
       }
-      case BOOLEAN: {
+      case BOOLEAN: {//发现存储的都是java的标准类型,而不是hadoop的序列化类型
         boolean v = ((BooleanObjectInspector) poi).get(o);
         buffer.write((byte) (v ? 2 : 1), invert);
         return;
@@ -781,16 +796,17 @@ public class BinarySortableSerDe extends AbstractSerDe {
     }
     case LIST: {
       ListObjectInspector loi = (ListObjectInspector) oi;
-      ObjectInspector eoi = loi.getListElementObjectInspector();
+      ObjectInspector eoi = loi.getListElementObjectInspector();//元素类型
 
       // \1 followed by each element
-      int size = loi.getListLength(o);
+      int size = loi.getListLength(o);//数据size
       for (int eid = 0; eid < size; eid++) {
-        buffer.write((byte) 1, invert);
-        serialize(buffer, loi.getListElement(o, eid), eoi, invert);
+        buffer.write((byte) 1, invert);//开始
+        //loi.getListElement(o, eid)表示获取o这个list中第eid个元素
+        serialize(buffer, loi.getListElement(o, eid), eoi, invert);//递归的过程
       }
       // and \0 to terminate
-      buffer.write((byte) 0, invert);
+      buffer.write((byte) 0, invert);//结束
       return;
     }
     case MAP: {
@@ -801,19 +817,19 @@ public class BinarySortableSerDe extends AbstractSerDe {
       // \1 followed by each key and then each value
       Map<?, ?> map = moi.getMap(o);
       for (Map.Entry<?, ?> entry : map.entrySet()) {
-        buffer.write((byte) 1, invert);
+        buffer.write((byte) 1, invert);//开始
         serialize(buffer, entry.getKey(), koi, invert);
         serialize(buffer, entry.getValue(), voi, invert);
       }
       // and \0 to terminate
-      buffer.write((byte) 0, invert);
+      buffer.write((byte) 0, invert);//结束
       return;
     }
     case STRUCT: {
       StructObjectInspector soi = (StructObjectInspector) oi;
       List<? extends StructField> fields = soi.getAllStructFieldRefs();
 
-      for (int i = 0; i < fields.size(); i++) {
+      for (int i = 0; i < fields.size(); i++) {//不需要存储name,只需要按照顺序存储value即可
         serialize(buffer, soi.getStructFieldData(o, fields.get(i)), fields.get(
             i).getFieldObjectInspector(), invert);
       }

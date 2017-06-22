@@ -23,6 +23,7 @@ import java.io.IOException;
 /**
  * This class is much more efficient than ByteArrayInputStream because none of
  * the methods are synchronized.
+ * 存储数据源字节数组
  */
 public class InputByteBuffer {
 
@@ -48,13 +49,14 @@ public class InputByteBuffer {
    * 
    * @param invert
    *          whether we want to invert all the bits.
+   * 读取一个字节
    */
   public final byte read(boolean invert) throws IOException {
     if (start >= end) {
       throw new EOFException();
     }
     if (invert) {
-      return (byte) (0xff ^ data[start++]);
+      return (byte) (0xff ^ data[start++]);//0xff为1111 1111,因此该表示将字节对应的二进制进行反转,即0变成1,1变成0
     } else {
       return data[start++];
     }
@@ -80,6 +82,7 @@ public class InputByteBuffer {
 
   /**
    * Returns the underlying byte array.
+   * 返回全部字节数组内容
    */
   public final byte[] getData() {
     return data;
