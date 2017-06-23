@@ -66,6 +66,7 @@ public interface IMetaStoreClient {
    * @return List of database names.
    * @throws MetaException
    * @throws TException
+   * 获取匹配表达式的数据库集合
    */
   public List<String> getDatabases(String databasePattern)
       throws MetaException, TException;
@@ -75,6 +76,7 @@ public interface IMetaStoreClient {
    * @return List of database names.
    * @throws MetaException
    * @throws TException
+   * 匹配所有的数据库集合
    */
   public List<String> getAllDatabases()
       throws MetaException, TException;
@@ -88,6 +90,7 @@ public interface IMetaStoreClient {
    * @throws MetaException
    * @throws TException
    * @throws UnknownDBException
+   * 匹配指定数据库下.符合表达式表的集合
    */
   public List<String> getTables(String dbName, String tablePattern)
       throws MetaException, TException, UnknownDBException;
@@ -99,6 +102,7 @@ public interface IMetaStoreClient {
    * @throws MetaException
    * @throws TException
    * @throws UnknownDBException
+   * 获取指定数据库下所有的表的集合
    */
   public List<String> getAllTables(String dbName)
       throws MetaException, TException, UnknownDBException;
@@ -273,6 +277,7 @@ public interface IMetaStoreClient {
    *          A thrift communication error occurred
    * @throws MetaException
    *          Any other errors
+   * 通过表名字获取该数据库下表对象
    */
   public List<Table> getTableObjectsByName(String dbName, List<String> tableNames)
       throws MetaException, InvalidOperationException, UnknownDBException, TException;
@@ -643,6 +648,7 @@ public interface IMetaStoreClient {
    * @throws TException
    * @see org.apache.hadoop.hive.metastore.api.ThriftHiveMetastore.Iface#get_schema(java.lang.String,
    *      java.lang.String)
+   * 获取该表的列集合
    */
   public List<FieldSchema> getSchema(String db, String tableName)
       throws MetaException, TException, UnknownTableException,

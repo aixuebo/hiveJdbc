@@ -26,7 +26,7 @@ import org.apache.hive.service.cli.session.HiveSession;
 
 /**
  * MetadataOperation.
- *
+ * 元数据的操作
  */
 public abstract class MetadataOperation extends Operation {
 

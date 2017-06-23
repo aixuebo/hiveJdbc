@@ -30,15 +30,15 @@ import org.apache.hive.service.cli.TableSchema;
 import org.apache.hive.service.cli.session.HiveSession;
 
 
-
+//一个session对应一个状态
 public abstract class Operation {
-  protected final HiveSession parentSession;
-  private OperationState state = OperationState.INITIALIZED;
-  private final OperationHandle opHandle;
+  protected final HiveSession parentSession;//状态所属session
+  private OperationState state = OperationState.INITIALIZED;//操作状态为初始化完成
+  private final OperationHandle opHandle;//操作处理类
   private HiveConf configuration;
   public static final Log LOG = LogFactory.getLog(Operation.class.getName());
-  public static final long DEFAULT_FETCH_MAX_ROWS = 100;
-  protected boolean hasResultSet;
+  public static final long DEFAULT_FETCH_MAX_ROWS = 100;//默认抓去的最大行数
+  protected boolean hasResultSet;//true表示 该操作已经有结果了
 
   protected Operation(HiveSession parentSession, OperationType opType) {
     super();
@@ -74,11 +74,13 @@ public abstract class Operation {
     return hasResultSet;
   }
 
+  //设置该操作已经有结果了
   protected void setHasResultSet(boolean hasResultSet) {
     this.hasResultSet = hasResultSet;
     opHandle.setHasResultSet(hasResultSet);
   }
 
+  //设置操作的新状态
   protected final OperationState setState(OperationState newState) throws HiveSQLException {
     state.validateTransition(newState);
     this.state = newState;
@@ -112,7 +114,7 @@ public abstract class Operation {
   // TODO: make this abstract and implement in subclasses.
   public void cancel() throws HiveSQLException {
     setState(OperationState.CANCELED);
-    throw new UnsupportedOperationException("SQLOperation.cancel()");
+    throw new UnsupportedOperationException("SQLOperation.cancel()");//说明执行完了,因为已经取消了,所以将该操作抛异常,上层调用该操作的程序会处理该异常,停止调用
   }
 
   public abstract void close() throws HiveSQLException;

@@ -39,6 +39,7 @@ import org.apache.hive.service.cli.session.SessionManager;
 
 /**
  * CLIService.
+ * 一个第三方服务,需要额外被开启
  *
  */
 public class CLIService extends CompositeService implements ICLIService {
@@ -47,7 +48,7 @@ public class CLIService extends CompositeService implements ICLIService {
 
   private HiveConf hiveConf;
   private SessionManager sessionManager;
-  private IMetaStoreClient metastoreClient;
+  private IMetaStoreClient metastoreClient;//该服务最终会请求metaStore服务,因此持有该服务的客户端
   private String serverUserName = null;
 
 
@@ -59,7 +60,7 @@ public class CLIService extends CompositeService implements ICLIService {
   public synchronized void init(HiveConf hiveConf) {
     this.hiveConf = hiveConf;
 
-    sessionManager = new SessionManager();
+    sessionManager = new SessionManager();//创建session服务,并且添加该服务去启动
     addService(sessionManager);
     try {
       HiveAuthFactory.loginFromKeytab(hiveConf);

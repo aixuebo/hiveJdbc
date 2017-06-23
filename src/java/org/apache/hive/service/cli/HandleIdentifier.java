@@ -25,9 +25,11 @@ import org.apache.hive.service.cli.thrift.THandleIdentifier;
 
 /**
  * HandleIdentifier.
- *
+ * 设置唯一号码表示
  */
 public class HandleIdentifier {
+
+  //公钥和私钥
   private final UUID publicId;
   private final UUID secretId;
 
@@ -106,6 +108,7 @@ public class HandleIdentifier {
     return true;
   }
 
+  //输出公钥
   @Override
   public String toString() {
     return publicId.toString();

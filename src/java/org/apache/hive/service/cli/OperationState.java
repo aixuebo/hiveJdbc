@@ -22,25 +22,25 @@ import org.apache.hive.service.cli.thrift.TOperationState;
 
 /**
  * OperationState.
- *
+ * 操作的状态
  */
 public enum OperationState {
-  INITIALIZED(TOperationState.INITIALIZED_STATE),
-  RUNNING(TOperationState.RUNNING_STATE),
-  FINISHED(TOperationState.FINISHED_STATE),
-  CANCELED(TOperationState.CANCELED_STATE),
-  CLOSED(TOperationState.CLOSED_STATE),
-  ERROR(TOperationState.ERROR_STATE),
-  UNKNOWN(TOperationState.UKNOWN_STATE),
-  PENDING(TOperationState.PENDING_STATE);
+  INITIALIZED(TOperationState.INITIALIZED_STATE),//初始化完成
+  RUNNING(TOperationState.RUNNING_STATE),//运行中
+  FINISHED(TOperationState.FINISHED_STATE),//完成
+  CANCELED(TOperationState.CANCELED_STATE),//取消
+  CLOSED(TOperationState.CLOSED_STATE),//关闭
+  ERROR(TOperationState.ERROR_STATE),//异常
+  UNKNOWN(TOperationState.UKNOWN_STATE),//未知
+  PENDING(TOperationState.PENDING_STATE);//等待
 
-  private final TOperationState tOperationState;
+  private final TOperationState tOperationState;//thrift的状态对象
 
   OperationState(TOperationState tOperationState) {
     this.tOperationState = tOperationState;
   }
 
-
+ //thrift对象和hive对象转换
   public static OperationState getOperationState(TOperationState tOperationState) {
     // TODO: replace this with a Map?
     for (OperationState opState : values()) {
@@ -51,6 +51,7 @@ public enum OperationState {
     return OperationState.UNKNOWN;
   }
 
+  //状态机
   public static void validateTransition(OperationState oldState, OperationState newState)
       throws HiveSQLException {
     switch (oldState) {
@@ -90,7 +91,7 @@ public enum OperationState {
     default:
       // fall-through
     }
-    throw new HiveSQLException("Illegal Operation state transition");
+    throw new HiveSQLException("Illegal Operation state transition");//状态异常
   }
 
   public void validateTransition(OperationState newState)

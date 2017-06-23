@@ -24,7 +24,7 @@ import org.apache.hive.service.cli.thrift.THandleIdentifier;
 
 public abstract class Handle {
 
-  private final HandleIdentifier handleId;
+  private final HandleIdentifier handleId;//公钥和私钥组成的密钥
 
   public Handle() {
     handleId = new HandleIdentifier();

@@ -37,10 +37,12 @@ import org.apache.hive.service.cli.session.HiveSession;
 
 /**
  * GetColumnsOperation.
- *
+ * 根据给定三个表达式---数据库、table表、列,获取满足表达式的列的集合
+ * 即该对象表示如何获取列的元数据
  */
 public class GetColumnsOperation extends MetadataOperation {
 
+  //结果集中的每一个元素类型
   private static final TableSchema RESULT_SET_SCHEMA = new TableSchema()
   .addPrimitiveColumn("TABLE_CAT", Type.STRING_TYPE,
       "Catalog name. NULL if not applicable")
@@ -97,11 +99,11 @@ public class GetColumnsOperation extends MetadataOperation {
       "Indicates whether this column is auto incremented.");
 
   private final String catalogName;
-  private final String schemaName;
-  private final String tableName;
-  private final String columnName;
+  private final String schemaName;//匹配数据库的表达式
+  private final String tableName;//匹配table表的表达式
+  private final String columnName;//匹配列的表达式
 
-  private final RowSet rowSet = new RowSet();
+  private final RowSet rowSet = new RowSet();//获取的结果集
 
   protected GetColumnsOperation(HiveSession parentSession, String catalogName, String schemaName,
       String tableName, String columnName) {
@@ -120,31 +122,32 @@ public class GetColumnsOperation extends MetadataOperation {
     setState(OperationState.RUNNING);
     try {
       IMetaStoreClient metastoreClient = getParentSession().getMetaStoreClient();
-      String schemaPattern = convertSchemaPattern(schemaName);
-      String tablePattern = convertIdentifierPattern(tableName, true);
+      String schemaPattern = convertSchemaPattern(schemaName);//要匹配的数据库表达式
+      String tablePattern = convertIdentifierPattern(tableName, true);//要匹配符合的表的表达式
 
-      Pattern columnPattern = null;
+      Pattern columnPattern = null;//要获取匹配列的表达式
       if (columnName != null) {
         columnPattern = Pattern.compile(convertIdentifierPattern(columnName, false));
       }
 
-      List<String> dbNames = metastoreClient.getDatabases(schemaPattern);
-      Collections.sort(dbNames);
+      List<String> dbNames = metastoreClient.getDatabases(schemaPattern);//获取符合表达式的数据库集合
+      Collections.sort(dbNames);//对数据库排序
       for (String dbName : dbNames) {
-        List<String> tableNames = metastoreClient.getTables(dbName, tablePattern);
+        List<String> tableNames = metastoreClient.getTables(dbName, tablePattern);//获取匹配模式的表的集合
         Collections.sort(tableNames);
-        for (Table table : metastoreClient.getTableObjectsByName(dbName, tableNames)) {
-          TableSchema schema = new TableSchema(metastoreClient.getSchema(dbName, table.getTableName()));
-          for (ColumnDescriptor column : schema.getColumnDescriptors()) {
-            if (columnPattern != null && !columnPattern.matcher(column.getName()).matches()) {
+        for (Table table : metastoreClient.getTableObjectsByName(dbName, tableNames)) {//通过表名字获取该数据库下表对象
+          TableSchema schema = new TableSchema(metastoreClient.getSchema(dbName, table.getTableName()));//获取该表的列集合,从而组成表对象
+          for (ColumnDescriptor column : schema.getColumnDescriptors()) {//转换成所有的列对象
+            if (columnPattern != null && !columnPattern.matcher(column.getName()).matches()) {//说明该列不是匹配表达式,因此不需要
               continue;
             }
+            //此时说明该列匹配成功
             Object[] rowData = new Object[] {
                 null,  // TABLE_CAT
                 table.getDbName(), // TABLE_SCHEM
                 table.getTableName(), // TABLE_NAME
                 column.getName(), // COLUMN_NAME
-                column.getType().toJavaSQLType(), // DATA_TYPE
+                column.getType().toJavaSQLType(), // DATA_TYPE sql接口定义的类型
                 column.getTypeName(), // TYPE_NAME
                 column.getType().getColumnSize(), // COLUMN_SIZE
                 null, // BUFFER_LENGTH, unused
@@ -179,6 +182,7 @@ public class GetColumnsOperation extends MetadataOperation {
 
   /* (non-Javadoc)
    * @see org.apache.hive.service.cli.Operation#getResultSetSchema()
+   * 返回结果的schema
    */
   @Override
   public TableSchema getResultSetSchema() throws HiveSQLException {
@@ -188,6 +192,7 @@ public class GetColumnsOperation extends MetadataOperation {
 
   /* (non-Javadoc)
    * @see org.apache.hive.service.cli.Operation#getNextRowSet(org.apache.hive.service.cli.FetchOrientation, long)
+   * 获取结果内容
    */
   @Override
   public RowSet getNextRowSet(FetchOrientation orientation, long maxRows) throws HiveSQLException {

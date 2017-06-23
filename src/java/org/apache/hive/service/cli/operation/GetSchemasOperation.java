@@ -29,17 +29,18 @@ import org.apache.hive.service.cli.session.HiveSession;
 
 /**
  * GetSchemasOperation.
- *
+ * 获取匹配的数据库集合
  */
 public class GetSchemasOperation extends MetadataOperation {
-  private final String catalogName;
+  private final String catalogName;//数据库表达式
   private final String schemaName;
 
+  //返回时候定义的对象
   private static final TableSchema RESULT_SET_SCHEMA = new TableSchema()
   .addStringColumn("TABLE_SCHEM", "Schema name.")
   .addStringColumn("TABLE_CATALOG", "Catalog name.");
 
-  private RowSet rowSet;
+  private RowSet rowSet;//具体的返回值
 
   protected GetSchemasOperation(HiveSession parentSession,
       String catalogName, String schemaName) {
@@ -58,7 +59,7 @@ public class GetSchemasOperation extends MetadataOperation {
     try {
       IMetaStoreClient metastoreClient = getParentSession().getMetaStoreClient();
       String schemaPattern = convertSchemaPattern(schemaName);
-      for (String dbName : metastoreClient.getDatabases(schemaPattern)) {
+      for (String dbName : metastoreClient.getDatabases(schemaPattern)) {//获取匹配的数据库集合
         rowSet.addRow(RESULT_SET_SCHEMA, new Object[] {dbName, DEFAULT_HIVE_CATALOG});
       }
       setState(OperationState.FINISHED);

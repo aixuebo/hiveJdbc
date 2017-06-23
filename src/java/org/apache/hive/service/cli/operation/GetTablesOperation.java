@@ -34,13 +34,13 @@ import org.apache.hive.service.cli.session.HiveSession;
 
 /**
  * GetTablesOperation.
- *
+ * 获取table表的元数据
  */
 public class GetTablesOperation extends MetadataOperation {
 
   private final String catalogName;
-  private final String schemaName;
-  private final String tableName;
+  private final String schemaName;//数据库表达式
+  private final String tableName;//表的表达式
   private final List<String> tableTypes = new ArrayList<String>();
   private final RowSet rowSet = new RowSet();
   private final TableTypeMapping tableTypeMapping;
@@ -48,10 +48,10 @@ public class GetTablesOperation extends MetadataOperation {
 
   private static final TableSchema RESULT_SET_SCHEMA = new TableSchema()
   .addStringColumn("TABLE_CAT", "Catalog name. NULL if not applicable.")
-  .addStringColumn("TABLE_SCHEM", "Schema name.")
-  .addStringColumn("TABLE_NAME", "Table name.")
-  .addStringColumn("TABLE_TYPE", "The table type, e.g. \"TABLE\", \"VIEW\", etc.")
-  .addStringColumn("REMARKS", "Comments about the table.");
+  .addStringColumn("TABLE_SCHEM", "Schema name.")//所属数据库
+  .addStringColumn("TABLE_NAME", "Table name.")//所属表
+  .addStringColumn("TABLE_TYPE", "The table type, e.g. \"TABLE\", \"VIEW\", etc.")//表类型,是table还是视图view
+  .addStringColumn("REMARKS", "Comments about the table.");//表备注
 
   protected GetTablesOperation(HiveSession parentSession,
       String catalogName, String schemaName, String tableName,
@@ -79,8 +79,8 @@ public class GetTablesOperation extends MetadataOperation {
       IMetaStoreClient metastoreClient = getParentSession().getMetaStoreClient();
       String schemaPattern = convertSchemaPattern(schemaName);
       String tablePattern = convertIdentifierPattern(tableName, true);
-      for (String dbName : metastoreClient.getDatabases(schemaPattern)) {
-        List<String> tableNames = metastoreClient.getTables(dbName, tablePattern);
+      for (String dbName : metastoreClient.getDatabases(schemaPattern)) {//获取匹配的数据库集合
+        List<String> tableNames = metastoreClient.getTables(dbName, tablePattern);//获取匹配的表的表达式
         for (Table table : metastoreClient.getTableObjectsByName(dbName, tableNames)) {
           Object[] rowData = new Object[] {
               DEFAULT_HIVE_CATALOG,
