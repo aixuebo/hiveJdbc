@@ -43,8 +43,8 @@ import org.apache.hive.service.cli.thrift.TSessionHandle;
  */
 public class HiveStatement implements java.sql.Statement {
   private TCLIService.Iface client;
-  private TOperationHandle stmtHandle = null;
-  private final TSessionHandle sessHandle;
+  private TOperationHandle stmtHandle = null;//发送sql请求后的处理器
+  private final TSessionHandle sessHandle;//客户端的session
   Map<String,String> sessConf = new HashMap<String,String>();
   private int fetchSize = 50;
   /**
@@ -60,6 +60,10 @@ public class HiveStatement implements java.sql.Statement {
    * Sets the limit for the maximum number of rows that any ResultSet object produced by this
    * Statement can contain to the given number. If the limit is exceeded, the excess rows
    * are silently dropped. The value must be >= 0, and 0 means there is not limit.
+   * 设置最大行数,通过这个Statement产生的任何结果集,都不允许超过该伐值
+   * 如果超过该伐值的行数被查询出来了,则都会将其多余的丢弃掉
+   *
+   * 注意:0意味着不限制,可以返回无穷多的行
    */
   private int maxRows = 0;
 
@@ -95,8 +99,8 @@ public class HiveStatement implements java.sql.Statement {
    * (non-Javadoc)
    *
    * @see java.sql.Statement#cancel()
+   * 发送一个请求,取消查询
    */
-
   public void cancel() throws SQLException {
     if (isClosed) {
       throw new SQLException("Can't cancel after statement has been closed");
@@ -194,8 +198,8 @@ public class HiveStatement implements java.sql.Statement {
 
       TExecuteStatementReq execReq = new TExecuteStatementReq(sessHandle, sql);
       execReq.setConfOverlay(sessConf);
-      TExecuteStatementResp execResp = client.ExecuteStatement(execReq);
-      Utils.verifySuccessWithInfo(execResp.getStatus());
+      TExecuteStatementResp execResp = client.ExecuteStatement(execReq);//发送请求给服务端
+      Utils.verifySuccessWithInfo(execResp.getStatus());//校验服务端返回的请求
       stmtHandle = execResp.getOperationHandle();
     } catch (SQLException eS) {
       throw eS;
@@ -203,7 +207,7 @@ public class HiveStatement implements java.sql.Statement {
       throw new SQLException(ex.toString(), "08S01", ex);
     }
 
-    if (!stmtHandle.isHasResultSet()) {
+    if (!stmtHandle.isHasResultSet()) {//说明查询没有结果集
       // Poll until the query has completed one way or another. DML queries will not return a result
       // set, but we should not return from this method until the query has completed to avoid
       // racing with possible subsequent session shutdown, or queries that depend on the results
@@ -244,6 +248,7 @@ public class HiveStatement implements java.sql.Statement {
       }
       return false;
     }
+    //说明查询有结果集,要处理结果集
     resultSet =  new HiveQueryResultSet.Builder().setClient(client).setSessionHandle(sessHandle)
         .setStmtHandle(stmtHandle).setHiveStatement(this).setMaxRows(maxRows).setFetchSize(fetchSize)
         .build();

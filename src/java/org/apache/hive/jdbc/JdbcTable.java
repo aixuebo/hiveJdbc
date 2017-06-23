@@ -23,12 +23,13 @@ import java.sql.SQLException;
 
 /**
  * Table metadata.
+ * 表示一个table表的元数据
  */
 public class JdbcTable {
   private String tableCatalog;
-  private String tableName;
+  private String tableName;//表名字
   private String type;
-  private String comment;
+  private String comment;//备注
 
   public JdbcTable(String tableCatalog, String tableName, String type, String comment) {
     this.tableCatalog = tableCatalog;

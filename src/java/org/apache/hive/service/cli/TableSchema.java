@@ -28,10 +28,10 @@ import org.apache.hive.service.cli.thrift.TTableSchema;
 
 /**
  * TableSchema.
- *
+ * 表示抓去的一个table表的元数据
  */
 public class TableSchema {
-  private final List<ColumnDescriptor> columns = new ArrayList<ColumnDescriptor>();
+  private final List<ColumnDescriptor> columns = new ArrayList<ColumnDescriptor>();//该表内的列的元数据
 
   public TableSchema() {
   }
@@ -61,10 +61,12 @@ public class TableSchema {
     return new ArrayList<ColumnDescriptor>(columns);
   }
 
+  //获取指定一个列对象
   public ColumnDescriptor getColumnDescriptorAt(int pos) {
     return columns.get(pos);
   }
 
+  //获取列的长度
   public int getSize() {
     return columns.size();
   }
@@ -82,6 +84,7 @@ public class TableSchema {
     return tTableSchema;
   }
 
+  //添加一个列
   public TableSchema addPrimitiveColumn(String columnName, Type columnType, String columnComment) {
     columns.add(ColumnDescriptor.newPrimitiveColumnDescriptor(columnName, columnComment, columnType, columns.size() + 1));
     return this;

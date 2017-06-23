@@ -51,12 +51,12 @@ import org.apache.thrift.TException;
 
 /**
  * HiveDatabaseMetaData.
- *
+ * 如何查询hive的元数据
  */
 public class HiveDatabaseMetaData implements DatabaseMetaData {
 
-  private final TCLIService.Iface client;
-  private final TSessionHandle sessHandle;
+  private final TCLIService.Iface client;//请求的客户端
+  private final TSessionHandle sessHandle;//客户端对应的session对象
   private static final String CATALOG_SEPARATOR = ".";
 
   private static final char SEARCH_STRING_ESCAPE = '\\';
@@ -225,6 +225,7 @@ public class HiveDatabaseMetaData implements DatabaseMetaData {
    */
   private class GetColumnsComparator implements Comparator<JdbcColumn> {
 
+    //先按照tabeName排序,相同tableName的按照列的序号排序
     public int compare(JdbcColumn o1, JdbcColumn o2) {
       int compareName = o1.getTableName().compareTo(o2.getTableName());
       if (compareName==0) {

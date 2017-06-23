@@ -24,15 +24,15 @@ import org.apache.hive.service.cli.thrift.TTypeId;
 
 /**
  * Type.
- *
+ * 表示列类型
  */
 public enum Type {
   NULL_TYPE("VOID",
       java.sql.Types.NULL,
       TTypeId.NULL_TYPE),
-  BOOLEAN_TYPE("BOOLEAN",
-      java.sql.Types.BOOLEAN,
-      TTypeId.BOOLEAN_TYPE),
+  BOOLEAN_TYPE("BOOLEAN",//hive中定义的类型
+      java.sql.Types.BOOLEAN,//sql接口定义的列类型
+      TTypeId.BOOLEAN_TYPE),//thrift中定义的列类型
   TINYINT_TYPE("TINYINT",
       java.sql.Types.TINYINT,
       TTypeId.TINYINT_TYPE),
@@ -80,7 +80,7 @@ public enum Type {
       TTypeId.STRING_TYPE,
       true, true),
   STRUCT_TYPE("STRUCT",
-      java.sql.Types.VARCHAR,
+      java.sql.Types.VARCHAR,//sql和thrift中都使用json表示,因此是String类型
       TTypeId.STRING_TYPE,
       true, false),
   UNION_TYPE("UNIONTYPE",
@@ -92,12 +92,12 @@ public enum Type {
       TTypeId.STRING_TYPE,
       true, false);
 
-  private final String name;
-  private final TTypeId tType;
-  private final int javaSQLType;
-  private final boolean isQualified;
-  private final boolean isComplex;
-  private final boolean isCollection;
+  private final String name;//自己定义的类型
+  private final TTypeId tType;//thrift中定义的类型
+  private final int javaSQLType;//sql接口定义的类型
+  private final boolean isQualified;//DECIMAL和verchar时候是true,含义应该是是否需要参数的意思,因为这两个类型需要参数修饰
+  private final boolean isComplex;//是否是复杂类型,true表示是复杂类型,比如Map struct等类型
+  private final boolean isCollection;//是否是集合类型,只有ARRAY和MAP是集合类型,即该字段可以存储值
 
   Type(String name, int javaSQLType, TTypeId tType, boolean isQualified, boolean isComplex, boolean isCollection) {
     this.name = name;
@@ -116,6 +116,7 @@ public enum Type {
     this(name, javaSqlType, tType, false, false, false);
   }
 
+  //是否是简单类型
   public boolean isPrimitiveType() {
     return !isComplex;
   }
@@ -124,6 +125,7 @@ public enum Type {
     return isQualified;
   }
 
+  //是否是复杂类型
   public boolean isComplexType() {
     return isComplex;
   }
@@ -132,6 +134,7 @@ public enum Type {
     return isCollection;
   }
 
+    //通过thrift类型找类型
   public static Type getType(TTypeId tType) {
     for (Type type : values()) {
       if (tType.equals(type.tType)) {
@@ -141,6 +144,7 @@ public enum Type {
     throw new IllegalArgumentException("Unregonized Thrift TTypeId value: " + tType);
   }
 
+    //通过hive的类型找类型
   public static Type getType(String name) {
     if (name == null) {
       throw new IllegalArgumentException("Invalid type name: null");
@@ -148,7 +152,7 @@ public enum Type {
     for (Type type : values()) {
       if (name.equalsIgnoreCase(type.name)) {
         return type;
-      } else if (type.isQualifiedType() || type.isComplexType()) {
+      } else if (type.isQualifiedType() || type.isComplexType()) {//因为需要参数,因此只比较开头部分即可
         if (name.toUpperCase().startsWith(type.name)) {
             return type;
         }

@@ -45,13 +45,14 @@ import org.apache.hive.service.cli.thrift.TSessionHandle;
 
 /**
  * HivePreparedStatement.
- *
+ * 预编译sql
  */
 public class HivePreparedStatement extends HiveStatement implements PreparedStatement {
   private final String sql;
 
   /**
    * save the SQL parameters {paramLoc:paramValue}
+   * 为预编译sql设置具体的值
    */
   private final HashMap<Integer, String> parameters=new HashMap<Integer, String>();
 
@@ -123,9 +124,10 @@ public class HivePreparedStatement extends HiveStatement implements PreparedStat
    * @param sql
    * @param parameters
    * @return updated SQL string
+   * 将预编译的sql转换成正常的sql,即将?号改成具体的值
    */
   private String updateSql(final String sql, HashMap<Integer, String> parameters) {
-    if (!sql.contains("?")) {
+    if (!sql.contains("?")) {//即预编译sql也可以执行非预编译的sql,即可以不带有?
       return sql;
     }
 
@@ -150,9 +152,9 @@ public class HivePreparedStatement extends HiveStatement implements PreparedStat
    * Get the index of given char from the SQL string by parameter location
    * </br> The -1 will be return, if nothing found
    *
-   * @param sql
-   * @param cchar
-   * @param paramLoc
+   * @param sql 预编译的sql
+   * @param cchar 要查找的字节
+   * @param paramLoc 从什么位置开始查找
    * @return
    */
   private int getCharIndexFromSqlByParamLocation(final String sql, final char cchar, final int paramLoc) {

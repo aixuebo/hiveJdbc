@@ -27,7 +27,7 @@ import org.apache.hadoop.hive.serde.serdeConstants;
 
 /**
  * HiveResultSetMetaData.
- *
+ * hive元数据的查询结果
  */
 public class HiveResultSetMetaData implements java.sql.ResultSetMetaData {
   private final List<String> columnNames;

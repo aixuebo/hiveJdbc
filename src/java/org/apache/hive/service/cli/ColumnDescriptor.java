@@ -24,14 +24,14 @@ import org.apache.hive.service.cli.thrift.TColumnDesc;
 
 /**
  * ColumnDescriptor.
- *
+ * 表示一个列的元数据
  */
 public class ColumnDescriptor {
-  private final String name;
-  private final String comment;
-  private final TypeDescriptor type;
+  private final String name;//列名字
+  private final String comment;//列的备注
+  private final TypeDescriptor type;//列的类型
   // ordinal position of this column in the schema
-  private final int position;
+  private final int position;//列的序号
 
   public ColumnDescriptor(String name, String comment, TypeDescriptor type, int position) {
     this.name = name;

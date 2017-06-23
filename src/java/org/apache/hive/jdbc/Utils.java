@@ -33,7 +33,7 @@ public class Utils {
   /**
     * The required prefix for the connection URL.
     */
-  public static final String URL_PREFIX = "jdbc:hive2://";
+  public static final String URL_PREFIX = "jdbc:hive2://";//是JDBC连接hive的连接url前缀
 
   /**
     * If host is provided, without a port.
@@ -51,10 +51,10 @@ public class Utils {
   public static class JdbcConnectionParams {
     private String host = null;
     private int port;
-    private String dbName = DEFAULT_DATABASE;
+    private String dbName = DEFAULT_DATABASE;//数据库name
     //mysql://rdsmmee6zmmee6z.mysql.rds.aliyuncs.com:3306/passport;aa=bb?rewriteBatchedStatements=true&amp;useUnicode=true&amp;characterEncoding=utf8 解析rewriteBatchedStatements=true&amp;useUnicode=true&amp;characterEncoding=utf8中key-value
-    private Map<String,String> hiveConfs = new HashMap<String,String>();
-    //解析#号之后的key-value参数
+    private Map<String,String> hiveConfs = new HashMap<String,String>();//用于配置hive的环境信息,比如hive.auto.convert.join=false;
+    //解析#号之后的key-value参数,用于设置hive的sql中需要的变量,比如-hivevar today=2017-06-06
     private Map<String,String> hiveVars = new HashMap<String,String>();
     //jdbc数据库字符后面的参数,即用;拆分的key-value,例如mysql://rdsmmee6zmmee6z.mysql.rds.aliyuncs.com:3306/passport;aa=bb?rewriteBatchedStatements=true&amp;useUnicode=true&amp;characterEncoding=utf8解析aa=bb
     private Map<String,String> sessionVars = new HashMap<String,String>();
@@ -141,9 +141,9 @@ public class Utils {
       return Types.TIMESTAMP;
     } else if ("decimal".equalsIgnoreCase(type)) {
       return Types.DECIMAL;
-    } else if ("binary".equalsIgnoreCase(type)) {
+    } else if ("binary".equalsIgnoreCase(type)) {//binary表示字节数组类型
       return Types.BINARY;
-    } else if (type.startsWith("map<")) {
+    } else if (type.startsWith("map<")) {//使用json存储hive的复杂类型,因此是verchar
       return Types.VARCHAR;
     } else if (type.startsWith("array<")) {
       return Types.VARCHAR;
@@ -159,6 +159,7 @@ public class Utils {
   }
 
   // Verify success status, else throw SQLException
+    //客户端要去校验服务端返回的response的状态码是否合法
   public static void verifySuccess(TStatus status) throws SQLException {
     verifySuccess(status, false);
   }
@@ -190,6 +191,7 @@ public class Utils {
    *
    * @param uri
    * @return
+   * 解析传入的url连接串
    */
   public static JdbcConnectionParams parseURL(String uri) throws IllegalArgumentException {
     JdbcConnectionParams connParams = new JdbcConnectionParams();
@@ -201,7 +203,7 @@ public class Utils {
     // For URLs with no other configuration
     // Don't parse them, but set embedded mode as true
     //是否为嵌入式模式
-    if (uri.equalsIgnoreCase(URL_PREFIX)) {
+    if (uri.equalsIgnoreCase(URL_PREFIX)) {//内嵌不需要host port以及数据库name,因为内嵌的是内置自己支持的数据库,因此不需要其他的连接串
       connParams.setEmbeddedMode(true);
       return connParams;
     }

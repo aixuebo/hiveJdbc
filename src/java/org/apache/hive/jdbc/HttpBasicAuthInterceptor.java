@@ -31,7 +31,7 @@ import org.apache.http.protocol.HttpContext;
 /**
  * The class is instantiated with the username and password, it is then
  * used to add header with these credentials to HTTP requests
- *
+ * 拦截器,对用户名和密码进行处理,防止客户端传输的明码是明文
  */
 public class HttpBasicAuthInterceptor implements HttpRequestInterceptor {
 

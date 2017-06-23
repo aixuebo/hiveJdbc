@@ -18,8 +18,9 @@
 
 package org.apache.hive.jdbc;
 
+//表示一个列的特别属性信息,比如decimal属性需要除了设置类型外,还要设置精准度
 class JdbcColumnAttributes {
-  public int precision = 0;
+  public int precision = 0;//该字段也存储verchar对应的字段长度
   public int scale = 0;
 
   public JdbcColumnAttributes() {

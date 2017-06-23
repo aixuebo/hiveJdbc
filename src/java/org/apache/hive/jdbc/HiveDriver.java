@@ -36,7 +36,9 @@ import org.apache.hive.jdbc.Utils.JdbcConnectionParams;
 
 /**
  * HiveDriver.
+ * 该driver表示hive2服务
  *
+ * driver的主要作用是解析url,获取host、port以及数据库name,方便connection模块进行连接操作
  */
 public class HiveDriver implements Driver {
   static {
@@ -50,23 +52,24 @@ public class HiveDriver implements Driver {
 
   /**
    * Is this driver JDBC compliant?
+   * 是否兼容JDBC
    */
   private static final boolean JDBC_COMPLIANT = false;
 
   /**
    * Property key for the database name.
    */
-  private static final String DBNAME_PROPERTY_KEY = "DBNAME";
+  private static final String DBNAME_PROPERTY_KEY = "DBNAME";//存储要连接的数据库的key
 
   /**
    * Property key for the Hive Server2 host.
    */
-  private static final String HOST_PROPERTY_KEY = "HOST";
+  private static final String HOST_PROPERTY_KEY = "HOST";//存储host的key
 
   /**
    * Property key for the Hive Server2 port.
    */
-  private static final String PORT_PROPERTY_KEY = "PORT";
+  private static final String PORT_PROPERTY_KEY = "PORT";//存储port的key
 
 
   /**
@@ -90,16 +93,17 @@ public class HiveDriver implements Driver {
    * localhost port 5050
    *
    * TODO: - write a better regex. - decide on uri format
+   * 校验是否url的合法的
    */
-
   public boolean acceptsURL(String url) throws SQLException {
     return Pattern.matches(Utils.URL_PREFIX + ".*", url);
-  }
+  }//以jdbc:hive2://开头
 
   /*
    * As per JDBC 3.0 Spec (section 9.2)
    * "If the Driver implementation understands the URL, it will return a Connection object;
    * otherwise it returns null"
+   * 根据url创建连接
    */
   public Connection connect(String url, Properties info) throws SQLException {
     return acceptsURL(url) ? new HiveConnection(url, info) : null;
@@ -109,12 +113,13 @@ public class HiveDriver implements Driver {
    * Package scoped access to the Driver's Major Version
    * @return The Major version number of the driver. -1 if it cannot be determined from the
    * manifest.mf file.
+   * 获取jar包的大版本
    */
   static int getMajorDriverVersion() {
     int version = -1;
     try {
       String fullVersion = HiveDriver.fetchManifestAttribute(
-          Attributes.Name.IMPLEMENTATION_VERSION);
+          Attributes.Name.IMPLEMENTATION_VERSION);//加载jar包下配置的属性中Implementation-Version属性
       String[] tokens = fullVersion.split("\\."); //$NON-NLS-1$
 
       if(tokens != null && tokens.length > 0 && tokens[0] != null) {
@@ -133,12 +138,13 @@ public class HiveDriver implements Driver {
    * Package scoped access to the Driver's Minor Version
    * @return The Minor version number of the driver. -1 if it cannot be determined from the
    * manifest.mf file.
+   * 获取jar包的小版本
    */
   static int getMinorDriverVersion() {
     int version = -1;
     try {
       String fullVersion = HiveDriver.fetchManifestAttribute(
-          Attributes.Name.IMPLEMENTATION_VERSION);
+          Attributes.Name.IMPLEMENTATION_VERSION);//加载jar包下配置的属性中Implementation-Version属性
       String[] tokens = fullVersion.split("\\."); //$NON-NLS-1$
 
       if(tokens != null && tokens.length > 1 && tokens[1] != null) {
@@ -155,6 +161,7 @@ public class HiveDriver implements Driver {
 
   /**
    * Returns the major version of this driver.
+   * 获取jar包的大版本
    */
   public int getMajorVersion() {
     return HiveDriver.getMajorDriverVersion();
@@ -162,6 +169,7 @@ public class HiveDriver implements Driver {
 
   /**
    * Returns the minor version of this driver.
+   * 获取jar包的小版本
    */
   public int getMinorVersion() {
     return HiveDriver.getMinorDriverVersion();
@@ -172,15 +180,17 @@ public class HiveDriver implements Driver {
     throw new SQLFeatureNotSupportedException("Method not supported");
   }
 
+    //获取连接数据库的host、port、数据库name集合
   public DriverPropertyInfo[] getPropertyInfo(String url, Properties info) throws SQLException {
     if (info == null) {
       info = new Properties();
     }
 
-    if ((url != null) && url.startsWith(Utils.URL_PREFIX)) {
-      info = parseURLforPropertyInfo(url, info);
+    if ((url != null) && url.startsWith(Utils.URL_PREFIX)) {//说明url合法,进行解析url
+      info = parseURLforPropertyInfo(url, info);//解析url,然后将host port db数据库存储到info里面
     }
 
+      //获取host 、port、数据库name 返回
     DriverPropertyInfo hostProp = new DriverPropertyInfo(HOST_PROPERTY_KEY,
         info.getProperty(HOST_PROPERTY_KEY, ""));
     hostProp.required = false;
@@ -207,6 +217,7 @@ public class HiveDriver implements Driver {
 
   /**
    * Returns whether the driver is JDBC compliant.
+   * 是否兼容JDBC
    */
   public boolean jdbcCompliant() {
     return JDBC_COMPLIANT;
@@ -221,16 +232,17 @@ public class HiveDriver implements Driver {
    * @param defaults
    * @return
    * @throws java.sql.SQLException
+   * 解析url,将解析后的host、port以及db存储到Properties中返回
    */
   private Properties parseURLforPropertyInfo(String url, Properties defaults) throws SQLException {
     Properties urlProps = (defaults != null) ? new Properties(defaults)
         : new Properties();
 
-    if (url == null || !url.startsWith(Utils.URL_PREFIX)) {
+    if (url == null || !url.startsWith(Utils.URL_PREFIX)) {//url必须合法
       throw new SQLException("Invalid connection url: " + url);
     }
 
-    JdbcConnectionParams params = Utils.parseURL(url);
+    JdbcConnectionParams params = Utils.parseURL(url);//解析传入的url连接串
     String host = params.getHost();
     if (host == null){
       host = "";
@@ -239,7 +251,7 @@ public class HiveDriver implements Driver {
     if(host.equals("")){
       port = "";
     }
-    else if(port.equals("0")){
+    else if(port.equals("0")){//如果是0端口,则设置默认端口
       port = Utils.DEFAULT_PORT;
     }
     String db = params.getDbName();
@@ -252,12 +264,13 @@ public class HiveDriver implements Driver {
 
   /**
    * Lazy-load manifest attributes as needed.
+   * 获取jar包下的配置文件对象
    */
   private static Attributes manifestAttributes = null;
 
   /**
    * Loads the manifest attributes from the jar.
-   *
+   * 加载配置jar包下的主要属性
    * @throws java.net.MalformedURLException
    * @throws IOException
    */
@@ -277,7 +290,7 @@ public class HiveDriver implements Driver {
   /**
    * Package scoped to allow manifest fetching from other HiveDriver classes
    * Helper to initialize attributes and return one.
-   *
+   * 加载配置jar包下的主要属性
    * @param attributeName
    * @return
    * @throws SQLException

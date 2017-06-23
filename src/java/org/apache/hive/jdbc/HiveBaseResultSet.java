@@ -61,7 +61,7 @@ import org.apache.hive.service.cli.thrift.TStringValue;
 public abstract class HiveBaseResultSet implements ResultSet {
   protected SQLWarning warningChain = null;
   protected boolean wasNull = false;
-  protected TRow row;
+  protected TRow row;//下一行要处理的数据
   protected List<String> columnNames;
   protected List<String> columnTypes;
   protected List<JdbcColumnAttributes> columnAttributes;

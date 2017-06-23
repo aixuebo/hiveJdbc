@@ -24,14 +24,15 @@ import java.sql.Types;
 
 /**
  * Column metadata.
+ * 表示一个列的元数据
  */
 public class JdbcColumn {
-  private final String columnName;
-  private final String tableName;
+  private final String columnName;//列名字
+  private final String tableName;//列所属表
   private final String tableCatalog;
-  private final String type;
-  private final String comment;
-  private final int ordinalPos;
+  private final String type;//列的类型
+  private final String comment;//列的备注
+  private final int ordinalPos;//列的序号
 
   JdbcColumn(String columnName, String tableName, String tableCatalog
           , String type, String comment, int ordinalPos) {
@@ -63,6 +64,7 @@ public class JdbcColumn {
     return Utils.hiveTypeToSqlType(type);
   }
 
+  //列需要的长度
   static int columnDisplaySize(int columnType, JdbcColumnAttributes columnAttributes)
       throws SQLException {
     // according to hiveTypeToSqlType possible options are:

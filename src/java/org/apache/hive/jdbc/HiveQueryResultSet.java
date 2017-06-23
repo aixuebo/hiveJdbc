@@ -53,19 +53,20 @@ public class HiveQueryResultSet extends HiveBaseResultSet {
 
   public static final Log LOG = LogFactory.getLog(HiveQueryResultSet.class);
 
-  private TCLIService.Iface client;
-  private TOperationHandle stmtHandle;
-  private HiveStatement hiveStatement;
-  private TSessionHandle sessHandle;
-  private int maxRows;
-  private int fetchSize;
-  private int rowsFetched = 0;
+  private TCLIService.Iface client;//客户端对象
+  private TOperationHandle stmtHandle;//查询的结果集处理对象
+  private HiveStatement hiveStatement;//具体处理该sql的statement对象
+  private TSessionHandle sessHandle;//客户端的session对象
+  private int maxRows;//设置最大行数,通过这个Statement产生的任何结果集,都不允许超过该伐值，如果超过该伐值的行数被查询出来了,则都会将其多余的丢弃掉，。 注意:0意味着不限制,可以返回无穷多的行
+  private int fetchSize;//每次抓去多少条数据。因为不是一次把数据都抓去完的,而是不断的抓去的
+  private int rowsFetched = 0;//已经抓去了多少行数据
 
-  private List<TRow> fetchedRows;
-  private Iterator<TRow> fetchedRowsItr;
+  private List<TRow> fetchedRows;//抓去到的数据临时存储队列
+  private Iterator<TRow> fetchedRowsItr;//抓去结果的迭代器
   private boolean isClosed = false;
-  private boolean emptyResultSet = false;
+  private boolean emptyResultSet = false;//true表示结果集是空的
 
+  //如何构建一个查询结果集
   public static class Builder {
 
     private TCLIService.Iface client = null;
@@ -79,10 +80,10 @@ public class HiveQueryResultSet extends HiveBaseResultSet {
      * are silently dropped. The value must be >= 0, and 0 means there is not limit.
      */
     private int maxRows = 0;
-    private boolean retrieveSchema = true;
-    private List<String> colNames;
-    private List<String> colTypes;
-    private List<JdbcColumnAttributes> colAttributes;
+    private boolean retrieveSchema = true;//true表示要发送请求去抓去schema
+    private List<String> colNames;//列集合
+    private List<String> colTypes;//列类型
+    private List<JdbcColumnAttributes> colAttributes;//列类型外的其他属性.比如decimal中的精准度
     private int fetchSize = 50;
     private boolean emptyResultSet = false;
 
@@ -111,6 +112,7 @@ public class HiveQueryResultSet extends HiveBaseResultSet {
       return this;
     }
 
+    //列名字以及列类型
     public Builder setSchema(List<String> colNames, List<String> colTypes) {
       // no column attributes provided - create list of null attributes.
       List<JdbcColumnAttributes> colAttributes =
@@ -121,6 +123,13 @@ public class HiveQueryResultSet extends HiveBaseResultSet {
       return setSchema(colNames, colTypes, colAttributes);
     }
 
+      /**
+       * //列名字以及列类型
+       * @param colNames
+       * @param colTypes
+       * @param colAttributes 列类型外其他定义,比如decimal中需要设置精准度
+       * @return
+       */
     public Builder setSchema(List<String> colNames, List<String> colTypes,
         List<JdbcColumnAttributes> colAttributes) {
       this.colNames = new ArrayList<String>();
@@ -157,7 +166,7 @@ public class HiveQueryResultSet extends HiveBaseResultSet {
     columnNames = new ArrayList<String>();
     columnTypes = new ArrayList<String>();
     columnAttributes = new ArrayList<JdbcColumnAttributes>();
-    if (builder.retrieveSchema) {
+    if (builder.retrieveSchema) {//表示要发送请求抓去schema
       retrieveSchema();
     } else {
       this.setSchema(builder.colNames, builder.colTypes, builder.colAttributes);
@@ -198,6 +207,7 @@ public class HiveQueryResultSet extends HiveBaseResultSet {
 
   /**
    * Retrieve schema from the server
+   * 表示要发送请求抓去schema
    */
   private void retrieveSchema() throws SQLException {
     try {
@@ -269,22 +279,23 @@ public class HiveQueryResultSet extends HiveBaseResultSet {
    * @see java.sql.ResultSet#next()
    * @throws SQLException
    *           if a database access error occurs.
+   * 不断的去请求服务抓去数据
    */
   public boolean next() throws SQLException {
     if (isClosed) {
       throw new SQLException("Resultset is closed");
     }
-    if (emptyResultSet || (maxRows > 0 && rowsFetched >= maxRows)) {
+    if (emptyResultSet || (maxRows > 0 && rowsFetched >= maxRows)) {//已经抓去够了,因此不需要抓去数据了
       return false;
     }
 
     try {
-      if (fetchedRows == null || !fetchedRowsItr.hasNext()) {
+      if (fetchedRows == null || !fetchedRowsItr.hasNext()) {//说明批出去抓去队列已经没有数据了,要再次抓去数据
         TFetchResultsReq fetchReq = new TFetchResultsReq(stmtHandle,
             TFetchOrientation.FETCH_NEXT, fetchSize);
         TFetchResultsResp fetchResp = client.FetchResults(fetchReq);
         Utils.verifySuccessWithInfo(fetchResp.getStatus());
-        fetchedRows = fetchResp.getResults().getRows();
+        fetchedRows = fetchResp.getResults().getRows();//将抓去的结果赋值
         fetchedRowsItr = fetchedRows.iterator();
       }
 

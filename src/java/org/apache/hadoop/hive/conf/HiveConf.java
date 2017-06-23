@@ -744,11 +744,11 @@ public class HiveConf extends Configuration {
     HIVE_ENTITY_SEPARATOR("hive.entity.separator", "@"),
 
     // binary or http
-    HIVE_SERVER2_TRANSPORT_MODE("hive.server2.transport.mode", "binary"),
+    HIVE_SERVER2_TRANSPORT_MODE("hive.server2.transport.mode", "binary"),//thrift传输是http传输还是二进制传输
 
     // http (over thrift) transport settings
     HIVE_SERVER2_THRIFT_HTTP_PORT("hive.server2.thrift.http.port", 10001),
-    HIVE_SERVER2_THRIFT_HTTP_PATH("hive.server2.thrift.http.path", "cliservice"),
+    HIVE_SERVER2_THRIFT_HTTP_PATH("hive.server2.thrift.http.path", "cliservice"),//http传输中的路径,比如http://host:port/index.html,该配置内容是/index.htm
     HIVE_SERVER2_THRIFT_HTTP_MIN_WORKER_THREADS("hive.server2.thrift.http.min.worker.threads", 5),
     HIVE_SERVER2_THRIFT_HTTP_MAX_WORKER_THREADS("hive.server2.thrift.http.max.worker.threads", 500),
 

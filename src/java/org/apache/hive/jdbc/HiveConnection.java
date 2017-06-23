@@ -67,17 +67,27 @@ import org.apache.thrift.transport.TTransportException;
 
 /**
  * HiveConnection.
+ * hive的连接原理,产生一个thrift客户端,通过客户端请求远程的server服务
  *
+ * 关于JDBC的支持
+ * 回滚等操作hive是不支持的
+ * 预编译sql支持,产生预编译class参与执行
+ *
+ * 一个该对象表示一个连接,持有一个客户端对象和一个session对象保持该连接的上下文信息
  */
 public class HiveConnection implements java.sql.Connection {
-  private static final String HIVE_AUTH_TYPE= "auth";
+  private static final String HIVE_AUTH_TYPE= "auth";//制定这个参数,说明二进制socket传输的时候需要用户名和密码
   private static final String HIVE_AUTH_QOP = "sasl.qop";
   private static final String HIVE_AUTH_SIMPLE = "noSasl";
-  private static final String HIVE_AUTH_USER = "user";//数据库连接用户名
+
+  private static final String HIVE_AUTH_USER = "user";//数据库连接用户名的key
   private static final String HIVE_AUTH_PRINCIPAL = "principal";
-  private static final String HIVE_AUTH_PASSWD = "password";//数据库连接密码
+  private static final String HIVE_AUTH_PASSWD = "password";//数据库连接密码的key
+
+  //匿名用户的用户名和密码
   private static final String HIVE_ANONYMOUS_USER = "anonymous";
   private static final String HIVE_ANONYMOUS_PASSWD = "anonymous";
+
   private final String jdbcURI;//配置的jdbc的url
   private final String host;//数据库连接host
   private final int port;//数据库连接端口
@@ -85,12 +95,13 @@ public class HiveConnection implements java.sql.Connection {
   private final Map<String, String> hiveConfMap;//数据库?号后参数
   private final Map<String, String> hiveVarMap;//数据库#号后参数
   private final boolean isEmbeddedMode;//是否使用内置的数据库
-  private TTransport transport;
-  private TCLIService.Iface client;
-  private boolean isClosed = true;
+
+  private TTransport transport;//thrift栓出的模式是http传输还是序列化后的二进制传输----http传输时候使用httpclient进行发送数据
+  private TCLIService.Iface client;//thrift客户端
+  private boolean isClosed = true;//连接是否关闭
   private SQLWarning warningChain = null;
-  private TSessionHandle sessHandle = null;
-  private final List<TProtocolVersion> supportedProtocols = new LinkedList<TProtocolVersion>();
+  private TSessionHandle sessHandle = null;//获取一个请求的session,因为每一个请求都有上下文,因此就是session
+  private final List<TProtocolVersion> supportedProtocols = new LinkedList<TProtocolVersion>();//支持的协议版本
 
   //创建和解析数据库连接串
   public HiveConnection(String uri, Properties info) throws SQLException {
@@ -114,6 +125,7 @@ public class HiveConnection implements java.sql.Connection {
       client = new EmbeddedThriftBinaryCLIService();
     } else {
       // extract user/password from JDBC connection properties if its not supplied in the connection URL
+        //设置用户名和密码.info中的信息优先级比url中的优先级大
       if (info.containsKey(HIVE_AUTH_USER)) {
         sessConfMap.put(HIVE_AUTH_USER, info.getProperty(HIVE_AUTH_USER));
         if (info.containsKey(HIVE_AUTH_PASSWD)) {
@@ -121,6 +133,7 @@ public class HiveConnection implements java.sql.Connection {
         }
       }
       // open the client transport
+      //创建客户端以及与服务端的协议是http协议还是二进制的流协议
       openTransport();
     }
 
@@ -130,29 +143,34 @@ public class HiveConnection implements java.sql.Connection {
     supportedProtocols.add(TProtocolVersion.HIVE_CLI_SERVICE_PROTOCOL_V3);
 
     // open client session
+    //获取一个请求的session,因为每一个请求都有上下文,因此就是session
     openSession();
 
+    //配置hive执行前的配置信息
     configureConnection();
   }
 
   private void openTransport() throws SQLException {
-    transport = isHttpTransportMode() ?
+    //获取传输模式对象
+    transport = isHttpTransportMode() ? //是否支持http或者https传输模式
         createHttpTransport() :
           createBinaryTransport();
+    //根据传输协议创建客户端
     TProtocol protocol = new TBinaryProtocol(transport);
     client = new TCLIService.Client(protocol);
     try {
-      transport.open();
+      transport.open();//打开传输协议
     } catch (TTransportException e) {
       throw new SQLException("Could not open connection to "
           + jdbcURI + ": " + e.getMessage(), " 08S01", e);
     }
   }
 
+  //创建HTTP传输方式
   private TTransport createHttpTransport() throws SQLException {
     // http path should begin with "/"
     String httpPath;
-    httpPath = hiveConfMap.get(HiveConf.ConfVars.HIVE_SERVER2_THRIFT_HTTP_PATH.varname);
+    httpPath = hiveConfMap.get(HiveConf.ConfVars.HIVE_SERVER2_THRIFT_HTTP_PATH.varname);//http传输中的路径,比如http://host:port/index.html,该配置内容是/index.htm  ,因为必须以为/开头
     if(httpPath == null) {
       httpPath = "/";
     }
@@ -160,11 +178,11 @@ public class HiveConnection implements java.sql.Connection {
       httpPath = "/" + httpPath;
     }
 
-    DefaultHttpClient httpClient = new DefaultHttpClient();
-    String httpUrl = hiveConfMap.get(HiveConf.ConfVars.HIVE_SERVER2_TRANSPORT_MODE.varname) +
-        "://" + host + ":" + port + httpPath;
+    DefaultHttpClient httpClient = new DefaultHttpClient();//httpclent对象
+    String httpUrl = hiveConfMap.get(HiveConf.ConfVars.HIVE_SERVER2_TRANSPORT_MODE.varname) + //获取传输协议是http还是https
+        "://" + host + ":" + port + httpPath;//获取最终交流的url
     httpClient.addRequestInterceptor(
-        new HttpBasicAuthInterceptor(getUserName(), getPasswd())
+        new HttpBasicAuthInterceptor(getUserName(), getPasswd())//设置用户名和密码
         );
     try {
       transport = new THttpClient(httpUrl, httpClient);
@@ -177,6 +195,7 @@ public class HiveConnection implements java.sql.Connection {
     return transport;
   }
 
+  //创建序列化后的二进制传输方式---采用socket传输
   private TTransport createBinaryTransport() throws SQLException {
     transport = new TSocket(host, port);
     // handle secure connection if specified
@@ -217,10 +236,10 @@ public class HiveConnection implements java.sql.Connection {
     return transport;
   }
 
-
+  //获取传输模式---是否支持http或者https传输模式
   private boolean isHttpTransportMode() {
     String transportMode =
-        hiveConfMap.get(HiveConf.ConfVars.HIVE_SERVER2_TRANSPORT_MODE.varname);
+        hiveConfMap.get(HiveConf.ConfVars.HIVE_SERVER2_TRANSPORT_MODE.varname);//thrift传输是http传输还是二进制传输   hive.server2.transport.mode
     if(transportMode != null && (transportMode.equalsIgnoreCase("http") ||
         transportMode.equalsIgnoreCase("https"))) {
       return true;
@@ -228,6 +247,7 @@ public class HiveConnection implements java.sql.Connection {
     return false;
   }
 
+    //获取一个请求的session,因为每一个请求都有上下文,因此就是session
   private void openSession() throws SQLException {
     TOpenSessionReq openReq = new TOpenSessionReq();
 
@@ -235,14 +255,14 @@ public class HiveConnection implements java.sql.Connection {
     // openReq.setConfiguration(null);
 
     try {
-      TOpenSessionResp openResp = client.OpenSession(openReq);
+      TOpenSessionResp openResp = client.OpenSession(openReq);//请求session,获取返回值
 
       // validate connection
-      Utils.verifySuccess(openResp.getStatus());
+      Utils.verifySuccess(openResp.getStatus());//客户端要去校验服务端返回的response的状态码是否合法
       if (!supportedProtocols.contains(openResp.getServerProtocolVersion())) {
         throw new TException("Unsupported Hive2 protocol");
       }
-      sessHandle = openResp.getSessionHandle();
+      sessHandle = openResp.getSessionHandle();//返回值中获取session对象,该session对象是服务器返回的
     } catch (TException e) {
       throw new SQLException("Could not establish connection to "
           + jdbcURI + ": " + e.getMessage(), " 08S01", e);
@@ -250,6 +270,7 @@ public class HiveConnection implements java.sql.Connection {
     isClosed = false;
   }
 
+  //配置hive执行前的配置信息
   private void configureConnection() throws SQLException {
     // set the hive variable in session state for local mode
     if (isEmbeddedMode) {
@@ -259,12 +280,12 @@ public class HiveConnection implements java.sql.Connection {
     } else {
       // for remote JDBC client, try to set the conf var using 'set foo=bar'
       Statement stmt = createStatement();
-      for (Entry<String, String> hiveConf : hiveConfMap.entrySet()) {
+      for (Entry<String, String> hiveConf : hiveConfMap.entrySet()) {//设置hive的环境信息,比如set hive.auto.convert.join=false;
         stmt.execute("set " + hiveConf.getKey() + "=" + hiveConf.getValue());
       }
 
       // For remote JDBC client, try to set the hive var using 'set hivevar:key=value'
-      for (Entry<String, String> hiveVar : hiveVarMap.entrySet()) {
+      for (Entry<String, String> hiveVar : hiveVarMap.entrySet()) {//设置hive的sql中需要的变量,比如-hivevar today=2017-06-06
         stmt.execute("set hivevar:" + hiveVar.getKey() + "=" + hiveVar.getValue());
       }
       stmt.close();
@@ -641,8 +662,8 @@ public class HiveConnection implements java.sql.Connection {
    * (non-Javadoc)
    *
    * @see java.sql.Connection#prepareStatement(java.lang.String)
+   * 执行预编译sql
    */
-
   public PreparedStatement prepareStatement(String sql) throws SQLException {
     return new HivePreparedStatement(client, sessHandle, sql);
   }
@@ -651,8 +672,8 @@ public class HiveConnection implements java.sql.Connection {
    * (non-Javadoc)
    *
    * @see java.sql.Connection#prepareStatement(java.lang.String, int)
+   * 执行预编译sql
    */
-
   public PreparedStatement prepareStatement(String sql, int autoGeneratedKeys)
       throws SQLException {
     return new HivePreparedStatement(client, sessHandle, sql);
@@ -663,7 +684,6 @@ public class HiveConnection implements java.sql.Connection {
    *
    * @see java.sql.Connection#prepareStatement(java.lang.String, int[])
    */
-
   public PreparedStatement prepareStatement(String sql, int[] columnIndexes)
       throws SQLException {
     // TODO Auto-generated method stub
