@@ -29,7 +29,7 @@ import org.apache.hive.service.cli.session.HiveSession;
 
 /**
  * GetTypeInfoOperation.
- *
+ * 获取hive支持的字段类型以及与标准sql接口的类型对比
  */
 public class GetTypeInfoOperation extends MetadataOperation {
 

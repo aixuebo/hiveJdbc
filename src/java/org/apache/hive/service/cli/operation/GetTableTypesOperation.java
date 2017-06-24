@@ -30,7 +30,9 @@ import org.apache.hive.service.cli.session.HiveSession;
 
 /**
  * GetTableTypesOperation.
- *
+ * 获取表的类型
+ * //hive表类型为MANAGED_TABLE、EXTERNAL_TABLE、VIRTUAL_VIEW、INDEX_TABLE
+ //经典表类型为TABLE和VIEW
  */
 public class GetTableTypesOperation extends MetadataOperation {
 
@@ -38,7 +40,7 @@ public class GetTableTypesOperation extends MetadataOperation {
   .addStringColumn("TABLE_TYPE", "Table type name.");
 
   private RowSet rowSet;
-  private final TableTypeMapping tableTypeMapping;
+  private final TableTypeMapping tableTypeMapping;//表的映射转换类
 
   protected GetTableTypesOperation(HiveSession parentSession) {
     super(parentSession, OperationType.GET_TABLE_TYPES);

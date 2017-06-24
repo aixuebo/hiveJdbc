@@ -31,10 +31,11 @@ import org.apache.hadoop.hive.metastore.TableType;
  *  Managed Table ==> Table
  *  External Table ==> Table
  *  Virtual View ==> View
+ *  经典的表类型与hive表类型的映射关系
  */
 public class ClassicTableTypeMapping implements TableTypeMapping {
 
-  public enum ClassicTableTypes {
+  public enum ClassicTableTypes {//经典表只有table和view
     TABLE,
     VIEW,
   }
@@ -56,6 +57,7 @@ public class ClassicTableTypeMapping implements TableTypeMapping {
         TableType.VIRTUAL_VIEW.toString());
   }
 
+  //经典类型映射hive类型
   @Override
   public String mapToHiveType(String clientTypeName) {
     if (clientToHiveMap.containsKey(clientTypeName)) {
@@ -65,6 +67,7 @@ public class ClassicTableTypeMapping implements TableTypeMapping {
     }
   }
 
+  //hive类型映射经典类型
   @Override
   public String mapToClientType(String hiveTypeName) {
     if (hiveToClientMap.containsKey(hiveTypeName)) {
@@ -74,6 +77,7 @@ public class ClassicTableTypeMapping implements TableTypeMapping {
     }
   }
 
+  //经典表类型集合
   @Override
   public Set<String> getTableTypeNames() {
     Set<String> typeNameSet = new HashSet<String>();

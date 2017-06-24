@@ -35,7 +35,7 @@ import org.apache.hive.service.cli.session.HiveSession;
 
 /**
  * GetFunctionsOperation.
- *
+ * 获取匹配的函数表达式对应的函数集合
  */
 public class GetFunctionsOperation extends MetadataOperation {
   private static final TableSchema RESULT_SET_SCHEMA = new TableSchema()
@@ -54,7 +54,7 @@ public class GetFunctionsOperation extends MetadataOperation {
 
   private final String catalogName;
   private final String schemaName;
-  private final String functionName;
+  private final String functionName;//函数表达式
 
   private final RowSet rowSet = new RowSet();
 
@@ -76,7 +76,7 @@ public class GetFunctionsOperation extends MetadataOperation {
       if ((null == catalogName || "".equals(catalogName))
           && (null == schemaName || "".equals(schemaName))) {
         Set<String> functionNames =  FunctionRegistry
-            .getFunctionNames(CLIServiceUtils.patternToRegex(functionName));
+            .getFunctionNames(CLIServiceUtils.patternToRegex(functionName));//获取函数表达式匹配的函数集合
         for (String functionName : functionNames) {
           FunctionInfo functionInfo = FunctionRegistry.getFunctionInfo(functionName);
           Object rowData[] = new Object[] {
