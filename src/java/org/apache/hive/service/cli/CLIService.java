@@ -39,7 +39,7 @@ import org.apache.hive.service.cli.session.SessionManager;
 
 /**
  * CLIService.
- * 一个第三方服务,需要额外被开启
+ * 一个第三方服务,需要额外被开启,提供cli服务端功能,让客户端可以调用cli命令操作hive,所有命令都会发送给该服务去真正实现
  *
  */
 public class CLIService extends CompositeService implements ICLIService {
@@ -98,6 +98,7 @@ public class CLIService extends CompositeService implements ICLIService {
 
   /* (non-Javadoc)
    * @see org.apache.hive.service.cli.ICLIService#openSession(java.lang.String, java.lang.String, java.util.Map)
+   * 创建一个session
    */
   @Override
   public SessionHandle openSession(String username, String password, Map<String, String> configuration)
@@ -109,6 +110,7 @@ public class CLIService extends CompositeService implements ICLIService {
 
   /* (non-Javadoc)
    * @see org.apache.hive.service.cli.ICLIService#openSession(java.lang.String, java.lang.String, java.util.Map)
+   * 创建一个session
    */
   @Override
   public SessionHandle openSessionWithImpersonation(String username, String password, Map<String, String> configuration,
@@ -121,6 +123,7 @@ public class CLIService extends CompositeService implements ICLIService {
 
   /* (non-Javadoc)
    * @see org.apache.hive.service.cli.ICLIService#closeSession(org.apache.hive.service.cli.SessionHandle)
+   * 关闭一个session
    */
   @Override
   public void closeSession(SessionHandle sessionHandle)
@@ -131,6 +134,7 @@ public class CLIService extends CompositeService implements ICLIService {
 
   /* (non-Javadoc)
    * @see org.apache.hive.service.cli.ICLIService#getInfo(org.apache.hive.service.cli.SessionHandle, java.util.List)
+   * 获取该session下的一个信息
    */
   @Override
   public GetInfoValue getInfo(SessionHandle sessionHandle, GetInfoType getInfoType)
@@ -143,6 +147,7 @@ public class CLIService extends CompositeService implements ICLIService {
   /* (non-Javadoc)
    * @see org.apache.hive.service.cli.ICLIService#executeStatement(org.apache.hive.service.cli.SessionHandle,
    *  java.lang.String, java.util.Map)
+   *  执行该session下的一个动作操作
    */
   @Override
   public OperationHandle executeStatement(SessionHandle sessionHandle, String statement,
@@ -157,6 +162,7 @@ public class CLIService extends CompositeService implements ICLIService {
   /* (non-Javadoc)
    * @see org.apache.hive.service.cli.ICLIService#executeStatementAsync(org.apache.hive.service.cli.SessionHandle,
    *  java.lang.String, java.util.Map)
+   *  执行该session下的一个动作操作
    */
   @Override
   public OperationHandle executeStatementAsync(SessionHandle sessionHandle, String statement,
@@ -170,6 +176,7 @@ public class CLIService extends CompositeService implements ICLIService {
 
   /* (non-Javadoc)
    * @see org.apache.hive.service.cli.ICLIService#getTypeInfo(org.apache.hive.service.cli.SessionHandle)
+   * 获取该session下的一个列的类型集合
    */
   @Override
   public OperationHandle getTypeInfo(SessionHandle sessionHandle)
@@ -181,6 +188,7 @@ public class CLIService extends CompositeService implements ICLIService {
 
   /* (non-Javadoc)
    * @see org.apache.hive.service.cli.ICLIService#getCatalogs(org.apache.hive.service.cli.SessionHandle)
+   * 获取该session下的一个数据库顶层catalogs信息
    */
   @Override
   public OperationHandle getCatalogs(SessionHandle sessionHandle)
@@ -192,6 +200,7 @@ public class CLIService extends CompositeService implements ICLIService {
 
   /* (non-Javadoc)
    * @see org.apache.hive.service.cli.ICLIService#getSchemas(org.apache.hive.service.cli.SessionHandle, java.lang.String, java.lang.String)
+   * 获取该session下的匹配数的据库集合信息
    */
   @Override
   public OperationHandle getSchemas(SessionHandle sessionHandle,
@@ -205,6 +214,7 @@ public class CLIService extends CompositeService implements ICLIService {
 
   /* (non-Javadoc)
    * @see org.apache.hive.service.cli.ICLIService#getTables(org.apache.hive.service.cli.SessionHandle, java.lang.String, java.lang.String, java.lang.String, java.util.List)
+   * 获取该session下的匹配数据库下的所有匹配表集合信息
    */
   @Override
   public OperationHandle getTables(SessionHandle sessionHandle,

@@ -22,7 +22,7 @@ import org.apache.hive.service.cli.thrift.TGetInfoType;
 
 /**
  * GetInfoType.
- *
+ * 可以获取的info信息类型
  */
 public enum GetInfoType {
   CLI_MAX_DRIVER_CONNECTIONS(TGetInfoType.CLI_MAX_DRIVER_CONNECTIONS),

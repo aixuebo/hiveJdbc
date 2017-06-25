@@ -21,6 +21,7 @@ package org.apache.hive.service.cli.session;
 /**
  * Proxy wrapper on HiveSession to execute operations
  * by impersonating given user
+ * 使用动态代理的方式,代理session
  */
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;

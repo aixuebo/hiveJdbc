@@ -34,7 +34,7 @@ import org.apache.hive.service.cli.thrift.TStringValue;
 
 /**
  * ColumnValue.
- *
+ * 代表一行数据中的一个列的值
  */
 public class ColumnValue {
 
@@ -55,10 +55,11 @@ public class ColumnValue {
     return (value == null);
   }
 
+  //表示该列是boolean类型的
   public static ColumnValue booleanValue(Boolean value) {
-    TBoolValue tBoolValue = new TBoolValue();
+    TBoolValue tBoolValue = new TBoolValue();//创建boolean类型列
     if (value != null) {
-      tBoolValue.setValue(value);
+      tBoolValue.setValue(value);//设置列值
     }
     return new ColumnValue(TColumnValue.boolVal(tBoolValue));
   }
@@ -151,6 +152,7 @@ public class ColumnValue {
     return new ColumnValue(TColumnValue.stringVal(tStrValue));
   }
 
+  //添加一个列,参数提供该列的类型和具体值
   public static ColumnValue newColumnValue(Type type, Object value) {
     switch (type) {
     case BOOLEAN_TYPE:

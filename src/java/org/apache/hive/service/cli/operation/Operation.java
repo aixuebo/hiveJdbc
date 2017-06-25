@@ -38,7 +38,7 @@ public abstract class Operation {
   private HiveConf configuration;
   public static final Log LOG = LogFactory.getLog(Operation.class.getName());
   public static final long DEFAULT_FETCH_MAX_ROWS = 100;//默认抓去的最大行数
-  protected boolean hasResultSet;//true表示 该操作已经有结果了
+  protected boolean hasResultSet;//true表示 该操作可以产生结果
 
   protected Operation(HiveSession parentSession, OperationType opType) {
     super();
@@ -74,7 +74,7 @@ public abstract class Operation {
     return hasResultSet;
   }
 
-  //设置该操作已经有结果了
+  //设置该操作可以产生结果
   protected void setHasResultSet(boolean hasResultSet) {
     this.hasResultSet = hasResultSet;
     opHandle.setHasResultSet(hasResultSet);

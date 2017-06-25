@@ -26,13 +26,13 @@ import org.apache.hive.service.cli.thrift.TRowSet;
 
 /**
  * RowSet.
- *
+ * 存储一行一行的数据
  */
 public class RowSet {
 
-  private long startOffset = 0;
+  private long startOffset = 0;//表示此时结果集的开始第一条数据是全部历史数据中的第几条
   private boolean hasMoreResults = false;
-  private List<Row> rows;
+  private List<Row> rows;//存储尚未发送给客户端的所有数据行
 
   public RowSet() {
     rows = new ArrayList<Row>();
@@ -52,21 +52,24 @@ public class RowSet {
     this.startOffset = startOffset;
   }
 
+    //结果集添加一行数据
   public RowSet addRow(Row row) {
     rows.add(row);
     return this;
   }
 
+  //提供一行的所有数据,自动添加一行数据
   public RowSet addRow(TableSchema schema, Object[] fields) {
     return addRow(new Row(schema, fields));
   }
 
+  //从数据结果集中抽取maxRows行数据返回给客户端
   public RowSet extractSubset(int maxRows) {
-    int numRows = rows.size();
-    maxRows = (maxRows <= numRows) ? maxRows : numRows;
-    RowSet result = new RowSet(rows.subList(0, maxRows), startOffset);
-    rows = new ArrayList<Row>(rows.subList(maxRows, numRows));
-    startOffset += result.getSize();
+    int numRows = rows.size();//总行数
+    maxRows = (maxRows <= numRows) ? maxRows : numRows;//真正要抓取多少行数据
+    RowSet result = new RowSet(rows.subList(0, maxRows), startOffset);//从结果集中抓取maxRows数据
+    rows = new ArrayList<Row>(rows.subList(maxRows, numRows));//因为rows数据已经抓取了maxRows条了,因此要删除这些条,即从maxRows之后的数据是尚未被抓取的.要保留
+    startOffset += result.getSize();//最近的位置
     return result;
   }
 

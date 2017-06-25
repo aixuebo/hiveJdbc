@@ -25,6 +25,7 @@ import org.apache.hadoop.hive.conf.HiveConf;
  * HiveSessionHookContextImpl.
  * Session hook context implementation which is created by session  manager
  * and passed to hook invocation.
+ *
  */
 public class HiveSessionHookContextImpl implements HiveSessionHookContext {
 

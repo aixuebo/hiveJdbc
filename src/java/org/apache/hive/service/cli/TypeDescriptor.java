@@ -31,13 +31,13 @@ import org.apache.hive.service.cli.thrift.TTypeEntry;
 
 /**
  * TypeDescriptor.
- *
+ * 代表一个列的类型对象
  */
 public class TypeDescriptor {
 
-  private final Type type;
-  private String typeName = null;
-  private TypeQualifiers typeQualifiers = null;
+  private final Type type;//类型对象
+  private String typeName = null;//类型名字
+  private TypeQualifiers typeQualifiers = null;//该类型的补充信息
 
   public TypeDescriptor(Type type) {
     this.type = type;

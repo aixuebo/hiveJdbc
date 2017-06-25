@@ -23,7 +23,7 @@ import org.apache.hive.service.cli.thrift.TOperationHandle;
 public class OperationHandle extends Handle {
 
   private OperationType opType = OperationType.EXECUTE_STATEMENT;//默认是执行sql的操作
-  private boolean hasResultSet = false;//true表示设置该操作已经有结果了
+  private boolean hasResultSet = false;//true表示设置该操作产生了结果
 
   public OperationHandle() {
     // TODO: make this type abstract

@@ -55,16 +55,18 @@ import org.apache.hive.service.cli.operation.OperationManager;
 
 /**
  * HiveSession
- *
+ * 用户session的一个实现类
  */
 public class HiveSessionImpl implements HiveSession {
 
-  private final SessionHandle sessionHandle = new SessionHandle();
+  private final SessionHandle sessionHandle = new SessionHandle();//该session对应的用户秘钥,比如公钥和秘钥
+
+  //该session用户对应的用户名和密码以及配置信息
   private String username;
   private final String password;
   private final Map<String, String> sessionConf = new HashMap<String, String>();
   private final HiveConf hiveConf = new HiveConf();
-  private final SessionState sessionState;
+  private final SessionState sessionState;//该session对应的用户状态
 
   private static final String FETCH_WORK_SERDE_CLASS =
       "org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe";
@@ -74,7 +76,7 @@ public class HiveSessionImpl implements HiveSession {
   private SessionManager sessionManager;
   private OperationManager operationManager;
   private IMetaStoreClient metastoreClient = null;
-  private final Set<OperationHandle> opHandleSet = new HashSet<OperationHandle>();
+  private final Set<OperationHandle> opHandleSet = new HashSet<OperationHandle>();//该session下的操作集合
 
   public HiveSessionImpl(String username, String password, Map<String, String> sessionConf) {
     this.username = username;
@@ -87,7 +89,7 @@ public class HiveSessionImpl implements HiveSession {
     }
     // set an explicit session name to control the download directory name
     hiveConf.set(ConfVars.HIVESESSIONID.varname,
-        sessionHandle.getHandleIdentifier().toString());
+        sessionHandle.getHandleIdentifier().toString());//将秘钥更换成具体的值
     sessionState = new SessionState(hiveConf);
   }
 
@@ -144,6 +146,7 @@ public class HiveSessionImpl implements HiveSession {
     return metastoreClient;
   }
 
+  //可以获取信息
   public GetInfoValue getInfo(GetInfoType getInfoType)
       throws HiveSQLException {
     acquire();
@@ -180,6 +183,7 @@ public class HiveSessionImpl implements HiveSession {
     return executeStatementInternal(statement, confOverlay, true);
   }
 
+  //执行命令操作
   private OperationHandle executeStatementInternal(String statement, Map<String, String> confOverlay,
       boolean runAsync)
       throws HiveSQLException {

@@ -761,7 +761,7 @@ public class HiveConf extends Configuration {
 
     // Configuration for async thread pool in SessionManager
     // Number of async threads
-    HIVE_SERVER2_ASYNC_EXEC_THREADS("hive.server2.async.exec.threads", 50),
+    HIVE_SERVER2_ASYNC_EXEC_THREADS("hive.server2.async.exec.threads", 50),//session服务的线程连接池大小
     // Number of seconds HiveServer2 shutdown will wait for async threads to terminate
     HIVE_SERVER2_ASYNC_EXEC_SHUTDOWN_TIMEOUT("hive.server2.async.exec.shutdown.timeout", 10),
 

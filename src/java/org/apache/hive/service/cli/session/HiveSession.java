@@ -34,6 +34,7 @@ import org.apache.hive.service.cli.SessionHandle;
 import org.apache.hive.service.cli.TableSchema;
 import org.apache.hive.service.cli.operation.OperationManager;
 
+//表示一个用户连接下的session可以有哪些操作
 public interface HiveSession {
   /**
    * Set the session manager for the session

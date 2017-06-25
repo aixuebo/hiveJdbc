@@ -25,7 +25,7 @@ import org.apache.hive.service.cli.HiveSQLException;
  * HiveSessionHook.
  * HiveServer2 session level Hook interface. The run method is executed
  *  when session manager starts a new session
- *
+ *  当一个session被创建的时候,就会执行每一个实现该HiveSessionHookContext接口的所有类,这些类要怎么实现都可以.主要目的是知道session创建了一个新的
  */
 public interface HiveSessionHook extends Hook {
 

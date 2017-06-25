@@ -23,24 +23,28 @@ import org.apache.hadoop.hive.conf.HiveConf;
  * HiveSessionHookContext.
  * Interface passed to the HiveServer2 session hook execution. This enables
  * the hook implementation to accesss session config, user and session handle
+ * 一个session连接的上下文信息
  */
 public interface HiveSessionHookContext {
 
   /**
    * Retrieve session conf
    * @return
+   * 可以获取该session的配置信息
    */
   public HiveConf getSessionConf();
 
   /**
    * The get the username starting the session
    * @return
+   * 获取该session的登录用户
    */
   public String getSessionUser();
 
   /**
    * Retrieve handle for the session
    * @return
+   * 获取该session的SessionHandle对象,即该session的公钥信息
    */
   public String getSessionHandle();
 }

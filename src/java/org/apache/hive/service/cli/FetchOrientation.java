@@ -22,10 +22,10 @@ import org.apache.hive.service.cli.thrift.TFetchOrientation;
 
 /**
  * FetchOrientation.
- *
+ * 抓取类型,怎么抓取数据
  */
 public enum FetchOrientation {
-  FETCH_NEXT(TFetchOrientation.FETCH_NEXT),
+  FETCH_NEXT(TFetchOrientation.FETCH_NEXT),//向下抓取数据
   FETCH_PRIOR(TFetchOrientation.FETCH_PRIOR),
   FETCH_RELATIVE(TFetchOrientation.FETCH_RELATIVE),
   FETCH_ABSOLUTE(TFetchOrientation.FETCH_ABSOLUTE),

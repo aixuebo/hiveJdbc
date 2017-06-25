@@ -38,15 +38,18 @@ import org.apache.hive.service.cli.operation.OperationManager;
 
 /**
  * SessionManager.
+ * 用户管理每一个连接的session
+ * 当客户端向服务端连接时候,要先获取session,因此该对象控制着session的创建以及销毁等管理操作
  *
+ * 该操作归为一个第三方服务被发布
  */
 public class SessionManager extends CompositeService {
   private static final Log LOG = LogFactory.getLog(CompositeService.class);
   private HiveConf hiveConf;
-  private final Map<SessionHandle, HiveSession> handleToSession = new HashMap<SessionHandle, HiveSession>();
-  private OperationManager operationManager = new OperationManager();
-  private static final Object sessionMapLock = new Object();
-  private ExecutorService backgroundOperationPool;
+  private final Map<SessionHandle, HiveSession> handleToSession = new HashMap<SessionHandle, HiveSession>();//每一个session赋予一个sessionId.采用公钥方式
+  private OperationManager operationManager = new OperationManager();//管理所有的session的操作动作
+  private static final Object sessionMapLock = new Object();//锁对象
+  private ExecutorService backgroundOperationPool;//多线程服务
 
   public SessionManager() {
     super("SessionManager");
@@ -129,7 +132,7 @@ public class SessionManager extends CompositeService {
     session.close();
   }
 
-
+  //根据session的公钥,获取session对象
   public HiveSession getSession(SessionHandle sessionHandle) throws HiveSQLException {
     HiveSession session;
     synchronized(sessionMapLock) {
@@ -160,6 +163,7 @@ public class SessionManager extends CompositeService {
     threadLocalIpAddress.remove();
   }
 
+  //该线程下的userName
   private static ThreadLocal<String> threadLocalUserName = new ThreadLocal<String>(){
     @Override
     protected synchronized String initialValue() {
@@ -178,12 +182,13 @@ public class SessionManager extends CompositeService {
   // execute session hooks
   private void executeSessionHooks(HiveSession session) throws Exception {
     List<HiveSessionHook> sessionHooks = HookUtils.getHooks(hiveConf,
-        HiveConf.ConfVars.HIVE_SERVER2_SESSION_HOOK, HiveSessionHook.class);
-    for (HiveSessionHook sessionHook : sessionHooks) {
+        HiveConf.ConfVars.HIVE_SERVER2_SESSION_HOOK, HiveSessionHook.class);//session的hook信息
+    for (HiveSessionHook sessionHook : sessionHooks) {// 当一个session被创建的时候,就会执行每一个实现该HiveSessionHookContext接口的所有类,这些类要怎么实现都可以.主要目的是知道session创建了一个新的
       sessionHook.run(new HiveSessionHookContextImpl(session));
     }
   }
 
+  //异步执行一个线程去查询sql操作
   public Future<?> submitBackgroundOperation(Runnable r) {
     return backgroundOperationPool.submit(r);
   }

@@ -22,9 +22,10 @@ import org.apache.hive.service.cli.thrift.TGetInfoValue;
 
 /**
  * GetInfoValue.
- *
+ * 获取一个info信息的具体的值
  */
 public class GetInfoValue {
+  //因为info信息类型不同,所以值被存储在下面四种类型中
   private String stringValue = null;
   private short shortValue;
   private int intValue;

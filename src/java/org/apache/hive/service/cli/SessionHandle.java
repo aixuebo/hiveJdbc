@@ -41,6 +41,7 @@ public class SessionHandle extends Handle {
     super(tSessionHandle.getSessionId());
   }
 
+  //·µ»Ø¹«Ô¿
   public UUID getSessionId() {
     return getHandleIdentifier().getPublicId();
   }

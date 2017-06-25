@@ -29,9 +29,10 @@ import org.apache.hive.service.cli.thrift.TTypeQualifiers;
 /**
  * This class holds type qualifier information for a primitive type,
  * such as char/varchar length or decimal precision/scale.
+ * 代表类型的补充信息,比如verchar中要补充length长度
  */
 public class TypeQualifiers {
-  private Integer characterMaximumLength;
+  private Integer characterMaximumLength;//字节长度
 
   public TypeQualifiers() {}
 

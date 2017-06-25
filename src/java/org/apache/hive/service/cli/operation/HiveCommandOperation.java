@@ -44,11 +44,11 @@ import org.apache.hive.service.cli.session.HiveSession;
 
 /**
  * HiveCommandOperation.
- *
+ * 执行hive的命令行
  */
 public abstract class HiveCommandOperation extends ExecuteStatementOperation {
-  private CommandProcessorResponse response;
-  private CommandProcessor commandProcessor;
+  private CommandProcessorResponse response;//输出
+  private CommandProcessor commandProcessor;//真正的处理操作的程序
   private TableSchema resultSchema = null;
 
   /**
@@ -63,11 +63,12 @@ public abstract class HiveCommandOperation extends ExecuteStatementOperation {
     setupSessionIO(parentSession.getSessionState());
   }
 
+    //设置session状态
   private void setupSessionIO(SessionState sessionState) {
     try {
       LOG.info("Putting temp output to file " + sessionState.getTmpOutputFile().toString());
       sessionState.in = null; // hive server's session input stream is not used
-      // open a per-session file in auto-flush mode for writing temp results
+      // open a per-session file in auto-flush mode for writing temp results,session的输出是一个临时文件存储
       sessionState.out = new PrintStream(new FileOutputStream(sessionState.getTmpOutputFile()), true, "UTF-8");
       // TODO: for hadoop jobs, progress is printed out to session.err,
       // we should find a way to feed back job progress to client
@@ -102,9 +103,9 @@ public abstract class HiveCommandOperation extends ExecuteStatementOperation {
     try {
       String command = getStatement().trim();
       String[] tokens = statement.split("\\s");
-      String commandArgs = command.substring(tokens[0].length()).trim();
+      String commandArgs = command.substring(tokens[0].length()).trim();//取消第一个命令
 
-      response = getCommandProcessor().run(commandArgs);
+      response = getCommandProcessor().run(commandArgs);//去运行真正的程序
       int returnCode = response.getResponseCode();
       String sqlState = response.getSQLState();
       String errorMessage = response.getErrorMessage();
@@ -166,7 +167,7 @@ public abstract class HiveCommandOperation extends ExecuteStatementOperation {
       SessionState sessionState = getParentSession().getSessionState();
       File tmp = sessionState.getTmpOutputFile();
       try {
-        resultReader = new BufferedReader(new FileReader(tmp));
+        resultReader = new BufferedReader(new FileReader(tmp));//读取临时文件的输出内容
       } catch (FileNotFoundException e) {
         LOG.error("File " + tmp + " not found. ", e);
         throw new HiveSQLException(e);

@@ -26,10 +26,10 @@ import org.apache.hive.service.cli.thrift.TRow;
 
 /**
  * Row.
- *
+ * 代表一行数据
  */
 public class Row {
-  private final List<ColumnValue> values = new ArrayList<ColumnValue>();
+  private final List<ColumnValue> values = new ArrayList<ColumnValue>();//存储一行内的数据
 
   public Row() {
   }
@@ -40,19 +40,26 @@ public class Row {
     }
   }
 
+    /**
+     * 代表一行数据
+     * @param schema 该数据代码的schema
+     * @param fields 该行数据中每一个列的值
+     */
   public Row(TableSchema schema, Object[] fields) {
-    assert fields.length == schema.getColumnDescriptors().size();
-    for (ColumnDescriptor colDesc : schema.getColumnDescriptors()) {
+    assert fields.length == schema.getColumnDescriptors().size();//确保列的数量与参数field数量一样
+    for (ColumnDescriptor colDesc : schema.getColumnDescriptors()) {//循环每一列
       TypeDescriptor typeDesc = colDesc.getTypeDescriptor();
-      values.add(ColumnValue.newColumnValue(typeDesc.getType(), fields[colDesc.getOrdinalPosition() - 1]));
+      values.add(ColumnValue.newColumnValue(typeDesc.getType(), fields[colDesc.getOrdinalPosition() - 1]));//使用列的类型以及列对应的值,创建一个ColumnValue
     }
   }
 
+  //添加一列
   public Row addColumnValue(ColumnValue value) {
     values.add(value);
     return this;
   }
 
+  //添加一列,该列类型是boolean
   public Row addBoolean(boolean value) {
     values.add(ColumnValue.booleanValue(value));
     return this;

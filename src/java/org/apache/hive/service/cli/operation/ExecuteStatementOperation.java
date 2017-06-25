@@ -25,6 +25,9 @@ import java.util.Map;
 import org.apache.hive.service.cli.OperationType;
 import org.apache.hive.service.cli.session.HiveSession;
 
+/**
+ * 执行一些命令的操作
+ */
 public abstract class ExecuteStatementOperation extends Operation {
   protected String statement = null;
   protected Map<String, String> confOverlay = new HashMap<String, String>();
@@ -52,7 +55,7 @@ public abstract class ExecuteStatementOperation extends Operation {
       return new AddResourceOperation(parentSession, statement, confOverlay);
     } else if ("delete".equals(command)) {
       return new DeleteResourceOperation(parentSession, statement, confOverlay);
-    } else {
+    } else {//执行sql
       return new SQLOperation(parentSession, statement, confOverlay, runAsync);
     }
   }

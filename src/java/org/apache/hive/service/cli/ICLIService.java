@@ -24,39 +24,48 @@ import java.util.Map;
 
 
 public interface ICLIService {
-
+  //创建一个session
   public abstract SessionHandle openSession(String username, String password,
       Map<String, String> configuration)
       throws HiveSQLException;
 
+  //创建一个session
   public abstract SessionHandle openSessionWithImpersonation(String username, String password,
       Map<String, String> configuration, String delegationToken)
       throws HiveSQLException;
 
+  //关闭一个session
   public abstract void closeSession(SessionHandle sessionHandle)
       throws HiveSQLException;
 
+  //获取该session下的一个信息
   public abstract GetInfoValue getInfo(SessionHandle sessionHandle, GetInfoType infoType)
       throws HiveSQLException;
 
+  //执行该session下的一个动作操作
   public abstract OperationHandle executeStatement(SessionHandle sessionHandle, String statement,
       Map<String, String> confOverlay)
       throws HiveSQLException;
 
+  //异步执行该session下的一个动作操作
   public abstract OperationHandle executeStatementAsync(SessionHandle sessionHandle,
       String statement, Map<String, String> confOverlay)
       throws HiveSQLException;
 
+  //获取该session下的一个列的类型集合
   public abstract OperationHandle getTypeInfo(SessionHandle sessionHandle)
       throws HiveSQLException;
 
+  //获取该session下的一个数据库顶层catalogs信息
   public abstract OperationHandle getCatalogs(SessionHandle sessionHandle)
       throws HiveSQLException;
 
+  //获取该session下的匹配数的据库集合信息
   public abstract OperationHandle getSchemas(SessionHandle sessionHandle,
       String catalogName, String schemaName)
       throws HiveSQLException;
 
+  //获取该session下的匹配数据库下的所有匹配表集合信息
   public abstract OperationHandle getTables(SessionHandle sessionHandle,
       String catalogName, String schemaName, String tableName, List<String> tableTypes)
       throws HiveSQLException;

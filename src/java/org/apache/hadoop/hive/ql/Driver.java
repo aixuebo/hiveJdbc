@@ -1477,6 +1477,7 @@ public class Driver implements CommandProcessor {
     }
   }
 
+    //该方法不会内存溢出么?因为抓取结果的数据很大,都存储在res参数里面好像存储不够
   public boolean getResults(ArrayList<String> res) throws IOException, CommandNeedRetryException {
     if (plan != null && plan.getFetchTask() != null) {
       FetchTask ft = plan.getFetchTask();

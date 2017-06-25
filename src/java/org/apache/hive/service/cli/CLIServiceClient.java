@@ -25,7 +25,9 @@ import java.util.Map;
 
 /**
  * CLIServiceClient.
- *
+ * 作为cli服务的客户端抽象类,提供了两个实现类
+ * org.apache.hive.service.cli.thrift.ThriftCLIServiceClient 基于thrift的实现类,比较常用
+ * org.apache.hive.service.cli.EmbeddedCLIServiceClient 基于本地嵌入的一个实现类,即基于本地实现的一个类,不需要远程
  */
 public abstract class CLIServiceClient implements ICLIService {
 

@@ -57,7 +57,7 @@ import org.apache.hive.service.cli.session.HiveSession;
 
 /**
  * SQLOperation.
- *
+ * 执行sql
  */
 public class SQLOperation extends ExecuteStatementOperation {
 
@@ -66,8 +66,8 @@ public class SQLOperation extends ExecuteStatementOperation {
   private TableSchema resultSchema = null;
   private Schema mResultSchema = null;
   private SerDe serde = null;
-  private final boolean runAsync;
-  private Future<?> backgroundHandle;
+  private final boolean runAsync;//true表示异步执行
+  private Future<?> backgroundHandle;//异步线程
 
   public SQLOperation(HiveSession parentSession, String statement, Map<String,
       String> confOverlay, boolean runInBackground) {
@@ -84,7 +84,7 @@ public class SQLOperation extends ExecuteStatementOperation {
     setState(OperationState.RUNNING);
     String statement_trimmed = statement.trim();
     String[] tokens = statement_trimmed.split("\\s");
-    String cmd_1 = statement_trimmed.substring(tokens[0].length()).trim();
+    String cmd_1 = statement_trimmed.substring(tokens[0].length()).trim();//取消第一个命令
 
     int ret = 0;
     String errorMessage = "";
@@ -97,19 +97,20 @@ public class SQLOperation extends ExecuteStatementOperation {
       // For now, we disable the test attempts.
       driver.setTryCount(Integer.MAX_VALUE);
 
+      //替换sql中的变量
       String subStatement = new VariableSubstitution().substitute(getParentSession().getHiveConf(), statement);
 
-      response = driver.run(subStatement);
+      response = driver.run(subStatement);//执行该sql
       if (0 != response.getResponseCode()) {
         throw new HiveSQLException("Error while processing statement: "
             + response.getErrorMessage(), response.getSQLState(), response.getResponseCode());
       }
 
-      mResultSchema = driver.getSchema();
+      mResultSchema = driver.getSchema();//返回值的schema
 
       // hasResultSet should be true only if the query has a FetchTask
       // "explain" is an exception for now
-      if(driver.getPlan().getFetchTask() != null) {
+      if(driver.getPlan().getFetchTask() != null) {//说明有结果集
         //Schema has to be set
         if (mResultSchema == null || !mResultSchema.isSetFieldSchemas()) {
           throw new HiveSQLException("Error running query: Schema and FieldSchema " +
@@ -121,6 +122,7 @@ public class SQLOperation extends ExecuteStatementOperation {
         setHasResultSet(false);
       }
       // Set hasResultSet true if the plan has ExplainTask
+        //如果执行计划有explain,则设置有结果集为true
       // TODO explain should use a FetchTask for reading
       for (Task<? extends Serializable> task: driver.getPlan().getRootTasks()) {
         if (task.getClass() == ExplainTask.class) {
@@ -141,10 +143,10 @@ public class SQLOperation extends ExecuteStatementOperation {
   @Override
   public void run() throws HiveSQLException {
     setState(OperationState.PENDING);
-    if (!shouldRunAsync()) {
+    if (!shouldRunAsync()) {//表示同步执行
       runInternal();
     } else {
-      Runnable backgroundOperation = new Runnable() {
+      Runnable backgroundOperation = new Runnable() {//异步执行
         SessionState ss = SessionState.get();
         @Override
         public void run() {
@@ -197,6 +199,7 @@ public class SQLOperation extends ExecuteStatementOperation {
     cleanup(OperationState.CLOSED);
   }
 
+  //一旦操作完成,可以抓取schema
   @Override
   public TableSchema getResultSetSchema() throws HiveSQLException {
     assertState(OperationState.FINISHED);
@@ -206,7 +209,7 @@ public class SQLOperation extends ExecuteStatementOperation {
     return resultSchema;
   }
 
-
+  //获取结果集
   @Override
   public RowSet getNextRowSet(FetchOrientation orientation, long maxRows) throws HiveSQLException {
     assertState(OperationState.FINISHED);
@@ -214,23 +217,24 @@ public class SQLOperation extends ExecuteStatementOperation {
     driver.setMaxRows((int)maxRows);
 
     try {
-      driver.getResults(rows);
+      ////该方法不会内存溢出么?因为抓取结果的数据很大,都存储在rows参数里面好像存储不够
+      driver.getResults(rows);//获取结果集存储在rows中
 
       getSerDe();
       StructObjectInspector soi = (StructObjectInspector) serde.getObjectInspector();
-      List<? extends StructField> fieldRefs = soi.getAllStructFieldRefs();
-      RowSet rowSet = new RowSet();
+      List<? extends StructField> fieldRefs = soi.getAllStructFieldRefs();//返回值的属性集合
+      RowSet rowSet = new RowSet();//存储返回值
 
-      Object[] deserializedFields = new Object[fieldRefs.size()];
+      Object[] deserializedFields = new Object[fieldRefs.size()];//每一行中每一个属性对应的值
       Object rowObj;
       ObjectInspector fieldOI;
 
-      for (String rowString : rows) {
-        rowObj = serde.deserialize(new BytesWritable(rowString.getBytes()));
+      for (String rowString : rows) {//循环每一行的返回值
+        rowObj = serde.deserialize(new BytesWritable(rowString.getBytes()));//将该对象进行反序列化
         for (int i = 0; i < fieldRefs.size(); i++) {
-          StructField fieldRef = fieldRefs.get(i);
-          fieldOI = fieldRef.getFieldObjectInspector();
-          deserializedFields[i] = convertLazyToJava(soi.getStructFieldData(rowObj, fieldRef), fieldOI);
+          StructField fieldRef = fieldRefs.get(i);//每一个属性
+          fieldOI = fieldRef.getFieldObjectInspector();//该属性对应的类型
+          deserializedFields[i] = convertLazyToJava(soi.getStructFieldData(rowObj, fieldRef), fieldOI);//反序列化该属性值
         }
         rowSet.addRow(resultSchema, deserializedFields);
       }
@@ -267,15 +271,15 @@ public class SQLOperation extends ExecuteStatementOperation {
     return obj;
   }
 
-
+  //获取解析该行数据的反序列化对象
   private SerDe getSerDe() throws SQLException {
     if (serde != null) {
       return serde;
     }
     try {
       List<FieldSchema> fieldSchemas = mResultSchema.getFieldSchemas();
-      List<String> columnNames = new ArrayList<String>();
-      List<String> columnTypes = new ArrayList<String>();
+      List<String> columnNames = new ArrayList<String>();//属性名字集合
+      List<String> columnTypes = new ArrayList<String>();//属性类型集合
       StringBuilder namesSb = new StringBuilder();
       StringBuilder typesSb = new StringBuilder();
 
