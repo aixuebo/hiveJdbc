@@ -24,7 +24,7 @@ import org.apache.hadoop.hive.metastore.api.Table;
 public class DropTableEvent extends ListenerEvent {
 
   private final Table table;
-  private final boolean deleteData;
+  private final boolean deleteData;//true表示删除一个表的时候,也要删除表的数据
 
   public DropTableEvent(Table table, boolean status, boolean deleteData, HMSHandler handler) {
     super(status, handler);

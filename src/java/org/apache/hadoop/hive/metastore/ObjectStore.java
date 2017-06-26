@@ -143,7 +143,9 @@ public class ObjectStore implements RawStore, Configurable {
   private static final Log LOG = LogFactory.getLog(ObjectStore.class.getName());
 
   private static enum TXN_STATUS {
-    NO_STATE, OPEN, COMMITED, ROLLBACK
+    NO_STATE, OPEN,
+      COMMITED,//提交
+      ROLLBACK//回滚
   }
 
   //HiveConf.ConfVars.METASTORE_CACHE_PINOBJTYPES 远程通过thrift接口可以存储和访问的接口对象集合 Table,StorageDescriptor,SerDeInfo,Partition,Database,Type,FieldSchema,Order

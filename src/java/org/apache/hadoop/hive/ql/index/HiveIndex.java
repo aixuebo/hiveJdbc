@@ -29,7 +29,7 @@ public class HiveIndex {
 
   public static final Log l4j = LogFactory.getLog("HiveIndex");
 
-  public static String INDEX_TABLE_CREATETIME = "hive.index.basetbl.dfs.lastModifiedTime";
+  public static String INDEX_TABLE_CREATETIME = "hive.index.basetbl.dfs.lastModifiedTime";//该分区的最后修改时间
 
   //所有的索引类型
   public static enum IndexType {

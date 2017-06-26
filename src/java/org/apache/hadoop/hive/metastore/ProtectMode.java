@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hive.metastore;
 
-
+//保护模式
 public class ProtectMode {
   public static String PARAMETER_NAME = "PROTECT_MODE";
 

@@ -33,7 +33,10 @@ import java.util.regex.Pattern;
 
 /**
  * HiveDriver.
- *
+ * 此时为hive的server1版本
+ * HiveServer或者HiveServer2都是基于Thrift的，但HiveSever有时被称为Thrift server，而HiveServer2却不会。
+ * 既然已经存在HiveServer，为什么还需要HiveServer2呢？这是因为HiveServer不能处理多于一个客户端的并发请求，这是由于HiveServer使用的Thrift接口所导致的限制，不能通过修改HiveServer的代码修正。
+ * 因此在Hive-0.11.0版本中重写了HiveServer代码得到了HiveServer2，进而解决了该问题。HiveServer2支持多客户端的并发和认证，为开放API客户端如JDBC、ODBC提供更好的支持。
  */
 public class HiveDriver implements Driver {
   static {
@@ -62,16 +65,19 @@ public class HiveDriver implements Driver {
 
   /**
    * Property key for the database name.
+   * url中连接的数据库名字对应的key
    */
   private static final String DBNAME_PROPERTY_KEY = "DBNAME";
 
   /**
    * Property key for the Hive Server host.
+   * url连接的host对应的key
    */
   private static final String HOST_PROPERTY_KEY = "HOST";
 
   /**
    * Property key for the Hive Server port.
+   * url连接的post对应的key
    */
   private static final String PORT_PROPERTY_KEY = "PORT";
 
@@ -102,6 +108,7 @@ public class HiveDriver implements Driver {
     return Pattern.matches(URL_PREFIX + ".*", url);
   }
 
+  //创建一个连接
   public Connection connect(String url, Properties info) throws SQLException {
     return new HiveConnection(url, info);
   }
@@ -173,6 +180,7 @@ public class HiveDriver implements Driver {
     throw new SQLFeatureNotSupportedException("Method not supported");
   }
 
+  //创建连接的信息
   public DriverPropertyInfo[] getPropertyInfo(String url, Properties info) throws SQLException {
     if (info == null) {
       info = new Properties();
@@ -222,6 +230,7 @@ public class HiveDriver implements Driver {
    * @param defaults
    * @return
    * @throws java.sql.SQLException
+   * 解析url,将解析的内容填充到defaults中,并且返回
    */
   private Properties parseURL(String url, Properties defaults) throws SQLException {
     Properties urlProps = (defaults != null) ? new Properties(defaults)
@@ -270,6 +279,7 @@ public class HiveDriver implements Driver {
    * 
    * @throws java.net.MalformedURLException
    * @throws IOException
+   * 加载jar包下的配置文件对象
    */
   private static synchronized void loadManifestAttributes() throws IOException {
     if (manifestAttributes != null) {

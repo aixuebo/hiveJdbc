@@ -86,6 +86,7 @@ public class CommonCliOptions {
    * anything therein.
    *
    * @return a copy of the properties specified in hiveconf
+   * 将hiveconf中的信息设置到java中
    */
   public Properties addHiveconfToSystemProperties() {
     Properties confProps = commandLine.getOptionProperties("hiveconf");

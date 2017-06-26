@@ -39,6 +39,11 @@ import org.apache.hive.jdbc.Utils.JdbcConnectionParams;
  * 该driver表示hive2服务
  *
  * driver的主要作用是解析url,获取host、port以及数据库name,方便connection模块进行连接操作
+ *
+ * 此时为hive的server2版本
+ * HiveServer或者HiveServer2都是基于Thrift的，但HiveSever有时被称为Thrift server，而HiveServer2却不会。
+ * 既然已经存在HiveServer，为什么还需要HiveServer2呢？这是因为HiveServer不能处理多于一个客户端的并发请求，这是由于HiveServer使用的Thrift接口所导致的限制，不能通过修改HiveServer的代码修正。
+ * 因此在Hive-0.11.0版本中重写了HiveServer代码得到了HiveServer2，进而解决了该问题。HiveServer2支持多客户端的并发和认证，为开放API客户端如JDBC、ODBC提供更好的支持。
  */
 public class HiveDriver implements Driver {
   static {

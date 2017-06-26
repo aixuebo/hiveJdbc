@@ -35,6 +35,7 @@ public abstract class AbstractService implements Service {
 
   /**
    * Service state: initially {@link STATE#NOTINITED}.
+   * 初始服务状态
    */
   private STATE state = STATE.NOTINITED;
 
@@ -44,6 +45,7 @@ public abstract class AbstractService implements Service {
   private final String name;
   /**
    * Service start time. Will be zero until the service is started.
+   * 服务开始时间
    */
   private long startTime;
 
@@ -55,6 +57,7 @@ public abstract class AbstractService implements Service {
   /**
    * List of state change listeners; it is final to ensure
    * that it will never be null.
+   * 该服务的监听,即该服务状态变化的时候要通知这些监听
    */
   private final List<ServiceStateChangeListener> listeners =
       new ArrayList<ServiceStateChangeListener>();
@@ -158,6 +161,7 @@ public abstract class AbstractService implements Service {
    * @throws IllegalStateException
    *           if the service state is different from
    *           the desired state
+   * 确保参数的当前状态确实是当前状态
    */
   private void ensureCurrentState(STATE currentState) {
     ServiceOperations.ensureCurrentState(state, currentState);
@@ -172,11 +176,12 @@ public abstract class AbstractService implements Service {
    *
    * @param newState
    *          new service state
+   * 去更改服务的状态
    */
   private void changeState(STATE newState) {
     state = newState;
     // notify listeners
-    for (ServiceStateChangeListener l : listeners) {
+    for (ServiceStateChangeListener l : listeners) {//通知监听器服务状态有更改
       l.stateChanged(this);
     }
   }

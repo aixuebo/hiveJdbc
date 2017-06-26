@@ -34,6 +34,7 @@ import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.NoSuchObjectException;
 
+//java的动态代理类
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class RetryingHMSHandler implements InvocationHandler {

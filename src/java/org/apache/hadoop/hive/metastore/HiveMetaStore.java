@@ -141,6 +141,7 @@ import com.facebook.fb303.fb_status;
 
 /**
  * TODO:pc remove application logic to a separate interface.
+ * 元数据的服务端
  */
 public class HiveMetaStore extends ThriftHiveMetastore {
   public static final Log LOG = LogFactory.getLog(
@@ -148,12 +149,14 @@ public class HiveMetaStore extends ThriftHiveMetastore {
 
   /**
    * default port on which to start the Hive server
+   * hive的server默认端口
    */
   private static final int DEFAULT_HIVE_METASTORE_PORT = 9083;
 
   private static HadoopThriftAuthBridge.Server saslServer;
   private static boolean useSasl;
 
+  //链接方式的传输工厂
   private static final class ChainedTTransportFactory extends TTransportFactory {
     private final TTransportFactory parentTransFactory;
     private final TTransportFactory childTransFactory;
@@ -4020,6 +4023,7 @@ public class HiveMetaStore extends ThriftHiveMetastore {
       return ret;
     }
 
+    //向组集合中每一个组都添加一个user
     @Override
     public List<String> set_ugi(String username, List<String> groupNames) throws MetaException,
         TException {
@@ -4097,7 +4101,7 @@ public class HiveMetaStore extends ThriftHiveMetastore {
 
   /**
    * HiveMetaStore specific CLI
-   *
+   * 设置元数据的端口的cli命令类
    */
   static public class HiveMetastoreCli extends CommonCliOptions {
     int port = DEFAULT_HIVE_METASTORE_PORT;
@@ -4149,12 +4153,12 @@ public class HiveMetaStore extends ThriftHiveMetastore {
    * @param args
    */
   public static void main(String[] args) throws Throwable {
-    HiveMetastoreCli cli = new HiveMetastoreCli();
+    HiveMetastoreCli cli = new HiveMetastoreCli();//设置元数据的端口的cli命令类
     cli.parse(args);
     final boolean isCliVerbose = cli.isVerbose();
     // NOTE: It is critical to do this prior to initializing log4j, otherwise
     // any log specific settings via hiveconf will be ignored
-    Properties hiveconf = cli.addHiveconfToSystemProperties();
+    Properties hiveconf = cli.addHiveconfToSystemProperties();//将hiveconf中的信息设置到java中
 
     // If the log4j.configuration property hasn't already been explicitly set,
     // use Hive's default log4j configuration
@@ -4238,7 +4242,7 @@ public class HiveMetaStore extends ThriftHiveMetastore {
       useSasl = conf.getBoolVar(HiveConf.ConfVars.METASTORE_USE_THRIFT_SASL);
 
       TServerTransport serverTransport = tcpKeepAlive ?
-          new TServerSocketKeepAlive(port) : new TServerSocket(port);
+          new TServerSocketKeepAlive(port) : new TServerSocket(port);//开启一个socket服务
 
       TProcessor processor;
       TTransportFactory transFactory;

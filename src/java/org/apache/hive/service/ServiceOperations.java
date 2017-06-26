@@ -24,7 +24,7 @@ import org.apache.hadoop.hive.conf.HiveConf;
 
 /**
  * ServiceOperations.
- *
+ * 对服务的操作,比如初始化、开始、停止等操作
  */
 public final class ServiceOperations {
   private static final Log LOG = LogFactory.getLog(AbstractService.class);
@@ -38,6 +38,7 @@ public final class ServiceOperations {
    * @param expectedState the desired state
    * @throws IllegalStateException if the service state is different from
    * the desired state
+   * 确保两个参数状态是相同的
    */
   public static void ensureCurrentState(Service.STATE state,
                                         Service.STATE expectedState) {
@@ -94,6 +95,7 @@ public final class ServiceOperations {
    * @param configuration the configuration to initialize the service with
    * @throws RuntimeException on a state change failure
    * @throws IllegalStateException if the service is in the wrong state
+   * 部署一个服务
    */
   public static void deploy(Service service, HiveConf configuration) {
     init(service, configuration);
@@ -108,11 +110,12 @@ public final class ServiceOperations {
    * The service state is checked <i>before</i> the operation begins.
    * This process is <i>not</i> thread safe.
    * @param service a service or null
+   * 停止一个服务
    */
   public static void stop(Service service) {
     if (service != null) {
       Service.STATE state = service.getServiceState();
-      if (state == Service.STATE.STARTED) {
+      if (state == Service.STATE.STARTED) {//必须服务的状态是开始
         service.stop();
       }
     }
@@ -122,7 +125,7 @@ public final class ServiceOperations {
    * Stop a service; if it is null do nothing. Exceptions are caught and
    * logged at warn level. (but not Throwables). This operation is intended to
    * be used in cleanup operations
-   *
+   * 安静的停止一个服务,即如果服务停止出现异常,则只是记录日志,不会真的抛出异常
    * @param service a service; may be null
    * @return any exception that was caught; null if none was.
    */

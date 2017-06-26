@@ -40,7 +40,7 @@ import org.apache.thrift.transport.TTransportException;
  * implementation and retries calls to it on failure.
  * If the login user is authenticated using keytab, it relogins user before
  * each call.
- *
+ * java的动态代理类
  */
 public class RetryingMetaStoreClient implements InvocationHandler {
 

@@ -29,12 +29,13 @@ import org.apache.hadoop.hive.conf.HiveConf;
 
 /**
  * CompositeService.
- *
+ * 组合服务,该类可以容纳多个服务
  */
 public class CompositeService extends AbstractService {
 
   private static final Log LOG = LogFactory.getLog(CompositeService.class);
 
+  //服务集合
   private final List<Service> serviceList = new ArrayList<Service>();
 
   public CompositeService(String name) {

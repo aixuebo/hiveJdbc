@@ -23,8 +23,8 @@ import org.apache.hadoop.hive.metastore.api.EnvironmentContext;
 
 /**
  * Base class for all the events which are defined for metastore.
+ * 为元数据定义事件的基本类
  */
-
 public abstract class ListenerEvent {
 
   /**

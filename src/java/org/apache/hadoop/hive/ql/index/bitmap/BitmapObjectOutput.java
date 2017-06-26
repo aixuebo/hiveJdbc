@@ -30,6 +30,7 @@ import org.apache.hadoop.hive.serde2.objectinspector.primitive.PrimitiveObjectIn
 /**
  * An ObjectOutput that allows conversion from an EWAH-compressed bitmap
  * to an List of LongWritable.
+ * ´æ´¢longµÄÖµ
  */
 public class BitmapObjectOutput implements ObjectOutput {
   ArrayList<LongWritable> buffer = new ArrayList<LongWritable>();

@@ -22,6 +22,7 @@ import org.apache.hadoop.hive.metastore.HiveMetaStore.HMSHandler;
 import org.apache.hadoop.hive.metastore.api.Partition;
 import org.apache.hadoop.hive.metastore.api.Table;
 
+//为一个表添加分区信息事件
 public class AddPartitionEvent extends ListenerEvent {
 
   private final Table table;

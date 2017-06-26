@@ -37,15 +37,16 @@ import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.hooks.JDOConnectionURLHook;
 import org.apache.hadoop.util.ReflectionUtils;
 
+//java的动态代理类
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class RetryingRawStore implements InvocationHandler {
 
   private static final Log LOG = LogFactory.getLog(RetryingRawStore.class);
 
-  private final RawStore base;
-  private int retryInterval = 0;
-  private int retryLimit = 0;
+  private final RawStore base;//存储实例
+  private int retryInterval = 0;//每一次尝试失败后睡眠时间
+  private int retryLimit = 0;//最大尝试次数
   private MetaStoreInit.MetaStoreInitData metaStoreInitData =
     new MetaStoreInit.MetaStoreInitData();
   private final int id;
@@ -77,6 +78,7 @@ public class RetryingRawStore implements InvocationHandler {
         getAllInterfaces(baseClass), handler);
   }
 
+  //获取所有的接口集合
   private static Class<?>[] getAllInterfaces(Class<?> baseClass) {
     List interfaces = ClassUtils.getAllInterfaces(baseClass);
     Class<?>[] result = new Class<?>[interfaces.size()];
@@ -114,8 +116,8 @@ public class RetryingRawStore implements InvocationHandler {
       MetaStoreInit.updateConnectionURL(hiveConf, getConf(), null, metaStoreInitData);
     }
 
-    int retryCount = 0;
-    Exception caughtException = null;
+    int retryCount = 0;//已经尝试的次数
+    Exception caughtException = null;//出错异常
     while (true) {
       try {
         if (reloadConf || gotNewConnectUrl) {
@@ -137,7 +139,7 @@ public class RetryingRawStore implements InvocationHandler {
           throw e.getCause();
       }
 
-      if (retryCount >= retryLimit) {
+      if (retryCount >= retryLimit) {//说明尝试次数超过限制
         throw  caughtException;
       }
 

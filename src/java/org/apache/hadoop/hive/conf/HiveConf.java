@@ -255,9 +255,9 @@ public class HiveConf extends Configuration {
 
     // Metastore stuff. Be sure to update HiveConf.metaVars when you add
     // something here!
-    METASTOREDIRECTORY("hive.metastore.metadb.dir", ""),
+    METASTOREDIRECTORY("hive.metastore.metadb.dir", ""),//元数据存储的目录
     METASTOREWAREHOUSE("hive.metastore.warehouse.dir", "/user/hive/warehouse"),//hive的表数据存储地方
-    METASTOREURIS("hive.metastore.uris", ""),//Thrift URI for the remote metastore. Used by metastore client to connect to remote metastore.
+    METASTOREURIS("hive.metastore.uris", ""),//Thrift URI for the remote metastore. Used by metastore client to connect to remote metastore.设置元数据的url
     // Number of times to retry a connection to a Thrift metastore server
     METASTORETHRIFTCONNECTIONRETRIES("hive.metastore.connect.retries", 3),
     // Number of times to retry a Thrift metastore call upon failure
@@ -266,7 +266,7 @@ public class HiveConf extends Configuration {
     // Number of seconds the client should wait between connection attempts
     METASTORE_CLIENT_CONNECT_RETRY_DELAY("hive.metastore.client.connect.retry.delay", 1),
     // Socket timeout for the client connection (in seconds)
-    METASTORE_CLIENT_SOCKET_TIMEOUT("hive.metastore.client.socket.timeout", 20),
+    METASTORE_CLIENT_SOCKET_TIMEOUT("hive.metastore.client.socket.timeout", 20),//单位是s,连接超时时间
     METASTOREPWD("javax.jdo.option.ConnectionPassword", "mine"),
     // Class name of JDO connection url hook
     METASTORECONNECTURLHOOK("hive.metastore.ds.connection.url.hook", ""),
@@ -306,7 +306,7 @@ public class HiveConf extends Configuration {
     METASTORE_KERBEROS_KEYTAB_FILE("hive.metastore.kerberos.keytab.file", ""),
     METASTORE_KERBEROS_PRINCIPAL("hive.metastore.kerberos.principal",
         "hive-metastore/_HOST@EXAMPLE.COM"),
-    METASTORE_USE_THRIFT_SASL("hive.metastore.sasl.enabled", false),
+    METASTORE_USE_THRIFT_SASL("hive.metastore.sasl.enabled", false),//连接元数据服务是否安全方式
     METASTORE_USE_THRIFT_FRAMED_TRANSPORT("hive.metastore.thrift.framed.transport.enabled", false),
     METASTORE_CLUSTER_DELEGATION_TOKEN_STORE_CLS(
         "hive.cluster.delegation.token.store.class",

@@ -26,7 +26,7 @@ public class DropPartitionEvent extends ListenerEvent {
 
   private final Table table;
   private final Partition partition;
-  private final boolean deleteData;
+  private final boolean deleteData;//true表示删除一个分区的时候,也要将该分区的数据删除
 
   public DropPartitionEvent (Table table,
       Partition partition, boolean status, boolean deleteData, HMSHandler handler) {

@@ -82,12 +82,13 @@ import org.apache.thrift.transport.TTransportException;
 
 /**
  * Hive Metastore Client.
+ * 表示元数据的客户端
  */
 public class HiveMetaStoreClient implements IMetaStoreClient {
-  ThriftHiveMetastore.Iface client = null;
+  ThriftHiveMetastore.Iface client = null;//客户端接口的很多方法都是调用该服务完成的
   private TTransport transport = null;
-  private boolean isConnected = false;
-  private URI metastoreUris[];//localMetaStore为false的时候,表示外网存储metaStore的uri的IP集合
+  private boolean isConnected = false;//true表示已经连接到元数据服务了
+  private URI metastoreUris[];//localMetaStore为false的时候,表示外网存储metaStore的uri的IP集合,内网的时候,该uri是本地的一个目录
   private final HiveMetaHookLoader hookLoader;
   private final HiveConf conf;
   private String tokenStrForm;
@@ -113,8 +114,8 @@ public class HiveMetaStoreClient implements IMetaStoreClient {
     }
     this.conf = conf;
 
-    String msUri = conf.getVar(HiveConf.ConfVars.METASTOREURIS);
-    localMetaStore = (msUri == null) ? true : msUri.trim().isEmpty();
+    String msUri = conf.getVar(HiveConf.ConfVars.METASTOREURIS);//连接元数据的url
+    localMetaStore = (msUri == null) ? true : msUri.trim().isEmpty();//true表示获取本地的元数据
     if (localMetaStore) {
       // instantiate the metastore server handler directly instead of connecting
       // through the network
@@ -149,7 +150,7 @@ public class HiveMetaStoreClient implements IMetaStoreClient {
       } catch (Exception e) {
         MetaStoreUtils.logAndThrowMetaException(e);
       }
-    } else if (conf.getVar(HiveConf.ConfVars.METASTOREDIRECTORY) != null) {
+    } else if (conf.getVar(HiveConf.ConfVars.METASTOREDIRECTORY) != null) {//元数据存储的目录
       metastoreUris = new URI[1];
       try {
         metastoreUris[0] = new URI(conf
@@ -168,20 +169,22 @@ public class HiveMetaStoreClient implements IMetaStoreClient {
   /**
    * Swaps the first element of the metastoreUris array with a random element from the
    * remainder of the array.
+   * 随机选择一个元数据url
    */
   private void promoteRandomMetaStoreURI() {
     if (metastoreUris.length <= 1) {
       return;
     }
     Random rng = new Random();
-    int index = rng.nextInt(metastoreUris.length - 1) + 1;
-    URI tmp = metastoreUris[0];
+    int index = rng.nextInt(metastoreUris.length - 1) + 1;//选择一个id
+    URI tmp = metastoreUris[0];//将选择的id和第0个位置替换
     metastoreUris[0] = metastoreUris[index];
     metastoreUris[index] = tmp;
   }
 
+  //去建立连接
   public void reconnect() throws MetaException {
-    if (localMetaStore) {
+    if (localMetaStore) {//本地不需要连接
       // For direct DB connections we don't yet support reestablishing connections.
       throw new MetaException("For direct MetaStore DB connections, we don't support retries" +
           " at the client level.");
@@ -189,7 +192,7 @@ public class HiveMetaStoreClient implements IMetaStoreClient {
       // Swap the first element of the metastoreUris[] with a random element from the rest
       // of the array. Rationale being that this method will generally be called when the default
       // connection has died and the default connection is likely to be the first array element.
-      promoteRandomMetaStoreURI();
+      promoteRandomMetaStoreURI();//选择一个连接
       open();
     }
   }
@@ -236,15 +239,15 @@ public class HiveMetaStoreClient implements IMetaStoreClient {
     isConnected = false;
     TTransportException tte = null;
     HadoopShims shim = ShimLoader.getHadoopShims();
-    boolean useSasl = conf.getBoolVar(ConfVars.METASTORE_USE_THRIFT_SASL);
+    boolean useSasl = conf.getBoolVar(ConfVars.METASTORE_USE_THRIFT_SASL);//连接元数据服务是否安全方式
     boolean useFramedTransport = conf.getBoolVar(ConfVars.METASTORE_USE_THRIFT_FRAMED_TRANSPORT);
-    int clientSocketTimeout = conf.getIntVar(ConfVars.METASTORE_CLIENT_SOCKET_TIMEOUT);
+    int clientSocketTimeout = conf.getIntVar(ConfVars.METASTORE_CLIENT_SOCKET_TIMEOUT);//单位是s,连接超时时间
 
     for (int attempt = 0; !isConnected && attempt < retries; ++attempt) {
       for (URI store : metastoreUris) {
         LOG.info("Trying to connect to metastore with URI " + store);
         try {
-          transport = new TSocket(store.getHost(), store.getPort(), 1000 * clientSocketTimeout);
+          transport = new TSocket(store.getHost(), store.getPort(), 1000 * clientSocketTimeout);//发送socket连接该url
           if (useSasl) {
             // Wrap thrift connection with SASL for secure connection.
             try {

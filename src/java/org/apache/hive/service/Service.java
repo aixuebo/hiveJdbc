@@ -22,24 +22,25 @@ import org.apache.hadoop.hive.conf.HiveConf;
 
 /**
  * Service.
- *
+ * 定义服务接口
  */
 public interface Service {
 
   /**
    * Service states
+   * 服务状态
    */
   public enum STATE {
-    /** Constructed but not initialized */
+    /** Constructed but not initialized 构造,但是尚未初始化*/
     NOTINITED,
 
-    /** Initialized but not started or stopped */
+    /** Initialized but not started or stopped 初始化完成了,但是还没有开始和stop*/
     INITED,
 
-    /** started and not stopped */
+    /** started and not stopped 已经开始了*/
     STARTED,
 
-    /** stopped. No further state transitions are permitted */
+    /** stopped. No further state transitions are permitted 已经停止了*/
     STOPPED
   }
 
@@ -51,6 +52,7 @@ public interface Service {
    *
    * @param config
    *          the configuration of the service
+   * 初始化一个服务
    */
   void init(HiveConf conf);
 
@@ -76,6 +78,7 @@ public interface Service {
    *
    * @param listener
    *          a new listener
+   * 注册该服务到监听器中,当服务有变化时候,监听器可以知道,处理各种逻辑
    */
   void register(ServiceStateChangeListener listener);
 
@@ -91,6 +94,7 @@ public interface Service {
    * Get the name of this service.
    *
    * @return the service name
+   * 服务名字
    */
   String getName();
 
@@ -108,12 +112,13 @@ public interface Service {
    * Get the current service state
    *
    * @return the state of the service
+   * 服务此时状态
    */
   STATE getServiceState();
 
   /**
    * Get the service start time
-   *
+   * 返回服务的开始时间
    * @return the start time of the service. This will be zero if the service
    *         has not yet been started.
    */

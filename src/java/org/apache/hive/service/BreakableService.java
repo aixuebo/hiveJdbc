@@ -35,7 +35,7 @@ public class BreakableService extends AbstractService {
   private boolean failOnInit;
   private boolean failOnStart;
   private boolean failOnStop;
-  private final int[] counts = new int[4];
+  private final int[] counts = new int[4];//每一个状态对应次数
 
   public BreakableService() {
     this(false, false, false);
@@ -51,6 +51,7 @@ public class BreakableService extends AbstractService {
     inc(STATE.NOTINITED);
   }
 
+  //将状态转换成数字
   private int convert(STATE state) {
     switch (state) {
       case NOTINITED: return 0;
@@ -66,6 +67,7 @@ public class BreakableService extends AbstractService {
     counts[index] ++;
   }
 
+  //获取某一个状态的次数
   public int getCount(STATE state) {
     return counts[convert(state)];
   }
@@ -111,6 +113,7 @@ public class BreakableService extends AbstractService {
 
   /**
    * The exception explicitly raised on a failure
+   * 一个事件
    */
   public static class BrokenLifecycleEvent extends RuntimeException {
     BrokenLifecycleEvent(String action) {

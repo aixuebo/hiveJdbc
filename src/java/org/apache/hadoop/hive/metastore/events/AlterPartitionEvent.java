@@ -21,6 +21,7 @@ package org.apache.hadoop.hive.metastore.events;
 import org.apache.hadoop.hive.metastore.HiveMetaStore.HMSHandler;
 import org.apache.hadoop.hive.metastore.api.Partition;
 
+//修改一个分区事件
 public class AlterPartitionEvent extends ListenerEvent {
 
   private final Partition oldPart;

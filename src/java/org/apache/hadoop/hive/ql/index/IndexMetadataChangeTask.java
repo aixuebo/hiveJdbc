@@ -58,8 +58,8 @@ public class IndexMetadataChangeTask extends Task<IndexMetadataChangeWork>{
         return 1;
       }
 
-      if (work.getPartSpec() != null) {
-        Partition part = db.getPartition(tbl, work.getPartSpec(), false);
+      if (work.getPartSpec() != null) {//该表存在分区字段
+        Partition part = db.getPartition(tbl, work.getPartSpec(), false);//获取分区
         if (part == null) {
           console.printError("Partition " +
               Warehouse.makePartName(work.getPartSpec(), false).toString()
@@ -71,7 +71,7 @@ public class IndexMetadataChangeTask extends Task<IndexMetadataChangeWork>{
         FileSystem fs = url.getFileSystem(conf);
         FileStatus fstat = fs.getFileStatus(url);
 
-        part.getParameters().put(HiveIndex.INDEX_TABLE_CREATETIME, Long.toString(fstat.getModificationTime()));
+        part.getParameters().put(HiveIndex.INDEX_TABLE_CREATETIME, Long.toString(fstat.getModificationTime()));//设置该分区的最后修改时间
         db.alterPartition(tbl.getTableName(), part);
       } else {
         Path url = new Path(tbl.getPath().toString());

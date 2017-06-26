@@ -32,10 +32,11 @@ import org.apache.hadoop.hive.serde2.lazy.LazyLong;
 /**
  * An ObjectInput that allows for conversion from an List of LongWritable
  * to an EWAH-compressed bitmap.
+ * 可以读取每一个long的值
  */
 public class BitmapObjectInput implements ObjectInput {
-  Iterator<LongWritable> bufferIter;
-  List<LongWritable> buffer;
+  Iterator<LongWritable> bufferIter;//buffer的迭代器
+  List<LongWritable> buffer;//存储数据的集合
 
   public BitmapObjectInput() {
     buffer = new ArrayList<LongWritable>();
@@ -125,9 +126,9 @@ public class BitmapObjectInput implements ObjectInput {
   @Override
   public int readInt() throws IOException {
     if (bufferIter.hasNext()) {
-      LongObjectInspector loi = PrimitiveObjectInspectorFactory.writableLongObjectInspector;
-      Long l = PrimitiveObjectInspectorUtils.getLong(bufferIter.next(), loi);
-      return l.intValue();
+      LongObjectInspector loi = PrimitiveObjectInspectorFactory.writableLongObjectInspector;//获取long类型的hadoop对象
+      Long l = PrimitiveObjectInspectorUtils.getLong(bufferIter.next(), loi);//将一个long类型的转换成具体的long值
+      return l.intValue();//强制转换成int
       //return bufferIter.next().intValue();
     }
     else {
@@ -144,8 +145,8 @@ public class BitmapObjectInput implements ObjectInput {
   public long readLong() throws IOException {
     //LongObjectInspector loi = PrimitiveObjectInspectorFactory.writableLongObjectInspector;
     if (bufferIter.hasNext()) {
-      LongObjectInspector loi = PrimitiveObjectInspectorFactory.writableLongObjectInspector;
-      return PrimitiveObjectInspectorUtils.getLong(bufferIter.next(), loi);
+      LongObjectInspector loi = PrimitiveObjectInspectorFactory.writableLongObjectInspector;//获取long类型的hadoop对象
+      return PrimitiveObjectInspectorUtils.getLong(bufferIter.next(), loi);//将一个long类型的转换成具体的long值
       //return bufferIter.next();
     }
     else {

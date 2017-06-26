@@ -21,6 +21,7 @@ package org.apache.hadoop.hive.metastore.events;
 import org.apache.hadoop.hive.metastore.HiveMetaStore.HMSHandler;
 import org.apache.hadoop.hive.metastore.api.Database;
 
+//创建一个数据库事件
 public class CreateDatabaseEvent extends ListenerEvent {
 
   private final Database db;

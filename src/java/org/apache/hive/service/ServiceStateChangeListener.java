@@ -20,7 +20,7 @@ package org.apache.hive.service;
 
 /**
  * ServiceStateChangeListener.
- *
+ * 服务状态更改监听器,实现该监听的代码,可以对每一个服务更改状态时候,都会收到通知,此时可以处理一些业务逻辑
  */
 public interface ServiceStateChangeListener {
 

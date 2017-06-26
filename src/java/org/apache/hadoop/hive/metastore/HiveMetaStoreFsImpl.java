@@ -29,6 +29,7 @@ import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.shims.HadoopShims;
 import org.apache.hadoop.hive.shims.ShimLoader;
 
+//删除hdfs上的hive元数据文件
 public class HiveMetaStoreFsImpl implements MetaStoreFS {
 
   public static final Log LOG = LogFactory

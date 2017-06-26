@@ -27,13 +27,14 @@ import org.apache.thrift.transport.TTransportException;
 /**
  * TServerSocketKeepAlive - like TServerSocket, but will enable keepalive for
  * accepted sockets.
- *
+ * socket的服务端
  */
 public class TServerSocketKeepAlive extends TServerSocket {
   public TServerSocketKeepAlive(int port) throws TTransportException {
     super(port, 0);
   }
 
+  //接收一个真的socket,表示连接成功,设置为长连接
   @Override
   protected TSocket acceptImpl() throws TTransportException {
     TSocket ts = super.acceptImpl();

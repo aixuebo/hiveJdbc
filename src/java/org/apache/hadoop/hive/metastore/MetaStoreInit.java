@@ -36,8 +36,8 @@ public class MetaStoreInit {
   private static final Log LOG = LogFactory.getLog(MetaStoreInit.class);
 
   static class MetaStoreInitData {
-    JDOConnectionURLHook urlHook = null;
-    String urlHookClassName = "";
+    JDOConnectionURLHook urlHook = null;//如何获取元数据的url的实现类
+    String urlHookClassName = "";//获取元数据url的实现类全路径
   }
 
   /**
@@ -45,6 +45,7 @@ public class MetaStoreInit {
    *
    * @return true if a new connection URL was loaded into the thread local
    *         configuration
+   * 如果发现元数据url有变化了,则重新设置url
    */
   static boolean updateConnectionURL(HiveConf hiveConf, Configuration conf,
     String badUrl, MetaStoreInitData updateData)
@@ -78,6 +79,7 @@ public class MetaStoreInit {
     return false;
   }
 
+  //获取此时的元数据url
   static String getConnectionURL(Configuration conf) {
     return conf.get(
         HiveConf.ConfVars.METASTORECONNECTURLKEY.toString(), "");
@@ -88,14 +90,14 @@ public class MetaStoreInit {
     MetaStoreInitData updateData) throws ClassNotFoundException {
 
     String className =
-        hiveConf.get(HiveConf.ConfVars.METASTORECONNECTURLHOOK.toString(), "").trim();
-    if (className.equals("")) {
+        hiveConf.get(HiveConf.ConfVars.METASTORECONNECTURLHOOK.toString(), "").trim();//元数据url的实现类
+    if (className.equals("")) {//说明不存在,则退出
       updateData.urlHookClassName = "";
       updateData.urlHook = null;
       return;
     }
-    boolean urlHookChanged = !updateData.urlHookClassName.equals(className);
-    if (updateData.urlHook == null || urlHookChanged) {
+    boolean urlHookChanged = !updateData.urlHookClassName.equals(className);//说明实现类不同了
+    if (updateData.urlHook == null || urlHookChanged) {//初始化该实现类
       updateData.urlHookClassName = className.trim();
 
       Class<?> urlHookClass = Class.forName(updateData.urlHookClassName, true,

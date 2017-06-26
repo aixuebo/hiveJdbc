@@ -22,6 +22,7 @@ package org.apache.hadoop.hive.metastore.events;
 import org.apache.hadoop.hive.metastore.HiveMetaStore.HMSHandler;
 import org.apache.hadoop.hive.metastore.api.Table;
 
+//修改一个表事件
 public class AlterTableEvent extends ListenerEvent {
 
   private final Table newTable;

@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
  * JDOConnectURLHook is used to get the URL that JDO uses to connect to the
  * database that stores the metastore data. Classes implementing this must be
  * thread-safe (for Thrift server).
+ * 用于获取一个url,该url就是JDO去连接数据库的url,连接数据库获取元数据
  */
 public interface JDOConnectionURLHook {
 
@@ -35,6 +36,7 @@ public interface JDOConnectionURLHook {
    * @param conf The configuration used to initialize this instance of the HMS
    * @return the connection URL
    * @throws Exception
+   * 获取url
    */
   public String getJdoConnectionUrl(Configuration conf)
   throws Exception;
@@ -42,7 +44,7 @@ public interface JDOConnectionURLHook {
   /**
    * Alerts this that the connection URL was bad. Can be used to collect stats,
    * etc.
-   *
+   * 如果url是错误的,如何发送通知
    * @param url
    */
   public void notifyBadConnectionUrl(String url);

@@ -28,6 +28,8 @@ public class Utils {
    * @param type
    * @return Integer java.sql.Types values
    * @throws SQLException
+   * hive的类型与sql的类型映射关系
+   * 参数是hive的类型,返回值是sql类型
    */
   public static int hiveTypeToSqlType(String type) throws SQLException {
     if ("string".equalsIgnoreCase(type)) {

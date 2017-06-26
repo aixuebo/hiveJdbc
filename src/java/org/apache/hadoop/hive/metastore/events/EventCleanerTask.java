@@ -25,6 +25,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.metastore.HiveMetaStore.HMSHandler;
 import org.apache.hadoop.hive.metastore.RawStore;
 
+//定时任务,
 public class EventCleanerTask extends TimerTask{
 
   public static final Log LOG = LogFactory.getLog(EventCleanerTask.class);
