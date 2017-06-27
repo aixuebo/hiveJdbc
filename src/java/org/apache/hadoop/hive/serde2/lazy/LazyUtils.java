@@ -59,7 +59,7 @@ public final class LazyUtils {
 
   /**
    * Returns the digit represented by character b.
-   *
+   * 返回b对应的数字,比如b是50,其实返回的是2,因为50这个ascii对应的就是数字2
    * @param b
    *          The ascii code of the character
    * @param radix
@@ -70,9 +70,9 @@ public final class LazyUtils {
     int r = -1;
     if (b >= '0' && b <= '9') {
       r = b - '0';
-    } else if (b >= 'A' && b <= 'Z') {
+    } else if (b >= 'A' && b <= 'Z') {//用于16进制等
       r = b - 'A' + 10;
-    } else if (b >= 'a' && b <= 'z') {
+    } else if (b >= 'a' && b <= 'z') {//用于16进制等
       r = b - 'a' + 10;
     }
     if (r >= radix) {
@@ -169,20 +169,21 @@ public final class LazyUtils {
   /**
    * Write out the text representation of a Primitive Object to a UTF8 byte
    * stream.
-   *
+   * 将o对应的原始简单类型的内容,输出到out中
    * @param out
-   *          The UTF8 byte OutputStream
+   *          The UTF8 byte OutputStream 输出流
    * @param o
-   *          The primitive Object
+   *          The primitive Object 具体的值
    * @param needsEscape
    *          Whether a character needs escaping. This array should have size of
    *          128.
    */
   public static void writePrimitiveUTF8(OutputStream out, Object o,
-      PrimitiveObjectInspector oi, boolean escaped, byte escapeChar,
+      PrimitiveObjectInspector oi,//o对应的类型
+      boolean escaped, byte escapeChar,
       boolean[] needsEscape) throws IOException {
 
-    switch (oi.getPrimitiveCategory()) {
+    switch (oi.getPrimitiveCategory()) {//看该属性类型是什么
     case BOOLEAN: {
       boolean b = ((BooleanObjectInspector) oi).get(o);
       if (b) {
@@ -400,6 +401,8 @@ public final class LazyUtils {
    * @param level - nesting level
    * @return separator at given level
    * @throws SerDeException
+   * 比如user集合,每一个user还有生活在若干个省,每一个省对应若干个市.因此如果用一个分隔符分割list是有问题,没办法区别其他节点,因此每一个list就用一个分隔符,因此取决于level
+   * 返回该集合list的值的分隔符
    */
   static byte getSeparator(byte[] separators, int level) throws SerDeException {
     try{

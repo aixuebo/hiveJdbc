@@ -31,7 +31,7 @@ import java.util.List;
  * objects, instead of directly creating an instance of this class.
  */
 public class StandardUnionObjectInspector implements UnionObjectInspector {
-  List<ObjectInspector> ois;
+  List<ObjectInspector> ois;//存储该union可以存放的不同数据类型的集合
 
   public StandardUnionObjectInspector(List<ObjectInspector> ois) {
     this.ois = ois;
@@ -41,9 +41,10 @@ public class StandardUnionObjectInspector implements UnionObjectInspector {
     return ois;
   }
 
+  //每一个下标对应一个具体对象
   public static class StandardUnion implements UnionObject {
-    protected byte tag;
-    protected Object object;
+    protected byte tag;//在union中的下标
+    protected Object object;//具体的值
 
     public StandardUnion() {
     }
@@ -79,6 +80,7 @@ public class StandardUnionObjectInspector implements UnionObjectInspector {
 
   /**
    * Return the tag of the object.
+   * 参数是UnionObject,返回该UnionObject对应的tag下标
    */
   public byte getTag(Object o) {
     if (o == null) {
@@ -89,6 +91,7 @@ public class StandardUnionObjectInspector implements UnionObjectInspector {
 
   /**
    * Return the field based on the tag value associated with the Object.
+   * 参数是UnionObject,返回该UnionObject对应的具体的值
    */
   public Object getField(Object o) {
     if (o == null) {

@@ -21,13 +21,15 @@ import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 
 /**
  * LazyPrimitive stores a primitive Object in a LazyObject.
+ * 说明此时存储的是复杂对象
+ * 参数OI表示复杂类型
  */
 public abstract class LazyNonPrimitive<OI extends ObjectInspector> extends
     LazyObject<OI> {
 
-  protected ByteArrayRef bytes;
-  protected int start;
-  protected int length;
+  protected ByteArrayRef bytes;//字节数组内容
+  protected int start;//开始位置
+  protected int length;//总长度
 
   /**
    * Create a LazyNonPrimitive object with the specified ObjectInspector.

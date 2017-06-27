@@ -38,11 +38,13 @@ public interface UnionObjectInspector extends ObjectInspector {
 
   /**
    *   Return the tag of the object.
+   *   参数是UnionObject,返回该UnionObject对应的tag下标
    */
   byte getTag(Object o);
 
   /**
    *  Return the field based on the tag associated with the Object.
+   *  参数是UnionObject,返回该UnionObject对应的具体的值
    */
   Object getField(Object o);
 

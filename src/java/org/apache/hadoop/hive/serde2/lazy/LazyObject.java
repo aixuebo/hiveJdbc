@@ -28,7 +28,7 @@ import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
  */
 public abstract class LazyObject<OI extends ObjectInspector> extends LazyObjectBase {
 
-  protected OI oi;//泛型对象,可以通过该对象知道要处理的是什么类型的对象
+  protected OI oi;//泛型对象类型,可以通过该对象知道要处理的是什么类型的对象
 
   /**
    * Create a LazyObject.

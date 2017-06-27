@@ -55,7 +55,7 @@ public class LazyString extends LazyPrimitive<LazyStringObjectInspector, Text> {
 
       // Copy the data over, so that the internal state of Text will be set to
       // the required outputLength.
-      data.set(bytes.getData(), start, outputLength);
+      data.set(bytes.getData(), start, outputLength);//截取属于该字符串的字节数组
 
       // We need to copy the data byte by byte only in case the
       // "outputLength < length" (which means there is at least one escaped

@@ -30,6 +30,7 @@ import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorFactory;
 import org.apache.hadoop.hive.serde2.objectinspector.StandardUnionObjectInspector.StandardUnion;
 import org.apache.hadoop.hive.serde2.objectinspector.primitive.IntObjectInspector;
 
+//创建一个union对象,第一个参数是下标,即第几个元素.后面的是每一个元素对应的值
 @Description(name = "create_union", value = "_FUNC_(tag, obj1, obj2, obj3, ...)"
    + " - Creates a union with the object for given tag",
    extended = "Example:\n"
@@ -49,10 +50,11 @@ public class GenericUDFUnion extends GenericUDF {
         Arrays.asList(unionOIs));
   }
 
+  //参数是具体的tag以及各个类型的具体的值
   @Override
   public Object evaluate(DeferredObject[] arguments) throws HiveException {
-    byte tag = (byte)((IntObjectInspector)tagOI).get(arguments[0].get());
-    return new StandardUnion(tag, arguments[tag + 1].get());
+    byte tag = (byte)((IntObjectInspector)tagOI).get(arguments[0].get());//获取该tag具体的值
+    return new StandardUnion(tag, arguments[tag + 1].get());//表示获取第tag下标对应的具体的值
   }
 
   @Override

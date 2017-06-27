@@ -21,19 +21,19 @@ package org.apache.hadoop.hive.serde2.objectinspector;
  * The UnionObject.
  *
  * It has tag followed by the object it is holding.
- *
+ * 代表一个union中的一个元素
  */
 public interface UnionObject {
   /**
    * Get the tag of the union.
-   *
+   * 表示union中的下标序号
    * @return the tag byte
    */
   byte getTag();
 
   /**
    * Get the Object.
-   *
+   * 表示union中该序号对应的值
    * @return The Object union is holding
    */
   Object getObject();

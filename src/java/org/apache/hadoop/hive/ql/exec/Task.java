@@ -44,8 +44,8 @@ import org.apache.hadoop.util.StringUtils;
 
 /**
  * Task implementation.
+ * task内的任务只要是序列化的就可以作为任务存在
  **/
-
 public abstract class Task<T extends Serializable> implements Serializable, Node {
 
   private static final long serialVersionUID = 1L;
@@ -85,7 +85,7 @@ public abstract class Task<T extends Serializable> implements Serializable, Node
   protected transient List<Task<? extends Serializable>> feedSubscribers;
 
   protected String id;
-  protected T work;
+  protected T work;//工作的具体对象实例,该实例是支持序列化接口的
 
   public static enum FeedType {
     DYNAMIC_PARTITIONS, // list of dynamic partitions
@@ -93,8 +93,8 @@ public abstract class Task<T extends Serializable> implements Serializable, Node
 
   // Bean methods
 
-  protected List<Task<? extends Serializable>> childTasks;
-  protected List<Task<? extends Serializable>> parentTasks;
+  protected List<Task<? extends Serializable>> childTasks;//该任务的子任务集合
+  protected List<Task<? extends Serializable>> parentTasks;//该任务的父任务集合
   /**
    * this can be set by the Task, to provide more info about the failure in TaskResult
    * where the Driver can find it.  This is checked if {@link Task#execute(org.apache.hadoop.hive.ql.DriverContext)}
@@ -341,7 +341,7 @@ public abstract class Task<T extends Serializable> implements Serializable, Node
   }
 
 
-
+  //传入工作的具体对象实例
   public void setWork(T work) {
     this.work = work;
   }

@@ -174,7 +174,7 @@ public enum ErrorMsg {
       + "static partition column. To turn this off set hive.exec.dynamic.partition.mode=nonstrict"),//严格要求时,要求至少要有一个静态分区
   NONEXISTPARTCOL(10098, "Non-Partition column appears in the partition specification: "),
   UNSUPPORTED_TYPE(10099, "DATETIME type isn't supported yet. Please use "
-      + "DATE or TIMESTAMP instead"),
+      + "DATE or TIMESTAMP instead"),//说明类型尚未支持错误
   CREATE_NON_NATIVE_AS(10100, "CREATE TABLE AS SELECT cannot be used for a non-native table"),
   LOAD_INTO_NON_NATIVE(10101, "A non-native table cannot be used as target for LOAD"),
   LOCKMGR_NOT_SPECIFIED(10102, "Lock manager not specified correctly, set hive.lock.manager"),

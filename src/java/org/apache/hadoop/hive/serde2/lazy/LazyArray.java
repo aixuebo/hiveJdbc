@@ -30,6 +30,7 @@ import org.apache.hadoop.io.Text;
  * LazyArray does not deal with the case of a NULL array. That is handled by the
  * parent LazyObject.
  * 数组,一个数组只能存储一种元素类型
+ * 一个数组的内容不需要全部加载.可以一个一个加载.比如值要第3个值.则只是加载第三个值
  */
 public class LazyArray extends LazyNonPrimitive<LazyListObjectInspector> {
 
@@ -116,7 +117,7 @@ public class LazyArray extends LazyNonPrimitive<LazyListObjectInspector> {
   private void parse() {
     parsed = true;
 
-    byte separator = oi.getSeparator();
+    byte separator = oi.getSeparator();//元素之间的分隔符
     boolean isEscaped = oi.isEscaped();//是否需要转义
     byte escapeChar = oi.getEscapeChar();//转义字符
 
@@ -200,7 +201,7 @@ public class LazyArray extends LazyNonPrimitive<LazyListObjectInspector> {
     elementInited[index] = true;
 
     //进行真正的实例化该元素
-    Text nullSequence = oi.getNullSequence();
+    Text nullSequence = oi.getNullSequence();//null的字符串
 
     //通过相邻的两个元素第一个字符所在位置做差,就可以获取某一个元素所拥有的全部字节数组
     int elementLength = startPosition[index + 1] - startPosition[index] - 1;

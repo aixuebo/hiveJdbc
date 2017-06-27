@@ -166,7 +166,7 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
    */
   public static String getTypeName(ASTNode node) throws SemanticException {
     int token = node.getType();
-    String typeName;
+    String typeName;//上面的基础类型字符串形式
 
     // datetime type isn't currently supported 当前不支持datetime类型
     if (token == HiveParser.TOK_DATETIME) {
@@ -190,8 +190,8 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
 
   //描述一个数据库表名字以及对应的partition信息集合
   static class TablePartition {
-    String tableName;
-    HashMap<String, String> partSpec = null;
+    String tableName;//表名字
+    HashMap<String, String> partSpec = null;//分区的key和value映射集合
 
     public TablePartition() {
     }
@@ -1651,14 +1651,14 @@ b.String UNSET TBLPROPERTIES [IF Exists](keyValueProperty,keyValueProperty)
       HashMap<String, String> partSpec)
       throws SemanticException {
 
-    String inputFormat = null;
-    String outputFormat = null;
+    String inputFormat = null;//输入源
+    String outputFormat = null;//输出
     String storageHandler = null;
     String serde = null;
     ASTNode child = (ASTNode) ast.getChild(0);
 
     switch (child.getToken().getType()) {
-    case HiveParser.TOK_TABLEFILEFORMAT:
+    case HiveParser.TOK_TABLEFILEFORMAT://table的文件格式---自定义输入格式和输出格式
       inputFormat = unescapeSQLString(((ASTNode) child.getChild(0)).getToken()
           .getText());
       outputFormat = unescapeSQLString(((ASTNode) child.getChild(1)).getToken()
@@ -1670,7 +1670,7 @@ b.String UNSET TBLPROPERTIES [IF Exists](keyValueProperty,keyValueProperty)
         throw new SemanticException(e);
       }
       break;
-    case HiveParser.TOK_STORAGEHANDLER:
+    case HiveParser.TOK_STORAGEHANDLER://存储handler
       storageHandler =
           unescapeSQLString(((ASTNode) child.getChild(1)).getToken().getText());
       try {
@@ -1679,11 +1679,11 @@ b.String UNSET TBLPROPERTIES [IF Exists](keyValueProperty,keyValueProperty)
         throw new SemanticException(e);
       }
       break;
-    case HiveParser.TOK_TBLSEQUENCEFILE:
+    case HiveParser.TOK_TBLSEQUENCEFILE://序列化方式存储
       inputFormat = SEQUENCEFILE_INPUT;
       outputFormat = SEQUENCEFILE_OUTPUT;
       break;
-    case HiveParser.TOK_TBLTEXTFILE:
+    case HiveParser.TOK_TBLTEXTFILE://文本方式存储
       inputFormat = TEXTFILE_INPUT;
       outputFormat = TEXTFILE_OUTPUT;
       break;
@@ -1702,6 +1702,7 @@ b.String UNSET TBLPROPERTIES [IF Exists](keyValueProperty,keyValueProperty)
       break;
     }
 
+    //创建一个执行计划
     AlterTableDesc alterTblDesc = new AlterTableDesc(tableName, inputFormat,
         outputFormat, serde, storageHandler, partSpec);
 
@@ -1722,14 +1723,14 @@ b.String UNSET TBLPROPERTIES [IF Exists](keyValueProperty,keyValueProperty)
       AlterTableDesc desc) throws SemanticException {
     Table tab = getTable(tableName, true);
     if (partSpec == null || partSpec.isEmpty()) {
-      inputs.add(new ReadEntity(tab));
+      inputs.add(new ReadEntity(tab));//读取全部table数据
       outputs.add(new WriteEntity(tab));
     }
     else {
       inputs.add(new ReadEntity(tab));
       if (desc == null || desc.getOp() != AlterTableDesc.AlterTableTypes.ALTERPROTECTMODE) {
-        Partition part = getPartition(tab, partSpec, true);
-        outputs.add(new WriteEntity(part));
+        Partition part = getPartition(tab, partSpec, true);//获取分区对象
+        outputs.add(new WriteEntity(part));//输出到该分区内
       }
       else {
         for (Partition part : getPartitions(tab, partSpec, true)) {

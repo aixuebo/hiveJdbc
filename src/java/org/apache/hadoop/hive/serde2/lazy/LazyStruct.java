@@ -35,6 +35,7 @@ import org.apache.hadoop.io.Text;
  *
  * LazyStruct does not deal with the case of a NULL struct. That is handled by
  * the parent LazyObject.
+ * 懒加载,当需要某一个属性的时候才去加载该属性,其他属性暂时不加载
  */
 public class LazyStruct extends LazyNonPrimitive<LazySimpleStructObjectInspector> implements
     SerDeStatsStruct {
@@ -43,6 +44,7 @@ public class LazyStruct extends LazyNonPrimitive<LazySimpleStructObjectInspector
 
   /**
    * Whether the data is already parsed or not.
+   * true表示已经解析好了
    */
   boolean parsed;
 
@@ -96,6 +98,7 @@ public class LazyStruct extends LazyNonPrimitive<LazySimpleStructObjectInspector
 
   /**
    * Parse the byte[] and fill each field.
+   * 解析每一个属性对应的开始字节位置,但是尚未真的解析
    */
   private void parse() {
 
@@ -235,7 +238,7 @@ Hank 2"3333"44
    * 获取第index个属性对应的值
    */
   private Object uncheckedGetField(int fieldID) {
-    Text nullSequence = oi.getNullSequence();
+    Text nullSequence = oi.getNullSequence();//先获取空的字符串内容
     // Test the length first so in most cases we avoid doing a byte[]
     // comparison.
     int fieldByteBegin = startPosition[fieldID];
@@ -248,8 +251,8 @@ Hank 2"3333"44
     }
     //对属性的值进行初始化
     if (!fieldInited[fieldID]) {
-      fieldInited[fieldID] = true;
-      fields[fieldID].init(bytes, fieldByteBegin, fieldLength);
+      fieldInited[fieldID] = true;//说明该属性已经初始化完成
+      fields[fieldID].init(bytes, fieldByteBegin, fieldLength);//真正的去还原一个数据
     }
     return fields[fieldID].getObject();
   }

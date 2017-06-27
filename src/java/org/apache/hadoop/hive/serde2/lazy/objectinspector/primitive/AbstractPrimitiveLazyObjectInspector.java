@@ -24,6 +24,7 @@ import org.apache.hadoop.io.Writable;
 
 /**
  * An AbstractPrimitiveLazyObjectInspector for a LazyPrimitive object.
+ * 泛型T表示具体的值内容
  */
 public abstract class AbstractPrimitiveLazyObjectInspector<T extends Writable>
     extends AbstractPrimitiveObjectInspector {

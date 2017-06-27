@@ -105,7 +105,7 @@ public class AlterTableDesc extends DDLDesc implements Serializable {
     REPLACECOLS,//修改表的属性 String REPLACE COLUMNS (columnNameTypeList)
     ADDPROPS, DROPPROPS, ADDSERDE, 
     ADDSERDEPROPS,//设置存储的方式是csv、json、还是protobuffer等等吧,格式 SET SERDEPROPERTIES (key=value,key=value)
-    ADDFILEFORMAT, 
+    ADDFILEFORMAT, //添加文件格式
     ADDCLUSTERSORTCOLUMN, //alterStatementSuffixClusterbySortby
     RENAMECOLUMN,//alterStatementSuffixRenameCol 
     ADDPARTITION,

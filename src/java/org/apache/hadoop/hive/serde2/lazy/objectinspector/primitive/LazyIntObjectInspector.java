@@ -36,7 +36,7 @@ public class LazyIntObjectInspector extends
   @Override
   public int get(Object o) {
     return getPrimitiveWritableObject(o).get();
-  }
+  }//真正获取具体的值,此时才会发生加载操作
 
   @Override
   public Object copyObject(Object o) {

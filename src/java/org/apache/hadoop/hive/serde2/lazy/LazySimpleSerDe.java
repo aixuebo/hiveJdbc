@@ -56,6 +56,7 @@ import org.apache.hadoop.io.Writable;
  *
  * However, LazySimpleSerDe creates Objects in a lazy way, to provide better
  * performance.
+ * 采用懒加载的方式,将一行数据内容序列化成字节数组,或者将字节数组反序列化成一行内容。。因为网络传输的都是字节数组
  *
  * Also LazySimpleSerDe outputs typed columns instead of treating all columns as
  * String like MetadataTypedColumnsetSerDe.
@@ -66,16 +67,16 @@ public class LazySimpleSerDe extends AbstractSerDe {
       .getName());
 
   public static final String SERIALIZATION_EXTEND_NESTING_LEVELS
-    = "hive.serialization.extend.nesting.levels";
+    = "hive.serialization.extend.nesting.levels";//值是true或者false
 
   public static final byte[] DefaultSeparators = {(byte) 1, (byte) 2, (byte) 3};
 
   private ObjectInspector cachedObjectInspector;
 
-  private long serializedSize;
+  private long serializedSize;//序列化一行的字节大小
   private SerDeStats stats;
-  private boolean lastOperationSerialize;
-  private boolean lastOperationDeserialize;
+  private boolean lastOperationSerialize;//true表示最后处理的是序列化内容
+  private boolean lastOperationDeserialize;//true表示最后处理的是反序列化内容
 
   @Override
   public String toString() {
@@ -119,8 +120,8 @@ public class LazySimpleSerDe extends AbstractSerDe {
    * 序列化和反序列化的参数明细信息
    */
   public static class SerDeParameters {
-    byte[] separators = DefaultSeparators;//包含1,2,3,其他扩展字符,目的是为了拆分等作用
-    String nullString;//默认是\\N
+    byte[] separators = DefaultSeparators;//包含1,2,3,其他扩展字符,目的是为了拆分等作用,第1位拆分field的字节,默认是1,第2位拆分集合的拆分配置key,默认值是002,第三位拆分map的字节,默认是3
+    String nullString;//默认是\\N  表示如果是null的时候,如何写入数据
     Text nullSequence;//是hadoop序列化后的空值,即new Text(nullString)
     TypeInfo rowTypeInfo;//记录整行的数据需要的属性集合和属性类型集合,即是columnNames和columnTypes的整合
     boolean lastColumnTakesRest;//是否允许最后一个属性的数据值是一直到文章最后一个字节为止
@@ -129,7 +130,7 @@ public class LazySimpleSerDe extends AbstractSerDe {
 
     boolean escaped;//是否需要转义
     byte escapeChar;//转义字符,该值是127以内的数字,或者字符串就获取第一个char作为转义字符
-    boolean[] needsEscape;//从0-127的byte中,需要转义的字符有哪些,返回true的位置,就是需要转义的字符位置
+    boolean[] needsEscape;//需要被转义的字符集合   从0-127的byte中,需要转义的字符有哪些,返回true的位置,就是需要转义的字符位置
 
     public List<TypeInfo> getColumnTypes() {
       return columnTypes;
@@ -223,7 +224,7 @@ public class LazySimpleSerDe extends AbstractSerDe {
     // special delimiters, ie they should absent in the data or escaped.
     // To increase this level further, we need to stop relying
     // on single control chars delimiters
-
+    //如何拆分field、集合、map数据
     serdeParams.separators = new byte[8];
     serdeParams.separators[0] = getByte(tbl.getProperty(serdeConstants.FIELD_DELIM,
         tbl.getProperty(serdeConstants.SERIALIZATION_FORMAT)), DefaultSeparators[0]);
@@ -231,26 +232,27 @@ public class LazySimpleSerDe extends AbstractSerDe {
         .getProperty(serdeConstants.COLLECTION_DELIM), DefaultSeparators[1]);
     serdeParams.separators[2] = getByte(
         tbl.getProperty(serdeConstants.MAPKEY_DELIM), DefaultSeparators[2]);
+
     String extendedNesting =
-        tbl.getProperty(SERIALIZATION_EXTEND_NESTING_LEVELS);
+        tbl.getProperty(SERIALIZATION_EXTEND_NESTING_LEVELS);//获取boolean值
     if(extendedNesting == null || !extendedNesting.equalsIgnoreCase("true")){
-      //use the default smaller set of separators for backward compatibility
+      //use the default smaller set of separators for backward compatibility 向后兼容
       for (int i = 3; i < serdeParams.separators.length; i++) {//设置默认扩展字符
-        serdeParams.separators[i] = (byte) (i + 1);
+        serdeParams.separators[i] = (byte) (i + 1);//第3个位置开始设置4,第4个位置设置5 等等.一直设置完separators内容
       }
     } else{//设置扩展字符
       //If extended nesting is enabled, set the extended set of separator chars
 
       final int MAX_CTRL_CHARS = 29;
-      byte[] extendedSeparators = new byte[MAX_CTRL_CHARS];
+      byte[] extendedSeparators = new byte[MAX_CTRL_CHARS];//扩展后的字节结果
       int extendedSeparatorsIdx = 0;
 
       //get the first 3 separators that have already been set (defaults to 1,2,3)
-      for(int i = 0; i < 3; i++){
+      for(int i = 0; i < 3; i++){//前三个字节不变化
         extendedSeparators[extendedSeparatorsIdx++] = serdeParams.separators[i];
       }
 
-      for (byte asciival = 4; asciival <= MAX_CTRL_CHARS; asciival++) {
+      for (byte asciival = 4; asciival <= MAX_CTRL_CHARS; asciival++) {//开始扩展
 
         //use only control chars that are very unlikely to be part of the string
         // the following might/likely to be used in text files for strings
@@ -264,7 +266,7 @@ public class LazySimpleSerDe extends AbstractSerDe {
         // 30
         // 31
 
-        switch(asciival){
+        switch(asciival){//这5个是不需要被扩展的
         case 9:
         case 10:
         case 12:
@@ -276,7 +278,7 @@ public class LazySimpleSerDe extends AbstractSerDe {
       }
 
       serdeParams.separators =
-          Arrays.copyOfRange(extendedSeparators, 0, extendedSeparatorsIdx);
+          Arrays.copyOfRange(extendedSeparators, 0, extendedSeparatorsIdx);//扩展separators从8个内容转换成29-5个内容
     }
 
     //设置空值
@@ -321,9 +323,11 @@ public class LazySimpleSerDe extends AbstractSerDe {
   }
 
   // The object for storing row data
+  //一行数据内容的字节数组
   LazyStruct cachedLazyStruct;
 
   // The wrapper for byte array
+  //包装一行数据内容的字节数组
   ByteArrayRef byteArrayRef;
 
   /**
@@ -333,6 +337,7 @@ public class LazySimpleSerDe extends AbstractSerDe {
    *          the Writable that contains the data
    * @return The deserialized row Object.
    * @see SerDe#deserialize(Writable)
+   * 反序列化
    */
   @Override
   public Object deserialize(Writable field) throws SerDeException {
@@ -375,25 +380,26 @@ public class LazySimpleSerDe extends AbstractSerDe {
     return Text.class;
   }
 
-  Text serializeCache = new Text();
-  ByteStream.Output serializeStream = new ByteStream.Output();
+  Text serializeCache = new Text();//存储一行的数据内容
+  ByteStream.Output serializeStream = new ByteStream.Output();//临时存储一行数据的字节数组
 
   /**
    * Serialize a row of data.
-   *
+   * 如何序列化一行数据
    * @param obj
-   *          The row object
+   *          The row object 一行数据的具体内容
    * @param objInspector
-   *          The ObjectInspector for the row object
+   *          The ObjectInspector for the row object  一行数据的数据格式
    * @return The serialized Writable object
    * @throws IOException
    * @see SerDe#serialize(Object, ObjectInspector)
+   * 将一行数据序列化成Text
    */
   @Override
   public Writable serialize(Object obj, ObjectInspector objInspector)
       throws SerDeException {
 
-    if (objInspector.getCategory() != Category.STRUCT) {
+    if (objInspector.getCategory() != Category.STRUCT) {//数据格式一定是STRUCT形式
       throw new SerDeException(getClass().toString()
           + " can only serialize struct types, but we got: "
           + objInspector.getTypeName());
@@ -401,25 +407,24 @@ public class LazySimpleSerDe extends AbstractSerDe {
 
     // Prepare the field ObjectInspectors
     StructObjectInspector soi = (StructObjectInspector) objInspector;
-    List<? extends StructField> fields = soi.getAllStructFieldRefs();
-    List<Object> list = soi.getStructFieldsDataAsList(obj);
-    List<? extends StructField> declaredFields = (serdeParams.rowTypeInfo != null && ((StructTypeInfo) serdeParams.rowTypeInfo)
-        .getAllStructFieldNames().size() > 0) ? ((StructObjectInspector) getObjectInspector())
-        .getAllStructFieldRefs()
-        : null;
+    List<? extends StructField> fields = soi.getAllStructFieldRefs();//所有属性
+    List<Object> list = soi.getStructFieldsDataAsList(obj);//获取该属性对应的每一个值
+    List<? extends StructField> declaredFields = (serdeParams.rowTypeInfo != null &&
+            ((StructTypeInfo) serdeParams.rowTypeInfo).getAllStructFieldNames().size() > 0) ? ((StructObjectInspector) getObjectInspector()).getAllStructFieldRefs(): null;
+
 
     serializeStream.reset();
     serializedSize = 0;
 
-    // Serialize each field
-    for (int i = 0; i < fields.size(); i++) {
+    // Serialize each field 将每一个属性对应的值进行序列化到输出流中
+    for (int i = 0; i < fields.size(); i++) {//循环每一个属性
       // Append the separator if needed.
       if (i > 0) {
-        serializeStream.write(serdeParams.separators[0]);
+        serializeStream.write(serdeParams.separators[0]);//插入每一个属性之间的分隔符
       }
       // Get the field objectInspector and the field object.
-      ObjectInspector foi = fields.get(i).getFieldObjectInspector();
-      Object f = (list == null ? null : list.get(i));
+      ObjectInspector foi = fields.get(i).getFieldObjectInspector();//获取属性类型
+      Object f = (list == null ? null : list.get(i));//获取该属性对应的具体值
 
       if (declaredFields != null && i >= declaredFields.size()) {
         throw new SerDeException("Error: expecting " + declaredFields.size()
@@ -433,15 +438,23 @@ public class LazySimpleSerDe extends AbstractSerDe {
     }
 
     // TODO: The copy of data is unnecessary, but there is no work-around
-    // since we cannot directly set the private byte[] field inside Text.
+    // since we cannot directly set the private byte[] field inside Text.因为我们不能直接使用byte数组代替在text中
     serializeCache
-        .set(serializeStream.getData(), 0, serializeStream.getCount());
+        .set(serializeStream.getData(), 0, serializeStream.getCount());//将该行的输出内容写入到Text中
     serializedSize = serializeStream.getCount();
     lastOperationSerialize = true;
     lastOperationDeserialize = false;
     return serializeCache;
   }
 
+    /**
+     * 真正的序列化操作
+     * @param out 输出流,将序列化的结果写入该流中
+     * @param obj 要序列化的属性的具体的值
+     * @param objInspector 要序列化的属性类型
+     * @param serdeParams 序列化参数对象
+     * @throws SerDeException
+     */
   protected void serializeField(ByteStream.Output out, Object obj, ObjectInspector objInspector,
       SerDeParameters serdeParams) throws SerDeException {
     try {
@@ -454,27 +467,27 @@ public class LazySimpleSerDe extends AbstractSerDe {
 
   /**
    * Serialize the row into the StringBuilder.
-   *
+   * 序列化一行数据
    * @param out
-   *          The StringBuilder to store the serialized data.
+   *          The StringBuilder to store the serialized data.输出流
    * @param obj
-   *          The object for the current field.
+   *          The object for the current field.该属性当前具体的值
    * @param objInspector
-   *          The ObjectInspector for the current Object.
+   *          The ObjectInspector for the current Object.该属性具体的类型
    * @param separators
-   *          The separators array.
+   *          The separators array.配置参数对象
    * @param level
-   *          The current level of separator.
+   *          The current level of separator.分隔符的集合,针对list里面的元素依然是list时候处理
    * @param nullSequence
-   *          The byte sequence representing the NULL value.
+   *          The byte sequence representing the NULL value.如果是null的时候如何输出
    * @param escaped
-   *          Whether we need to escape the data when writing out
+   *          Whether we need to escape the data when writing out 是否转义字符转义
    * @param escapeChar
-   *          Which char to use as the escape char, e.g. '\\'
+   *          Which char to use as the escape char, e.g. '\\'  转义字符
    * @param needsEscape
    *          Which chars needs to be escaped. This array should have size of
    *          128. Negative byte values (or byte values >= 128) are never
-   *          escaped.
+   *          escaped. 需要转义的字符
    * @throws IOException
    * @throws SerDeException
    */
@@ -483,45 +496,45 @@ public class LazySimpleSerDe extends AbstractSerDe {
       Text nullSequence, boolean escaped, byte escapeChar, boolean[] needsEscape)
       throws IOException, SerDeException {
 
-    if (obj == null) {
+    if (obj == null) {//如果是null,则直接写入null对应的具体内容
       out.write(nullSequence.getBytes(), 0, nullSequence.getLength());
       return;
     }
 
     char separator;
     List<?> list;
-    switch (objInspector.getCategory()) {
+    switch (objInspector.getCategory()) {//判断属性类型
     case PRIMITIVE:
       LazyUtils.writePrimitiveUTF8(out, obj,
           (PrimitiveObjectInspector) objInspector, escaped, escapeChar,
-          needsEscape);
+          needsEscape);//将值的内容转换成字节数组,存储到out中
       return;
     case LIST:
-      separator = (char) LazyUtils.getSeparator(separators, level);
-      ListObjectInspector loi = (ListObjectInspector) objInspector;
-      list = loi.getList(obj);
-      ObjectInspector eoi = loi.getListElementObjectInspector();
+      separator = (char) LazyUtils.getSeparator(separators, level);//比如user集合,每一个user还有生活在若干个省,每一个省对应若干个市.因此如果用一个分隔符分割list是有问题,没办法区别其他节点,因此每一个list就用一个分隔符,因此取决于level
+      ListObjectInspector loi = (ListObjectInspector) objInspector;//数据类型是list
+      list = loi.getList(obj);//具体的值
+      ObjectInspector eoi = loi.getListElementObjectInspector();//list元素的类型
       if (list == null) {
-        out.write(nullSequence.getBytes(), 0, nullSequence.getLength());
+        out.write(nullSequence.getBytes(), 0, nullSequence.getLength());//设置空字节内容
       } else {
-        for (int i = 0; i < list.size(); i++) {
+        for (int i = 0; i < list.size(); i++) {//循环写入每一个list元素
           if (i > 0) {
             out.write(separator);
           }
           serialize(out, list.get(i), eoi, separators, level + 1, nullSequence,
-              escaped, escapeChar, needsEscape);
+              escaped, escapeChar, needsEscape);//递归写入数据
         }
       }
       return;
     case MAP:
-      separator = (char) LazyUtils.getSeparator(separators, level);
+      separator = (char) LazyUtils.getSeparator(separators, level);//map中元素的分隔符
       char keyValueSeparator =
-           (char) LazyUtils.getSeparator(separators, level + 1);
+           (char) LazyUtils.getSeparator(separators, level + 1);//key和value的分隔符
 
-      MapObjectInspector moi = (MapObjectInspector) objInspector;
-      ObjectInspector koi = moi.getMapKeyObjectInspector();
+      MapObjectInspector moi = (MapObjectInspector) objInspector;//表示Map类型
+      ObjectInspector koi = moi.getMapKeyObjectInspector();//获取map中key和value类型
       ObjectInspector voi = moi.getMapValueObjectInspector();
-      Map<?, ?> map = moi.getMap(obj);
+      Map<?, ?> map = moi.getMap(obj);//获取map的具体值
       if (map == null) {
         out.write(nullSequence.getBytes(), 0, nullSequence.getLength());
       } else {
@@ -530,21 +543,21 @@ public class LazySimpleSerDe extends AbstractSerDe {
           if (first) {
             first = false;
           } else {
-            out.write(separator);
+            out.write(separator);//第二个元素开始要加入分隔符
           }
           serialize(out, entry.getKey(), koi, separators, level + 2,
-              nullSequence, escaped, escapeChar, needsEscape);
-          out.write(keyValueSeparator);
+              nullSequence, escaped, escapeChar, needsEscape);//序列化key的字节内容
+          out.write(keyValueSeparator);//序列化key和value之间的分隔符
           serialize(out, entry.getValue(), voi, separators, level + 2,
-              nullSequence, escaped, escapeChar, needsEscape);
+              nullSequence, escaped, escapeChar, needsEscape);//序列化value的字节内容
         }
       }
       return;
     case STRUCT:
-      separator = (char) LazyUtils.getSeparator(separators, level);
+      separator = (char) LazyUtils.getSeparator(separators, level);//每一个属性值的分隔符
       StructObjectInspector soi = (StructObjectInspector) objInspector;
-      List<? extends StructField> fields = soi.getAllStructFieldRefs();
-      list = soi.getStructFieldsDataAsList(obj);
+      List<? extends StructField> fields = soi.getAllStructFieldRefs();//所有的属性集合
+      list = soi.getStructFieldsDataAsList(obj);//所有的属性值
       if (list == null) {
         out.write(nullSequence.getBytes(), 0, nullSequence.getLength());
       } else {
@@ -554,24 +567,24 @@ public class LazySimpleSerDe extends AbstractSerDe {
           }
           serialize(out, list.get(i), fields.get(i).getFieldObjectInspector(),
               separators, level + 1, nullSequence, escaped, escapeChar,
-              needsEscape);
+              needsEscape);//序列化每一个属性值
         }
       }
       return;
-    case UNION:
-      separator = (char) LazyUtils.getSeparator(separators, level);
+    case UNION://此时表示的是union类型中的一个元素,即obj是union类型的一个元素
+      separator = (char) LazyUtils.getSeparator(separators, level);//每一个类型的值的分隔符
       UnionObjectInspector uoi = (UnionObjectInspector) objInspector;
-      List<? extends ObjectInspector> ois = uoi.getObjectInspectors();
+      List<? extends ObjectInspector> ois = uoi.getObjectInspectors();//包含哪些类型
       if (ois == null) {
         out.write(nullSequence.getBytes(), 0, nullSequence.getLength());
       } else {
         LazyUtils.writePrimitiveUTF8(out, new Byte(uoi.getTag(obj)),
             PrimitiveObjectInspectorFactory.javaByteObjectInspector,
-            escaped, escapeChar, needsEscape);
+            escaped, escapeChar, needsEscape);//存储该union元素对应的编号
         out.write(separator);
-        serialize(out, uoi.getField(obj), ois.get(uoi.getTag(obj)),
+        serialize(out, uoi.getField(obj), ois.get(uoi.getTag(obj)),//分别表示输出流、第obj元素所在的具体的值,第obj元素所在的类型
             separators, level + 1, nullSequence, escaped, escapeChar,
-            needsEscape);
+            needsEscape);//存储该union对应的具体的值
       }
       return;
     default:

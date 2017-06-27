@@ -34,7 +34,8 @@ import org.apache.hadoop.io.IntWritable;
  * Delight, (Addison Wesley, 2002)</a> as well as <a
  * href="http://aggregate.org/MAGIC/">The Aggregate's Magic Algorithms</a>.
  * </p>
- * 
+ *
+ * 懒加载int类型的值,LazyIntObjectInspector表示int类型,IntWritable表示int类型的值对应的类型
  */
 public class LazyInteger extends
     LazyPrimitive<LazyIntObjectInspector, IntWritable> {
@@ -104,8 +105,8 @@ public class LazyInteger extends
       throw new NumberFormatException("Empty string!");
     }
     int offset = start;
-    boolean negative = bytes[start] == '-';
-    if (negative || bytes[start] == '+') {
+    boolean negative = bytes[start] == '-';//说明是负数
+    if (negative || bytes[start] == '+') {//取消正负号
       offset++;
       if (length == 1) {
         throw new NumberFormatException(LazyUtils.convertToString(bytes, start,
@@ -133,16 +134,17 @@ public class LazyInteger extends
    * @return the value represented by the argument
    * @exception NumberFormatException
    *              if the argument could not be parsed as an int quantity.
+   * 如何反序列化
    */
   private static int parse(byte[] bytes, int start, int length, int offset,
       int radix, boolean negative) {
     byte separator = '.';
-    int max = Integer.MIN_VALUE / radix;
+    int max = Integer.MIN_VALUE / radix;//最大值
     int result = 0, end = start + length;
-    while (offset < end) {
-      int digit = LazyUtils.digit(bytes[offset++], radix);
+    while (offset < end) {//获取整数部分
+      int digit = LazyUtils.digit(bytes[offset++], radix);//返回该位置byte对应的数字
       if (digit == -1) {
-        if (bytes[offset-1] == separator) {
+        if (bytes[offset-1] == separator) {//说明遇见.了
           // We allow decimals and will return a truncated integer in that case.
           // Therefore we won't throw an exception here (checking the fractional
           // part happens below.)
@@ -162,6 +164,13 @@ public class LazyInteger extends
       }
       result = next;
     }
+      /**
+       * 上面的逻辑
+       * 设置数字是25
+       * 因为第一个数字是2
+       * 因此变成-2
+       * 第二个数字是5.因此变成-20-(5) = -25
+       */
 
     // This is the case when we've encountered a decimal separator. The fractional
     // part will not change the number, but we will verify that the fractional part
@@ -174,8 +183,8 @@ public class LazyInteger extends
       }
     }
 
-    if (!negative) {
-      result = -result;
+    if (!negative) {//进来说明是正数
+      result = -result;//去负数,因此-25就变成25
       if (result < 0) {
         throw new NumberFormatException(LazyUtils.convertToString(bytes, start,
             length));
@@ -197,6 +206,8 @@ public class LazyInteger extends
    * @param i
    *          an int to write out
    * @throws IOException
+   * 如何将i序列化
+   * 该算法耗费很多字节,比如存储20001,要使用5个字节
    */
   public static void writeUTF8(OutputStream out, int i) throws IOException {
     if (i == 0) {
@@ -213,17 +224,18 @@ public class LazyInteger extends
       i = -i;
     }
 
-    int start = 1000000000;
-    while (i / start == 0) {
+    int start = 1000000000;//int最大值的位数
+    while (i / start == 0) {//如果i=12,则只需要10即可
       start /= 10;
     }
 
     while (start > 0) {
-      out.write('0' - (i / start % 10));
+      out.write('0' - (i / start % 10));//分别计算i的每一位内容,一定是负数,因此与0处理,变成整数
       start /= 10;
     }
   }
 
+  //如何将i序列化
   public static void writeUTF8NoException(OutputStream out, int i) {
     try {
       writeUTF8(out, i);

@@ -27,6 +27,8 @@ import org.apache.hadoop.io.Writable;
 
 /**
  * LazyPrimitive stores a primitive Object in a LazyObject.
+ * 参数IO表示类型--懒加载的类型
+ * T表示IO类型数据的具体的值
  */
 public abstract class LazyPrimitive<OI extends ObjectInspector, T extends Writable>
     extends LazyObject<OI> {
@@ -41,8 +43,8 @@ public abstract class LazyPrimitive<OI extends ObjectInspector, T extends Writab
     isNull = copy.isNull;
   }
 
-  protected T data;
-  protected boolean isNull = false;
+  protected T data;//具体的值
+  protected boolean isNull = false;//是否是null
 
   /**
    * Returns the primitive object represented by this LazyObject. This is useful
@@ -51,7 +53,7 @@ public abstract class LazyPrimitive<OI extends ObjectInspector, T extends Writab
   @Override
   public Object getObject() {
     return isNull ? null : this;
-  }
+  }//返回的还是懒加载对象,而不是具体的对象值
 
   public T getWritableObject() {
     return isNull ? null : data;

@@ -164,7 +164,7 @@ public class StandardStructObjectInspector extends
 
   boolean warned = false;
 
-  // With Data
+  // With Data 获取一个属性对应的值,该值是通过属性的下标从值的下标中获取具体的值
   @Override
   @SuppressWarnings("unchecked")
   public Object getStructFieldData(Object data, StructField fieldRef) {
@@ -180,7 +180,7 @@ public class StandardStructObjectInspector extends
     int listSize = (isArray ? ((Object[]) data).length : ((List<Object>) data)
         .size());
     MyField f = (MyField) fieldRef;
-    if (fields.size() != listSize && !warned) {
+    if (fields.size() != listSize && !warned) {//说明数据的size与属性对应的size不同
       // TODO: remove this
       warned = true;
       LOG.warn("Trying to access " + fields.size()
