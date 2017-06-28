@@ -21,6 +21,7 @@ package org.apache.hive.hcatalog.data.transfer;
 
 import java.util.Map;
 
+//向哪个数据库的哪个表的哪个分区写入数据
 public class WriteEntity extends EntityBase.Entity {
 
   /**

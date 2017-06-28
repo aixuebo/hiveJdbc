@@ -34,9 +34,10 @@ import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoUtils;
 import org.apache.hive.hcatalog.common.HCatException;
 import org.apache.hive.hcatalog.data.schema.HCatFieldSchema.Type;
 
-
+//如何设置一个对象的属性类型等信息
 public class HCatSchemaUtils {
 
+  //构建三种复杂对象的类型构造器
   public static CollectionBuilder getStructSchemaBuilder() {
     return new CollectionBuilder();
   }
@@ -55,12 +56,13 @@ public class HCatSchemaUtils {
   }
 
   public static class CollectionBuilder extends HCatSchemaBuilder { // for STRUCTS(multiple-add-calls) and LISTS(single-add-call)
-    List<HCatFieldSchema> fieldSchemas = null;
+    List<HCatFieldSchema> fieldSchemas = null;//存储设置好的属性集合
 
     CollectionBuilder() {
       fieldSchemas = new ArrayList<HCatFieldSchema>();
     }
 
+    //添加一个属性
     public CollectionBuilder addField(FieldSchema fieldSchema) throws HCatException {
       return this.addField(getHCatFieldSchema(fieldSchema));
     }
@@ -77,10 +79,11 @@ public class HCatSchemaUtils {
 
   }
 
+  //如何构建map对象
   public static class MapBuilder extends HCatSchemaBuilder {
 
-    PrimitiveTypeInfo keyType = null;
-    HCatSchema valueSchema = null;
+    PrimitiveTypeInfo keyType = null;//key类型,此时类型一定是原始类型
+    HCatSchema valueSchema = null;//value类型
 
     @Override
     public HCatSchema build() throws HCatException {
@@ -90,11 +93,13 @@ public class HCatSchemaUtils {
       return new HCatSchema(fslist);
     }
 
+    //设置value类型
     public MapBuilder withValueSchema(HCatSchema valueSchema) {
       this.valueSchema = valueSchema;
       return this;
     }
 
+    //设置key类型
     public MapBuilder withKeyType(PrimitiveTypeInfo keyType) {
       this.keyType = keyType;
       return this;
@@ -156,6 +161,7 @@ public class HCatSchemaUtils {
     return builder.build();
   }
 
+    //根据类型不同,构造不同的数据结构
   public static HCatSchema getHCatSchema(TypeInfo typeInfo) throws HCatException {
     Category typeCategory = typeInfo.getCategory();
     HCatSchema hCatSchema;

@@ -121,6 +121,7 @@ public final class LazyUtils {
    * @param length
    *          The length of the data, starting from "start"
    * @return The unicode String
+   * 将字节数组转换成String
    */
   public static String convertToString(byte[] bytes, int start, int length) {
     try {
@@ -170,6 +171,7 @@ public final class LazyUtils {
    * Write out the text representation of a Primitive Object to a UTF8 byte
    * stream.
    * 将o对应的原始简单类型的内容,输出到out中
+   * 输出的内容是UTF-8的字节码形式,而不是原始的java数据
    * @param out
    *          The UTF8 byte OutputStream 输出流
    * @param o
@@ -273,11 +275,13 @@ public final class LazyUtils {
    * @param o the PrimitiveObject
    * @param oi the PrimitiveObjectInspector
    * @throws IOException on error during the write operation
+   * 将原始值写入到out输出流中
    */
   public static void writePrimitive(
-      OutputStream out,
-      Object o,
-      PrimitiveObjectInspector oi) throws IOException {
+      OutputStream out,//输出流
+      Object o,//具体的值
+      PrimitiveObjectInspector oi)//具体值的类型
+          throws IOException {
 
     DataOutputStream dos = new DataOutputStream(out);
 
@@ -328,6 +332,7 @@ public final class LazyUtils {
     }
   }
 
+  //对数据内容进行hash
   public static int hashBytes(byte[] data, int start, int len) {
     int hash = 1;
     for (int i = start; i < len; i++) {
@@ -386,6 +391,7 @@ public final class LazyUtils {
   /**
    * gets a byte[] with copy of data from source BytesWritable
    * @param sourceBw - source BytesWritable
+   * 转换成字节数组
    */
   public static byte[] createByteArray(BytesWritable sourceBw){
     //TODO should replace with BytesWritable.copyData() once Hive

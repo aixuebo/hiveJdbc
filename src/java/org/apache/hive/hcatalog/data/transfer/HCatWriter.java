@@ -40,7 +40,7 @@ import org.apache.hive.hcatalog.data.transfer.state.StateProvider;
 public abstract class HCatWriter {
 
   protected Configuration conf;
-  protected WriteEntity we; // This will be null at slave nodes.
+  protected WriteEntity we; // This will be null at slave nodes. 向哪个数据库的哪个表的哪个分区写入数据
   protected WriterContext info;
   protected StateProvider sp;
 
@@ -55,7 +55,7 @@ public abstract class HCatWriter {
 
   /**
    * This method should be used at slave needs to perform writes.
-   *
+   * 该方法可以写入一个迭代器
    * @param recordItr
    *          {@link Iterator} records to be written into HCatalog.
    * @throws {@link HCatException}
@@ -66,7 +66,7 @@ public abstract class HCatWriter {
   /**
    * This method should be called at master node. Primary purpose of this is to
    * do metadata commit.
-   *
+   * 提交写入的信息
    * @throws {@link HCatException}
    */
   public abstract void commit(final WriterContext context) throws HCatException;

@@ -29,6 +29,7 @@ import org.apache.hadoop.hive.serde2.typeinfo.PrimitiveTypeInfo;
 import org.apache.hive.hcatalog.common.HCatException;
 import org.apache.hive.hcatalog.common.HCatUtil;
 
+//定义一个属性
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class HCatFieldSchema implements Serializable {
@@ -37,7 +38,7 @@ types (e.g. char(7)) we need to represent something richer than an enum but for 
 compatibility (and effort required to do full refactoring) this class has both 'type' and 'typeInfo';
 similarly for mapKeyType/mapKeyTypeInfo */
   
-  public enum Type {
+  public enum Type {//属性类别
     /*this captures mapping of Hive type names to HCat type names; in the long run
     * we should just use Hive types directly but that is a larger refactoring effort
     * For HCat->Pig mapping see PigHCatUtil.getPigType(Type)
@@ -83,15 +84,15 @@ similarly for mapKeyType/mapKeyTypeInfo */
     public PrimitiveObjectInspector.PrimitiveCategory getPrimitiveCategory() {
       return primitiveCategory;
     }
-    public static Type getPrimitiveHType(PrimitiveTypeInfo basePrimitiveTypeInfo) {
+    public static Type getPrimitiveHType(PrimitiveTypeInfo basePrimitiveTypeInfo) {//返回定义的类型
       for(Type t : values()) {
         if(t.getPrimitiveCategory() == basePrimitiveTypeInfo.getPrimitiveCategory()) {
           return t;
         }
       }
-      throw new TypeNotPresentException(basePrimitiveTypeInfo.getTypeName(), null);
+      throw new TypeNotPresentException(basePrimitiveTypeInfo.getTypeName(), null);//说明类型不存在
     }
-    //aid in testing
+    //aid in testing 原始数据类型的数量,用于测试
     public static int numPrimitiveTypes() {
       int numPrimitives = 0;
       for(Type t : values()) {
@@ -122,6 +123,7 @@ similarly for mapKeyType/mapKeyTypeInfo */
     }
   }
 
+  //是否是复杂类型
   public boolean isComplex() {
     return category != Category.PRIMITIVE;
   }
@@ -131,22 +133,22 @@ similarly for mapKeyType/mapKeyTypeInfo */
    */
   private static final long serialVersionUID = 1L;
 
-  String fieldName = null;
-  String comment = null;
+  String fieldName = null;//属性名字
+  String comment = null;//属性备注
   /**
    * @deprecated as of 0.13, slated for removal with 0.15
    * use {@link #typeInfo} instead
    */
-  Type type = null;
-  Category category = null;
+  Type type = null;//属性类型--更多的是小类型
+  Category category = null;//属性大类型
 
-  // Populated if column is struct, array or map types.
+  // Populated if column is struct, array or map types.如果列是复杂类型的时候,使用该对象表示子类型
   // If struct type, contains schema of the struct.
   // If array type, contains schema of one of the elements.
   // If map type, contains schema of the value element.
   HCatSchema subSchema = null;
 
-  // populated if column is Map type
+  // populated if column is Map type 被用于map类型
   @Deprecated // @deprecated as of 0.13, slated for removal with 0.15
   Type mapKeyType = null;
 
@@ -157,6 +159,7 @@ similarly for mapKeyType/mapKeyTypeInfo */
   private PrimitiveTypeInfo typeInfo;
   /**
    * represents key type for a Map; currently Hive only supports primitive keys
+   * 用于map类型的key
    */
   private PrimitiveTypeInfo mapKeyTypeInfo;
 
@@ -233,15 +236,16 @@ similarly for mapKeyType/mapKeyTypeInfo */
    * @param type Type of the field - either Type.ARRAY or Type.STRUCT
    * @param subSchema - subschema of the struct, or element schema of the elements in the array
    * @throws HCatException if call made on Primitive or Map types
+   * 因为有子类型存在,则说明该类属于复杂类型
    */
   public HCatFieldSchema(String fieldName, Type type, HCatSchema subSchema, String comment) throws HCatException {
-    assertTypeNotInCategory(type, Category.PRIMITIVE);
-    assertTypeNotInCategory(type, Category.MAP);
+    assertTypeNotInCategory(type, Category.PRIMITIVE);//不是原始类型
+    assertTypeNotInCategory(type, Category.MAP);//不是Map类型
     this.fieldName = fieldName;
     this.type = type;
     this.category = Category.fromType(type);
     this.subSchema = subSchema;
-    if (type == Type.ARRAY) {
+    if (type == Type.ARRAY) {//数组是不需要name的
       this.subSchema.get(0).setName(null);
     }
     this.comment = comment;
@@ -260,9 +264,10 @@ similarly for mapKeyType/mapKeyTypeInfo */
    * @throws HCatException if call made on non-Map types
    * @deprecated as of 0.13, slated for removal with 0.15
    * use {@link #createMapTypeFieldSchema(String, org.apache.hadoop.hive.serde2.typeinfo.PrimitiveTypeInfo, HCatSchema, String)}
+   * 设置map类型
    */
   public HCatFieldSchema(String fieldName, Type type, Type mapKeyType, HCatSchema mapValueSchema, String comment) throws HCatException {
-    assertTypeInCategory(type, Category.MAP, fieldName);
+    assertTypeInCategory(type, Category.MAP, fieldName);//必须是map类型
     //Hive only supports primitive map keys: 
     //https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Types#LanguageManualTypes-ComplexTypes
     assertTypeInCategory(mapKeyType, Category.PRIMITIVE, fieldName);
@@ -274,8 +279,10 @@ similarly for mapKeyType/mapKeyTypeInfo */
     this.subSchema.get(0).setName(null);
     this.comment = comment;
   }
-  public static HCatFieldSchema createMapTypeFieldSchema(String fieldName, PrimitiveTypeInfo mapKeyType, 
-                                                         HCatSchema mapValueSchema, 
+
+  //将一个属性创建为map类型的schema
+  public static HCatFieldSchema createMapTypeFieldSchema(String fieldName, PrimitiveTypeInfo mapKeyType, //map的key类型
+                                                         HCatSchema mapValueSchema, //map的value类型
                                                          String comment) throws HCatException {
     HCatFieldSchema mapSchema = new HCatFieldSchema(fieldName, Type.MAP,  
             Type.getPrimitiveHType(mapKeyType), 
@@ -284,12 +291,12 @@ similarly for mapKeyType/mapKeyTypeInfo */
     return mapSchema;
   }
   
-
   public HCatSchema getStructSubSchema() throws HCatException {
     assertTypeInCategory(this.type, Category.STRUCT, this.fieldName);
     return subSchema;
   }
 
+  //获取数组的子类型
   public HCatSchema getArrayElementSchema() throws HCatException {
     assertTypeInCategory(this.type, Category.ARRAY, this.fieldName);
     return subSchema;
@@ -297,15 +304,20 @@ similarly for mapKeyType/mapKeyTypeInfo */
   /**
    * @deprecated as of 0.13, slated for removal with 0.15
    * use {@link #getMapKeyTypeInfo()} instead
+   * 获取map的key类型
    */
   public Type getMapKeyType() throws HCatException {
     assertTypeInCategory(this.type, Category.MAP, this.fieldName);
     return mapKeyType;
   }
+
+   //获取map的key类型
   public PrimitiveTypeInfo getMapKeyTypeInfo() throws HCatException {
     assertTypeInCategory(this.type, Category.MAP, this.fieldName);
     return mapKeyTypeInfo;
   }
+
+  //获取map的value类型
   public HCatSchema getMapValueSchema() throws HCatException {
     assertTypeInCategory(this.type, Category.MAP, this.fieldName);
     return subSchema;

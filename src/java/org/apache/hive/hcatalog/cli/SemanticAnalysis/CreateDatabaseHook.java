@@ -35,10 +35,12 @@ import org.apache.hadoop.hive.ql.plan.DDLWork;
 import org.apache.hadoop.hive.ql.security.authorization.Privilege;
 import org.apache.hive.hcatalog.common.HCatConstants;
 
+//使用hcat方式创建hive的数据库
 final class CreateDatabaseHook extends HCatSemanticAnalyzerBase {
 
   String databaseName;
 
+  //解析数据库节点
   @Override
   public ASTNode preAnalyze(HiveSemanticAnalyzerHookContext context, ASTNode ast)
     throws SemanticException {
@@ -62,7 +64,7 @@ final class CreateDatabaseHook extends HCatSemanticAnalyzerBase {
 
       case HiveParser.TOK_IFNOTEXISTS:
         try {
-          List<String> dbs = db.getDatabasesByPattern(databaseName);
+          List<String> dbs = db.getDatabasesByPattern(databaseName);//查询该数据库
           if (dbs != null && dbs.size() > 0) { // db exists
             return ast;
           }
@@ -83,6 +85,7 @@ final class CreateDatabaseHook extends HCatSemanticAnalyzerBase {
     super.postAnalyze(context, rootTasks);
   }
 
+  //创建数据库
   @Override
   protected void authorizeDDLWork(HiveSemanticAnalyzerHookContext context,
                   Hive hive, DDLWork work) throws HiveException {

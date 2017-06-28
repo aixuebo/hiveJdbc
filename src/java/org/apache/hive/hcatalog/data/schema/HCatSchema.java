@@ -31,6 +31,7 @@ import org.apache.hive.hcatalog.common.HCatException;
 
 /**
  * HCatSchema. This class is NOT thread-safe.
+ * 定义一个对象
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -38,10 +39,10 @@ public class HCatSchema implements Serializable {
 
   private static final long serialVersionUID = 1L;
 
-  private final List<HCatFieldSchema> fieldSchemas;
+  private final List<HCatFieldSchema> fieldSchemas;//该对象有若干个属性
   //HCatFieldSchema.getName()->position
-  private final Map<String, Integer> fieldPositionMap;
-  private final List<String> fieldNames;
+  private final Map<String, Integer> fieldPositionMap;//该属性的name和对应的序号映射
+  private final List<String> fieldNames;//属性名字集合
 
   /**
    *
@@ -68,6 +69,7 @@ public class HCatSchema implements Serializable {
     }
   }
 
+  //追加一个属性
   public void append(final HCatFieldSchema hfs) throws HCatException {
     if (hfs == null)
       throw new HCatException("Attempt to append null HCatFieldSchema in HCatSchema.");
@@ -85,6 +87,7 @@ public class HCatSchema implements Serializable {
   /**
    *  Users are not allowed to modify the list directly, since HCatSchema
    *  maintains internal state. Use append/remove to modify the schema.
+   *  获取该对象的所有属性
    */
   public List<HCatFieldSchema> getFields() {
     return Collections.unmodifiableList(this.fieldSchemas);
@@ -96,11 +99,13 @@ public class HCatSchema implements Serializable {
    * @param fieldName
    * @return the index of field named fieldName in Schema. If field is not
    * present, returns null.
+   * 获取该属性的序号
    */
   public Integer getPosition(String fieldName) {
     return fieldPositionMap.get(normalizeName(fieldName));
   }
 
+  //获取该属性对象
   public HCatFieldSchema get(String fieldName) throws HCatException {
     return get(getPosition(fieldName));
   }
@@ -113,12 +118,15 @@ public class HCatSchema implements Serializable {
     return fieldSchemas.get(position);
   }
 
+  //有多少个属性
   public int size() {
     return fieldSchemas.size();
   }
 
+  //因为删除一个属性后,属性的序号要有变化
+    //参数是该属性的位置,该位置之后的属性都要变化.一般第二个参数都是-1,说明每一个序号都要-1
   private void reAlignPositionMap(int startPosition, int offset) {
-    for (Map.Entry<String, Integer> entry : fieldPositionMap.entrySet()) {
+    for (Map.Entry<String, Integer> entry : fieldPositionMap.entrySet()) {//循环每一个属性
       // Re-align the columns appearing on or after startPostion(say, column 1) such that
       // column 2 becomes column (2+offset), column 3 becomes column (3+offset) and so on.
       Integer entryVal = entry.getValue();
@@ -128,6 +136,7 @@ public class HCatSchema implements Serializable {
     }
   }
 
+  //删除一个属性
   public void remove(final HCatFieldSchema hcatFieldSchema) throws HCatException {
     if (!fieldSchemas.contains(hcatFieldSchema)) {
       throw new HCatException("Attempt to delete a non-existent column from HCat Schema: " + hcatFieldSchema);

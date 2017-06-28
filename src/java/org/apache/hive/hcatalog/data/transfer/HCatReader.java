@@ -44,6 +44,7 @@ public abstract class HCatReader {
    *
    * @return {@link ReaderContext}
    * @throws HCatException
+   * 读数据前初始化上下文
    */
   public abstract ReaderContext prepareRead() throws HCatException;
 
@@ -52,6 +53,7 @@ public abstract class HCatReader {
    *
    * @return {@link Iterator} of {@link HCatRecord}
    * @throws HCatException
+   * 读数据的迭代器
    */
   public abstract Iterator<HCatRecord> read() throws HCatException;
 
@@ -80,7 +82,7 @@ public abstract class HCatReader {
     this.sp = sp;
   }
 
-  protected ReadEntity re; // This will be null at slaves.
+  protected ReadEntity re; // This will be null at slaves.将要如何读取数据
   protected Configuration conf;
   protected ReaderContext info;
   protected StateProvider sp; // This will be null at master.

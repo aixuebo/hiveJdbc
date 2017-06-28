@@ -34,11 +34,12 @@ import org.apache.hive.hcatalog.mapreduce.HCatSplit;
 /**
  * This class contains the list of {@link InputSplit}s obtained
  * at master node and the configuration.
+ *
  */
 class ReaderContextImpl implements ReaderContext, Configurable {
 
     private static final long serialVersionUID = -2656468331739574367L;
-    private List<InputSplit> splits;
+    private List<InputSplit> splits;//本次读取的全部数据块集合
     private Configuration conf;
 
     public ReaderContextImpl() {

@@ -21,9 +21,10 @@ package org.apache.hive.hcatalog.data.transfer;
 
 import java.util.Map;
 
+//表示一个读取的实体对象
 public class ReadEntity extends EntityBase.Entity {
 
-  private String filterString;
+  private String filterString;//过滤条件
 
   /**
    * Don't instantiate {@link ReadEntity} directly. Use,
@@ -37,10 +38,10 @@ public class ReadEntity extends EntityBase.Entity {
   private ReadEntity(Builder builder) {
 
     this.region = builder.region;
-    this.dbName = builder.dbName;
-    this.tableName = builder.tableName;
-    this.partitionKVs = builder.partitionKVs;
-    this.filterString = builder.filterString;
+    this.dbName = builder.dbName;//读取哪个数据库
+    this.tableName = builder.tableName;//读取哪个数据表
+    this.partitionKVs = builder.partitionKVs;//读取哪些分区
+    this.filterString = builder.filterString;//读取时候的过滤条件
   }
 
   public String getFilterString() {

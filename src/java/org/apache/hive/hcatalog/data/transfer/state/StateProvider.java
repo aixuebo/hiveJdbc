@@ -28,7 +28,7 @@ public interface StateProvider {
 
   /**
    * This method should return id assigned to slave node.
-   *
+   * 如何产生一个id
    * @return id
    */
   public int getId();

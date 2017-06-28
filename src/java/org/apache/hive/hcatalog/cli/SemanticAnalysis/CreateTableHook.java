@@ -44,6 +44,7 @@ import org.apache.hadoop.hive.ql.security.authorization.Privilege;
 import org.apache.hive.hcatalog.common.HCatConstants;
 import org.apache.hive.hcatalog.common.HCatUtil;
 
+//创建一个表
 final class CreateTableHook extends HCatSemanticAnalyzerBase {
 
   private String tableName;
@@ -80,7 +81,7 @@ final class CreateTableHook extends HCatSemanticAnalyzerBase {
       }
       switch (child.getToken().getType()) {
 
-      case HiveParser.TOK_QUERY: // CTAS
+      case HiveParser.TOK_QUERY: // CTAS select as模式
         throw new SemanticException(
           "Operation not supported. Create table as " +
             "Select is not a valid operation.");
@@ -94,7 +95,7 @@ final class CreateTableHook extends HCatSemanticAnalyzerBase {
 
       case HiveParser.TOK_IFNOTEXISTS:
         try {
-          List<String> tables = db.getTablesByPattern(tableName);
+          List<String> tables = db.getTablesByPattern(tableName);//说明表存在
           if (tables != null && tables.size() > 0) { // table
             // exists
             return ast;

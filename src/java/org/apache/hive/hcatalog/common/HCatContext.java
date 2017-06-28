@@ -55,6 +55,7 @@ public enum HCatContext {
    * Use the given configuration for optional behavior. Keys exclusive to an existing config
    * are set in the new conf. The job conf must be used to ensure properties are passed to
    * backend MR tasks.
+   * 向参数conf添加hcat相关的配置信息
    */
   public synchronized HCatContext setConf(Configuration newConf) {
     Preconditions.checkNotNull(newConf, "Required parameter 'newConf' must not be null.");

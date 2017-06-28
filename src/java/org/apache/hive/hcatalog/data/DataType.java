@@ -64,6 +64,7 @@ public abstract class DataType {
    * Determine the datatype of an object.
    * @param o Object to test.
    * @return byte code of the type, or ERROR if we don't know.
+   * 根据参数的类型,决定hive的数据类型
    */
   public static byte findType(Object o) {
     if (o == null) {
@@ -115,8 +116,9 @@ public abstract class DataType {
     return compare(o1, o2, findType(o1), findType(o2));
   }
 
+  //参数分别表示两个对象值,以及两个对象值的类型
   public static int compare(Object o1, Object o2, byte dt1, byte dt2) {
-    if (dt1 == dt2) {
+    if (dt1 == dt2) {//判断类型相同的情况
       switch (dt1) {
       case NULL:
         return 0;
@@ -210,11 +212,12 @@ public abstract class DataType {
         throw new RuntimeException("Unkown type " + dt1 +
           " in compare");
       }
-    } else {
+    } else {//说明类型不同,直接比较类型大小
       return dt1 < dt2 ? -1 : 1;
     }
   }
 
+  //比较两个字节数组,比较每一个字节的大小.一旦发现比较成功,则直接返回比较的结果
   private static int compareByteArray(byte[] o1, byte[] o2) {
 
     for (int i = 0; i < o1.length; i++) {

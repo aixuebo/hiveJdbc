@@ -44,7 +44,7 @@ import org.apache.hive.hcatalog.mapreduce.OutputJobInfo;
 
 /**
  * This writer writes via {@link HCatOutputFormat}
- *
+ * 如何向hive中写入数据
  */
 public class HCatOutputFormatWriter extends HCatWriter {
 

@@ -26,6 +26,7 @@ public class DefaultStateProvider implements StateProvider {
 
   /**
    * Default implementation. Here, ids are generated randomly.
+   * 随机产生一个id
    */
   @Override
   public int getId() {

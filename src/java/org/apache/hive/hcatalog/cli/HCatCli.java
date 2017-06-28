@@ -89,14 +89,14 @@ public class HCatCli {
 
     Options options = new Options();
 
-    // -e 'quoted-query-string'
+    // -e 'quoted-query-string' 执行一个查询sql
     options.addOption(OptionBuilder
         .hasArg()
         .withArgName("exec")
         .withDescription("hcat command given from command line")
         .create('e'));
 
-    // -f <query-file>
+    // -f <query-file> 执行一个查询文件
     options.addOption(OptionBuilder
         .hasArg()
         .withArgName("file")

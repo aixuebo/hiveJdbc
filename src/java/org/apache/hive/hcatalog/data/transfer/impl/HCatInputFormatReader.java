@@ -42,12 +42,13 @@ import org.apache.hive.hcatalog.mapreduce.HCatInputFormat;
 
 /**
  * This reader reads via {@link HCatInputFormat}
- *
+ * 如何从hive中读取数据
  */
 public class HCatInputFormatReader extends HCatReader {
 
-  private InputSplit split;
+  private InputSplit split;//表示一个数据块对象
 
+  //slaveNumber表示此时获取第几个数据块去读取数据
   public HCatInputFormatReader(ReaderContext context, int slaveNumber,
                                StateProvider sp) {
     super(((ReaderContextImpl)context).getConf(), sp);
@@ -63,7 +64,7 @@ public class HCatInputFormatReader extends HCatReader {
     try {
       Job job = new Job(conf);
       HCatInputFormat hcif = HCatInputFormat.setInput(
-        job, re.getDbName(), re.getTableName(), re.getFilterString());
+        job, re.getDbName(), re.getTableName(), re.getFilterString());//设置该job读取哪个数据库的哪个表,以及过滤条件是什么
       ReaderContextImpl cntxt = new ReaderContextImpl();
       cntxt.setInputSplits(hcif.getSplits(
           ShimLoader.getHadoopShims().getHCatShim().createJobContext(job.getConfiguration(), null)));
@@ -76,6 +77,7 @@ public class HCatInputFormatReader extends HCatReader {
     }
   }
 
+    //返回读取数据的数据迭代器
   @Override
   public Iterator<HCatRecord> read() throws HCatException {
 

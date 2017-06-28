@@ -26,14 +26,14 @@ import java.util.Map;
  * {@link ReadEntity.Builder} / {@link WriteEntity.Builder}.
  * Many fields in them are common, so this class
  * contains the common fields.
+ * 读取哪些数据的基本信息
  */
-
 abstract class EntityBase {
 
   String region;
-  String tableName;
-  String dbName;
-  Map<String, String> partitionKVs;
+  String tableName;//读取哪个表
+  String dbName;//读取哪个数据库
+  Map<String, String> partitionKVs;//读取哪些分区
 
   /**
    * Common methods for {@link ReadEntity} and {@link WriteEntity}
