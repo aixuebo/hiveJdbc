@@ -89,7 +89,7 @@ public class HCatOutputFormat extends HCatBaseOutputFormat {
       HiveConf hiveConf = HCatUtil.getHiveConf(conf);
       client = HCatUtil.getHiveMetastoreClient(hiveConf);
       Table table = HCatUtil.getTable(client, outputJobInfo.getDatabaseName(),
-        outputJobInfo.getTableName());
+        outputJobInfo.getTableName());//获取该table的元数据
 
       List<String> indexList = client.listIndexNames(outputJobInfo.getDatabaseName(), outputJobInfo.getTableName(), Short.MAX_VALUE);
 
@@ -275,6 +275,7 @@ public class HCatOutputFormat extends HCatBaseOutputFormat {
     return getOutputFormat(context).getOutputCommitter(context);
   }
 
+  //获取最大的动态分区数量
   private static int getMaxDynamicPartitions(HiveConf hConf) {
     // by default the bounds checking for maximum number of
     // dynamic partitions is disabled (-1)

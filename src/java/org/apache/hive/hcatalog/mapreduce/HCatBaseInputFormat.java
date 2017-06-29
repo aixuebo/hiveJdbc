@@ -65,11 +65,12 @@ public abstract class HCatBaseInputFormat
   private Class<? extends InputFormat> inputFileFormatClass;
 
   // TODO needs to go in InitializeInput? as part of InputJobInfo
+  //设置要读取数据后,需要哪些列
   private static HCatSchema getOutputSchema(Configuration conf)
     throws IOException {
     String os = conf.get(HCatConstants.HCAT_KEY_OUTPUT_SCHEMA);
     if (os == null) {
-      return getTableSchema(conf);
+      return getTableSchema(conf);//全部列
     } else {
       return (HCatSchema) HCatUtil.deserialize(os);
     }
@@ -79,6 +80,7 @@ public abstract class HCatBaseInputFormat
    * Set the schema for the HCatRecord data returned by HCatInputFormat.
    * @param job the job object
    * @param hcatSchema the schema to use as the consolidated schema
+   * 设置用户定义的输出的schema
    */
   public static void setOutputSchema(Job job, HCatSchema hcatSchema)
     throws IOException {
@@ -100,6 +102,7 @@ public abstract class HCatBaseInputFormat
    * @return the splits, an HCatInputSplit wrapper over the storage
    *         handler InputSplits
    * @throws IOException or InterruptedException
+   * 对读取的数据进行数据块划分
    */
   @Override
   public List<InputSplit> getSplits(JobContext jobContext)
@@ -115,9 +118,9 @@ public abstract class HCatBaseInputFormat
       throw new IOException(e);
     }
 
-    List<InputSplit> splits = new ArrayList<InputSplit>();
-    List<PartInfo> partitionInfoList = inputJobInfo.getPartitions();
-    if (partitionInfoList == null) {
+    List<InputSplit> splits = new ArrayList<InputSplit>();//全部数据块集合
+    List<PartInfo> partitionInfoList = inputJobInfo.getPartitions();//获取所有分区集合
+    if (partitionInfoList == null) {//没有分区,则说明没有数据要读取
       //No partitions match the specified partition filter
       return splits;
     }
@@ -125,15 +128,15 @@ public abstract class HCatBaseInputFormat
     HiveStorageHandler storageHandler;
     JobConf jobConf;
     //For each matching partition, call getSplits on the underlying InputFormat
-    for (PartInfo partitionInfo : partitionInfoList) {
+    for (PartInfo partitionInfo : partitionInfoList) {//循环每一个分区
       jobConf = HCatUtil.getJobConfFromContext(jobContext);
-      setInputPath(jobConf, partitionInfo.getLocation());
+      setInputPath(jobConf, partitionInfo.getLocation());//设置输入源的路径
       Map<String, String> jobProperties = partitionInfo.getJobProperties();
 
       HCatUtil.copyJobPropertiesToJobConf(jobProperties, jobConf);
 
       storageHandler = HCatUtil.getStorageHandler(
-        jobConf, partitionInfo);
+        jobConf, partitionInfo);//获取HiveStorageHandler
 
       //Get the input format
       Class inputFormatClass = storageHandler.getInputFormatClass();
@@ -150,7 +153,7 @@ public abstract class HCatBaseInputFormat
       int desiredNumSplits =
         conf.getInt(HCatConstants.HCAT_DESIRED_PARTITION_NUM_SPLITS, 0);
       org.apache.hadoop.mapred.InputSplit[] baseSplits =
-        inputFormat.getSplits(jobConf, desiredNumSplits);
+        inputFormat.getSplits(jobConf, desiredNumSplits);//该数据源读取格式可以获取该数据块集合
 
       for (org.apache.hadoop.mapred.InputSplit split : baseSplits) {
         splits.add(new HCatSplit(partitionInfo, split));
@@ -170,20 +173,22 @@ public abstract class HCatBaseInputFormat
    * @return the record reader instance, either an HCatRecordReader(later) or
    *         the underlying storage handler's RecordReader
    * @throws IOException or InterruptedException
+   * 如何读取一个数据块
    */
   @Override
   public RecordReader<WritableComparable, HCatRecord>
   createRecordReader(InputSplit split,
              TaskAttemptContext taskContext) throws IOException, InterruptedException {
 
-    HCatSplit hcatSplit = InternalUtil.castToHCatSplit(split);
-    PartInfo partitionInfo = hcatSplit.getPartitionInfo();
+    HCatSplit hcatSplit = InternalUtil.castToHCatSplit(split);//数据块强制转换
+    PartInfo partitionInfo = hcatSplit.getPartitionInfo();//数据块对应的分区信息对象
     // Ensure PartInfo's TableInfo is initialized.
     if (partitionInfo.getTableInfo() == null) {
       partitionInfo.setTableInfo(((InputJobInfo)HCatUtil.deserialize(
           taskContext.getConfiguration().get(HCatConstants.HCAT_KEY_JOB_INFO)
       )).getTableInfo());
-    }
+    }//设置该分区对应的主表对象,这行代码应该一直不会执行
+
     JobContext jobContext = taskContext;
     Configuration conf = jobContext.getConfiguration();
 
@@ -196,7 +201,7 @@ public abstract class HCatBaseInputFormat
 
     Map<String, Object> valuesNotInDataCols = getColValsNotInDataColumns(
       getOutputSchema(conf), partitionInfo
-    );
+    );//对输出的内容中,如果需要分区字段,则设置分区字段的值
 
     return new HCatRecordReader(storageHandler, valuesNotInDataCols);
   }
@@ -204,29 +209,34 @@ public abstract class HCatBaseInputFormat
 
   /**
    * gets values for fields requested by output schema which will not be in the data
+   * outputSchema 表示最终要输出的字段内容
+   * partInfo 表示分区的内容
+   *
+   * 该类的目的是设置输出的内容中,分区字段对应的值
+   * 因为分区字段对应的值不在hive数据表内,因此要先配置
    */
   private static Map<String, Object> getColValsNotInDataColumns(HCatSchema outputSchema,
                                   PartInfo partInfo) throws HCatException {
-    HCatSchema dataSchema = partInfo.getPartitionSchema();
+    HCatSchema dataSchema = partInfo.getPartitionSchema();//分区的schema
     Map<String, Object> vals = new HashMap<String, Object>();
-    for (String fieldName : outputSchema.getFieldNames()) {
+    for (String fieldName : outputSchema.getFieldNames()) {//循环每一个输出内容
       if (dataSchema.getPosition(fieldName) == null) {
         // this entry of output is not present in the output schema
         // so, we first check the table schema to see if it is a part col
-        if (partInfo.getPartitionValues().containsKey(fieldName)) {
+        if (partInfo.getPartitionValues().containsKey(fieldName)) {//说明该输出的内容是分区字段
 
           // First, get the appropriate field schema for this field
-          HCatFieldSchema fschema = outputSchema.get(fieldName);
+          HCatFieldSchema fschema = outputSchema.get(fieldName);//该字段类型
 
           // For a partition key type, this will be a primitive typeinfo.
           // Obtain relevant object inspector for this typeinfo
-          ObjectInspector oi = TypeInfoUtils.getStandardJavaObjectInspectorFromTypeInfo(fschema.getTypeInfo());
+          ObjectInspector oi = TypeInfoUtils.getStandardJavaObjectInspectorFromTypeInfo(fschema.getTypeInfo());//hive类型
 
           // get appropriate object from the string representation of the value in partInfo.getPartitionValues()
           // Essentially, partition values are represented as strings, but we want the actual object type associated
           Object objVal = ObjectInspectorConverters
               .getConverter(PrimitiveObjectInspectorFactory.javaStringObjectInspector, oi)
-              .convert(partInfo.getPartitionValues().get(fieldName));
+              .convert(partInfo.getPartitionValues().get(fieldName));//因为分区值都是String,所以就将String转换成hive对象对象的具体的值
 
           vals.put(fieldName, objVal);
         } else {
@@ -245,6 +255,7 @@ public abstract class HCatBaseInputFormat
    * @return the table schema
    * @throws IOException if HCatInputFormat.setInput has not been called
    *                     for the current context
+   * 获取表的列集合
    */
   public static HCatSchema getTableSchema(Configuration conf)
     throws IOException {
@@ -281,6 +292,7 @@ public abstract class HCatBaseInputFormat
     return (InputJobInfo) HCatUtil.deserialize(jobString);
   }
 
+  //设置输入源的路径,路径可以是用逗号拆分的多个路径集合,也可以有定义的属性
   private void setInputPath(JobConf jobConf, String location)
     throws IOException {
 

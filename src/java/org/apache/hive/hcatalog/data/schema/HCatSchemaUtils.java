@@ -113,6 +113,7 @@ public class HCatSchemaUtils {
    * @param fs FieldSchema to convert
    * @return HCatFieldSchema representation of FieldSchema
    * @throws HCatException
+   * 参数是hive的一个表的列集合,转换成hcatalog对应的列对象集合
    */
   public static HCatFieldSchema getHCatFieldSchema(FieldSchema fs) throws HCatException {
     String fieldName = fs.getName();

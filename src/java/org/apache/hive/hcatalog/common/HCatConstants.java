@@ -55,9 +55,9 @@ public final class HCatConstants {
   //The keys used to store info into the job Configuration
   public static final String HCAT_KEY_BASE = "mapreduce.lib.hcat";
 
-  public static final String HCAT_KEY_OUTPUT_SCHEMA = HCAT_KEY_BASE + ".output.schema";
+  public static final String HCAT_KEY_OUTPUT_SCHEMA = HCAT_KEY_BASE + ".output.schema";//用户定义的输出schema
 
-  public static final String HCAT_KEY_JOB_INFO = HCAT_KEY_BASE + ".job.info";
+  public static final String HCAT_KEY_JOB_INFO = HCAT_KEY_BASE + ".job.info";//关于该job的数据库、表、filter分区等信息
 
   // hcatalog specific configurations, that can be put in hive-site.xml
   public static final String HCAT_HIVE_CLIENT_EXPIRY_TIME = "hcatalog.hive.client.cache.expiry.time";

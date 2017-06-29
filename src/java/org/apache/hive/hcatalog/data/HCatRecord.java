@@ -37,6 +37,7 @@ import org.apache.hive.hcatalog.data.schema.HCatSchema;
  * Note :
  *   HCatRecord is designed only to be used as in-memory representation only.
  *   Don't use it to store data on the physical device.
+ *   表示一行数据
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving

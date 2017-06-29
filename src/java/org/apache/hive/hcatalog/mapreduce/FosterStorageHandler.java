@@ -106,8 +106,8 @@ public class FosterStorageHandler extends DefaultStorageHandler {
     try {
       OutputJobInfo jobInfo = (OutputJobInfo)
         HCatUtil.deserialize(tableDesc.getJobProperties().get(
-          HCatConstants.HCAT_KEY_OUTPUT_INFO));
-      String parentPath = jobInfo.getTableInfo().getTableLocation();
+          HCatConstants.HCAT_KEY_OUTPUT_INFO));//获取job的输出内容
+      String parentPath = jobInfo.getTableInfo().getTableLocation();//主要表对应的路径,非分区表路径
       String dynHash = tableDesc.getJobProperties().get(
         HCatConstants.HCAT_DYNAMIC_PTN_JOBID);
       String idHash = tableDesc.getJobProperties().get(

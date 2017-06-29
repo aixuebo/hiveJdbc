@@ -24,6 +24,8 @@ import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.StandardStructObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.StructField;
 
+//表示一个HCatRecord对象在hive中的类型描述
+//在hive中使用struct方式描述该对象
 public class HCatRecordObjectInspector extends StandardStructObjectInspector {
 
   protected HCatRecordObjectInspector(List<String> structFieldNames,
@@ -31,6 +33,12 @@ public class HCatRecordObjectInspector extends StandardStructObjectInspector {
     super(structFieldNames, structFieldObjectInspectors);
   }
 
+    /**
+     * 获取该struct的一个属性值
+     * @param data 该值是一个HCatRecord对象,使用list存储所有的属性值
+     * @param fieldRef 获取哪个属性
+     * @return
+     */
   @Override
   public Object getStructFieldData(Object data, StructField fieldRef) {
     if (data == null) {

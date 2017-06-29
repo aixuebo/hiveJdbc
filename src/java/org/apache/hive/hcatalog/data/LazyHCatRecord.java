@@ -38,18 +38,20 @@ import org.slf4j.LoggerFactory;
 /**
  * An implementation of HCatRecord that wraps an Object returned by a SerDe
  * and an ObjectInspector.  This delays deserialization of unused columns.
+ * 懒加载一行数据
+ * 输入是hive的StructObjectInspector对象,表示一行数据,获取该行数据的任意一个属性值
  */
 public class LazyHCatRecord extends HCatRecord {
 
   public static final Logger LOG = LoggerFactory.getLogger(LazyHCatRecord.class.getName());
 
-  private Object wrappedObject;
-  private StructObjectInspector soi;
+  private Object wrappedObject;//hive中对应struct的类型值
+  private StructObjectInspector soi;//hive中存储这行数据的类型
 
   @Override
-  public Object get(int fieldNum) {
+  public Object get(int fieldNum) {//加载一行数据中的第i列
     try {
-      StructField fref = soi.getAllStructFieldRefs().get(fieldNum);
+      StructField fref = soi.getAllStructFieldRefs().get(fieldNum);//获取该列的类型,即hive类型
       return HCatRecordSerDe.serializeField(
         soi.getStructFieldData(wrappedObject, fref),
           fref.getFieldObjectInspector());

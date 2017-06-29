@@ -51,22 +51,22 @@ class HCatRecordReader extends RecordReader<WritableComparable, HCatRecord> {
 
   private InputErrorTracker errorTracker;
 
-  WritableComparable currentKey;
-  Writable currentValue;
-  HCatRecord currentHCatRecord;
+  WritableComparable currentKey;//获取hadoop里面存储的原始key
+  Writable currentValue;//获取hadoop里面存储的原始value
+  HCatRecord currentHCatRecord;//当前转换后的一行数据
 
   /** The underlying record reader to delegate to. */
   private org.apache.hadoop.mapred.RecordReader<WritableComparable, Writable> baseRecordReader;
 
   /** The storage handler used */
-  private final HiveStorageHandler storageHandler;
+  private final HiveStorageHandler storageHandler;//如何对hive表进行序列化与反序列化
 
-  private Deserializer deserializer;
+  private Deserializer deserializer;//如何对原始的value进行反序列化成hive的数据类型
 
-  private Map<String, Object> valuesNotInDataCols;
+  private Map<String, Object> valuesNotInDataCols;//对输出的内容中,如果需要分区字段,则设置分区字段的值,key是需要的输出字段,value是默认的值,即分区字段的值
 
-  private HCatSchema outputSchema = null;
-  private HCatSchema dataSchema = null;
+  private HCatSchema outputSchema = null;//输出的字段
+  private HCatSchema dataSchema = null;//数据表里面的字段
 
   /**
    * Instantiates a new hcat record reader.
@@ -86,7 +86,7 @@ class HCatRecordReader extends RecordReader<WritableComparable, HCatRecord> {
   public void initialize(org.apache.hadoop.mapreduce.InputSplit split,
                TaskAttemptContext taskContext) throws IOException, InterruptedException {
 
-    HCatSplit hcatSplit = InternalUtil.castToHCatSplit(split);
+    HCatSplit hcatSplit = InternalUtil.castToHCatSplit(split);//对应的split数据块
 
     baseRecordReader = createBaseRecordReader(hcatSplit, storageHandler, taskContext);
     createDeserializer(hcatSplit, storageHandler, taskContext);
@@ -96,7 +96,7 @@ class HCatRecordReader extends RecordReader<WritableComparable, HCatRecord> {
       taskContext.getConfiguration().get(HCatConstants.HCAT_KEY_OUTPUT_SCHEMA));
 
     if (outputSchema == null) {
-      outputSchema = hcatSplit.getTableSchema();
+      outputSchema = hcatSplit.getTableSchema();//输出需要的字段
     }
 
     // Pull the table schema out of the Split info
@@ -112,16 +112,17 @@ class HCatRecordReader extends RecordReader<WritableComparable, HCatRecord> {
     JobConf jobConf = HCatUtil.getJobConfFromContext(taskContext);
     HCatUtil.copyJobPropertiesToJobConf(hcatSplit.getPartitionInfo().getJobProperties(), jobConf);
     org.apache.hadoop.mapred.InputFormat inputFormat =
-      HCatInputFormat.getMapRedInputFormat(jobConf, storageHandler.getInputFormatClass());
+      HCatInputFormat.getMapRedInputFormat(jobConf, storageHandler.getInputFormatClass());//获取读取该数据块的读取方式
     return inputFormat.getRecordReader(hcatSplit.getBaseSplit(), jobConf,
-      InternalUtil.createReporter(taskContext));
+      InternalUtil.createReporter(taskContext));//打开该数据块
   }
 
+  //创建反序列化对象
   private void createDeserializer(HCatSplit hcatSplit, HiveStorageHandler storageHandler,
                   TaskAttemptContext taskContext) throws IOException {
 
     deserializer = ReflectionUtils.newInstance(storageHandler.getSerDeClass(),
-      taskContext.getConfiguration());
+      taskContext.getConfiguration());//如何序列化与反序列化
 
     try {
       InternalUtil.initializeDeserializer(deserializer, storageHandler.getConf(),
@@ -186,8 +187,8 @@ class HCatRecordReader extends RecordReader<WritableComparable, HCatRecord> {
       errorTracker.incRecords();
 
       try {
-        Object o = deserializer.deserialize(currentValue);
-        r = new LazyHCatRecord(o, deserializer.getObjectInspector());
+        Object o = deserializer.deserialize(currentValue);//反序列化成对象
+        r = new LazyHCatRecord(o, deserializer.getObjectInspector());//转换成一行数据
       } catch (Throwable throwable) {
         t = throwable;
       }
@@ -199,11 +200,11 @@ class HCatRecordReader extends RecordReader<WritableComparable, HCatRecord> {
 
       DefaultHCatRecord dr = new DefaultHCatRecord(outputSchema.size());
       int i = 0;
-      for (String fieldName : outputSchema.getFieldNames()) {
-        if (dataSchema.getPosition(fieldName) != null) {
+      for (String fieldName : outputSchema.getFieldNames()) {//输出列
+        if (dataSchema.getPosition(fieldName) != null) {//数据列
           dr.set(i, r.get(fieldName, dataSchema));
         } else {
-          dr.set(i, valuesNotInDataCols.get(fieldName));
+          dr.set(i, valuesNotInDataCols.get(fieldName));//设置该列的值
         }
         i++;
       }

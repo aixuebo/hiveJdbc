@@ -40,6 +40,7 @@ import java.util.zip.InflaterInputStream;
  * Going forward, we plan on treating InputJobInfo as an implementation detail and no longer
  * expose to end-users. Should you have a need to use InputJobInfo outside HCatalog itself,
  * please contact the developer mailing list before depending on this class.
+ * 表示该job读取的输入源
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -48,17 +49,23 @@ public class InputJobInfo implements Serializable {
   /** The serialization version */
   private static final long serialVersionUID = 1L;
 
-  /** The db and table names. */
+  /** The db and table names.
+   * 所在数据库和表名字
+   **/
   private final String databaseName;
   private final String tableName;
 
-  /** meta information of the table to be read from */
+  /** meta information of the table to be read from
+   * 从hive中获取的table的元数据信息
+   **/
   private HCatTableInfo tableInfo;
 
   /** The partition filter */
   private String filter;
 
-  /** The list of partitions matching the filter. */
+  /** The list of partitions matching the filter.
+   * 读取哪些分区信息的元数据
+   **/
   transient private List<PartInfo> partitions;
 
   /** implementation specific job properties */

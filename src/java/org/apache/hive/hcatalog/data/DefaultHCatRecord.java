@@ -28,6 +28,7 @@ import java.util.List;
 import org.apache.hive.hcatalog.common.HCatException;
 import org.apache.hive.hcatalog.data.schema.HCatSchema;
 
+//表示一行数据的具体实现,不需要实现数据schema,只要数据对象保存在List中即可
 public class DefaultHCatRecord extends HCatRecord {
 
   private List<Object> contents;

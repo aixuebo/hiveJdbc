@@ -209,6 +209,7 @@ class InternalUtil {
               + "partition values");
     }
 
+    //获取该partition对应的key和value的信息映射
     Map<String, String> ptnKeyValues = new HashMap<String, String>();
 
     int i = 0;

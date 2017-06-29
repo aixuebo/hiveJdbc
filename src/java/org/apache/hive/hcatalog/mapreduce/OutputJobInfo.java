@@ -29,10 +29,14 @@ import java.util.Properties;
 import org.apache.hadoop.hive.metastore.MetaStoreUtils;
 import org.apache.hive.hcatalog.data.schema.HCatSchema;
 
-/** The class used to serialize and store the output related information  */
+/** The class used to serialize and store the output related information
+ * 数据输出到哪个表里面,用于export相关信息
+ **/
 public class OutputJobInfo implements Serializable {
 
-  /** The db and table names. */
+  /** The db and table names.
+   * 写入到哪个数据库和表
+   **/
   private final String databaseName;
   private final String tableName;
 
@@ -56,7 +60,9 @@ public class OutputJobInfo implements Serializable {
   /** The relative path of custom dynamic partitions being written */
   private String customDynamicPath;
 
-  /** The partition values to publish to, if used for output*/
+  /** The partition values to publish to, if used for output
+   * 写入哪一个分区表中
+   */
   private Map<String, String> partitionValues;
 
   private List<Integer> posOfPartCols;

@@ -92,6 +92,7 @@ public class HCatUtil {
     return true;
   }
 
+    //序列化,对java对象进行序列化,然后将结果进行base64编码
   public static String serialize(Serializable obj) throws IOException {
     if (obj == null) {
       return "";
@@ -107,6 +108,7 @@ public class HCatUtil {
     }
   }
 
+    //反序列化---对str进行反base64编码,然后就是java的一个序列化
   public static Object deserialize(String str) throws IOException {
     if (str == null || str.length() == 0) {
       return null;
@@ -141,6 +143,7 @@ public class HCatUtil {
     return result;
   }
 
+  //参数是hive的一个表的列集合,转换成hcatalog对应的列对象集合
   public static List<HCatFieldSchema> getHCatFieldSchemaList(
     List<FieldSchema> fields) throws HCatException {
     if (fields == null) {
@@ -154,10 +157,12 @@ public class HCatUtil {
     }
   }
 
+ //hive表中列集合转换成hcatalog的列集合组成的对象
   public static HCatSchema extractSchema(Table table) throws HCatException {
     return new HCatSchema(HCatUtil.getHCatFieldSchemaList(table.getCols()));
   }
 
+  //hive分区列集合组成的对象集合
   public static HCatSchema extractSchema(Partition partition) throws HCatException {
     return new HCatSchema(HCatUtil.getHCatFieldSchemaList(partition.getCols()));
   }
@@ -175,6 +180,7 @@ public class HCatUtil {
     }
   }
 
+  //获取一个table的元数据
   public static Table getTable(IMetaStoreClient client, String dbName, String tableName)
     throws NoSuchObjectException, TException, MetaException {
     return new Table(client.getTable(dbName, tableName));
@@ -188,7 +194,7 @@ public class HCatUtil {
       // add partition keys to table schema
       // NOTE : this assumes that we do not ever have ptn keys as columns
       // inside the table schema as well!
-      for (FieldSchema fs : table.getPartitionKeys()) {
+      for (FieldSchema fs : table.getPartitionKeys()) {//分区列
         tableSchema.append(HCatSchemaUtils.getHCatFieldSchema(fs));
       }
     }
@@ -201,6 +207,7 @@ public class HCatUtil {
    * @param table the instance to extract partition columns from
    * @return HCatSchema instance which contains the partition columns
    * @throws IOException
+   * 获取hive表的分区列
    */
   public static HCatSchema getPartitionColumns(Table table) throws IOException {
     HCatSchema cols = new HCatSchema(new LinkedList<HCatFieldSchema>());
@@ -217,32 +224,34 @@ public class HCatUtil {
    * partition and the existing table schema. Returns the list of columns
    * present in the partition but not in the table.
    *
-   * @param table the table
-   * @param partitionSchema the partition schema
+   * @param table the table hive的一个表
+   * @param partitionSchema the partition schema 分区字段集合
    * @return the list of newly added fields
    * @throws IOException Signals that an I/O exception has occurred.
+   * 校验partition的schema
+   * partition中列的顺序必须是table中列的顺序,但是partition中列可以不再table中,因此返回不再table中的列集合
    */
   public static List<FieldSchema> validatePartitionSchema(Table table,
                               HCatSchema partitionSchema) throws IOException {
-    Map<String, FieldSchema> partitionKeyMap = new HashMap<String, FieldSchema>();
+    Map<String, FieldSchema> partitionKeyMap = new HashMap<String, FieldSchema>();//获取hive表分区列的列name和列对象类型
 
-    for (FieldSchema field : table.getPartitionKeys()) {
+    for (FieldSchema field : table.getPartitionKeys()) {//循环数据库表的分区列字段
       partitionKeyMap.put(field.getName().toLowerCase(), field);
     }
 
-    List<FieldSchema> tableCols = table.getCols();
-    List<FieldSchema> newFields = new ArrayList<FieldSchema>();
+    List<FieldSchema> tableCols = table.getCols();//table表的列集合
+    List<FieldSchema> newFields = new ArrayList<FieldSchema>();//新的列集合
 
-    for (int i = 0; i < partitionSchema.getFields().size(); i++) {
+    for (int i = 0; i < partitionSchema.getFields().size(); i++) {//循环catalog定义的分区列
 
       FieldSchema field = HCatSchemaUtils.getFieldSchema(partitionSchema
-        .getFields().get(i));
+        .getFields().get(i));//转换成hive的列对象
 
       FieldSchema tableField;
       if (i < tableCols.size()) {
         tableField = tableCols.get(i);
 
-        if (!tableField.getName().equalsIgnoreCase(field.getName())) {
+        if (!tableField.getName().equalsIgnoreCase(field.getName())) {//发现定义的列顺序不是table列的顺序
           throw new HCatException(
             ErrorType.ERROR_SCHEMA_COLUMN_MISMATCH,
             "Expected column <" + tableField.getName()
@@ -251,7 +260,7 @@ public class HCatUtil {
               + ">");
         }
       } else {
-        tableField = partitionKeyMap.get(field.getName().toLowerCase());
+        tableField = partitionKeyMap.get(field.getName().toLowerCase());//说明该列在分区列中
 
         if (tableField != null) {
           throw new HCatException(
@@ -261,16 +270,16 @@ public class HCatUtil {
       }
 
       if (tableField == null) {
-        // field present in partition but not in table
+        // field present in partition but not in table 说明该列在partition中,但是不在table中
         newFields.add(field);
-      } else {
+      } else {//说明列是可以找到的
         // field present in both. validate type has not changed
         TypeInfo partitionType = TypeInfoUtils
-          .getTypeInfoFromTypeString(field.getType());
+          .getTypeInfoFromTypeString(field.getType());//在partition中该列类型
         TypeInfo tableType = TypeInfoUtils
-          .getTypeInfoFromTypeString(tableField.getType());
+          .getTypeInfoFromTypeString(tableField.getType());//在hive表中该列类型
 
-        if (!partitionType.equals(tableType)) {
+        if (!partitionType.equals(tableType)) {//说明类型不相同
           String msg =
             "Column <"
             + field.getName() + ">, expected <"
@@ -391,6 +400,7 @@ public class HCatUtil {
    * @param outputFormat fully qualified class name of the desired outputFormat instance
    * @return storageHandler instance
    * @throws IOException
+   * 获取定义的hive插件
    */
   public static HiveStorageHandler getStorageHandler(Configuration conf,
                              String storageHandler,

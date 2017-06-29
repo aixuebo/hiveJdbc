@@ -51,8 +51,11 @@ import org.slf4j.LoggerFactory;
 
 /**
  * SerDe class for serializing to and from HCatRecord
+ * 如何序列化HCatRecord对象
+ *
+ * 序列化:输入是hive的StructObjectInspector对象,表示一行数据,输出是HCatRecord,表示一行数据方便hadoop和java使用
+ * 反序列化:输入是HCatRecord,输出依然是HCatRecord,因此不用改变
  */
-
 @SerDeSpec(schemaProps = {serdeConstants.LIST_COLUMNS,
                           serdeConstants.LIST_COLUMN_TYPES})
 
@@ -63,8 +66,8 @@ public class HCatRecordSerDe implements SerDe {
   public HCatRecordSerDe() throws SerDeException {
   }
 
-  private List<String> columnNames;
-  private List<TypeInfo> columnTypes;
+  private List<String> columnNames;//一行记录中的属性name集合
+  private List<TypeInfo> columnTypes;//一行记录中的属性类型集合
   private StructTypeInfo rowTypeInfo;
 
   private HCatRecordObjectInspector cachedObjectInspector;
@@ -188,6 +191,7 @@ public class HCatRecordSerDe implements SerDe {
   /**
    * Return underlying Java Object from an object-representation
    * that is readable by a provided ObjectInspector.
+   * 将hive的字段类型转换成java的类型值,返回
    */
   public static Object serializeField(Object field, ObjectInspector fieldObjectInspector)
     throws SerDeException {

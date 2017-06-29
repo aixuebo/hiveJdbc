@@ -75,6 +75,7 @@ class InitializeInput {
    * @param conf the job Configuration object
    * @param theirInputJobInfo information on the Input to read
    * @throws Exception
+   * 设置到conf中
    */
   public static void setInput(Configuration conf,
                 InputJobInfo theirInputJobInfo) throws Exception {
@@ -90,6 +91,7 @@ class InitializeInput {
 
   /**
    * Returns the given InputJobInfo after populating with data queried from the metadata service.
+   * 初始化该表的元数据内容----需要读取hive的元数据
    */
   private static InputJobInfo getInputJobInfo(
     Configuration conf, InputJobInfo inputJobInfo, String locationFilter) throws Exception {
@@ -101,19 +103,19 @@ class InitializeInput {
       } else {
         hiveConf = new HiveConf(HCatInputFormat.class);
       }
-      client = HCatUtil.getHiveMetastoreClient(hiveConf);
+      client = HCatUtil.getHiveMetastoreClient(hiveConf);//获取元数据请求
       Table table = HCatUtil.getTable(client, inputJobInfo.getDatabaseName(),
-        inputJobInfo.getTableName());
+        inputJobInfo.getTableName());//获取表的元数据
 
       List<PartInfo> partInfoList = new ArrayList<PartInfo>();
 
       inputJobInfo.setTableInfo(HCatTableInfo.valueOf(table.getTTable()));
-      if (table.getPartitionKeys().size() != 0) {
+      if (table.getPartitionKeys().size() != 0) {//说明是分区表
         //Partitioned table
         List<Partition> parts = client.listPartitionsByFilter(inputJobInfo.getDatabaseName(),
           inputJobInfo.getTableName(),
           inputJobInfo.getFilter(),
-          (short) -1);
+          (short) -1);//获取满足条件的所有分区对象
 
         // Default to 100,000 partitions if hive.metastore.maxpartition is not defined
         int maxPart = hiveConf.getInt("hcat.metastore.maxpartitions", 100000);
@@ -122,21 +124,21 @@ class InitializeInput {
         }
 
         // populate partition info
-        for (Partition ptn : parts) {
+        for (Partition ptn : parts) {//循环每一个分区
           HCatSchema schema = HCatUtil.extractSchema(
-            new org.apache.hadoop.hive.ql.metadata.Partition(table, ptn));
+            new org.apache.hadoop.hive.ql.metadata.Partition(table, ptn));//该partition的列集合
           PartInfo partInfo = extractPartInfo(schema, ptn.getSd(),
-            ptn.getParameters(), conf, inputJobInfo);
+            ptn.getParameters(), conf, inputJobInfo);//获取该partition的元数据信息
           partInfo.setPartitionValues(InternalUtil.createPtnKeyValueMap(table, ptn));
           partInfoList.add(partInfo);
         }
 
-      } else {
+      } else {//说明不是分区表
         //Non partitioned table
         HCatSchema schema = HCatUtil.extractSchema(table);
         PartInfo partInfo = extractPartInfo(schema, table.getTTable().getSd(),
-          table.getParameters(), conf, inputJobInfo);
-        partInfo.setPartitionValues(new HashMap<String, String>());
+          table.getParameters(), conf, inputJobInfo);//因为没有分区,则就是一个总分区
+        partInfo.setPartitionValues(new HashMap<String, String>());//因为没有分区值
         partInfoList.add(partInfo);
       }
       inputJobInfo.setPartitions(partInfoList);
@@ -152,7 +154,7 @@ class InitializeInput {
                       Map<String, String> parameters, Configuration conf,
                       InputJobInfo inputJobInfo) throws IOException {
 
-    StorerInfo storerInfo = InternalUtil.extractStorerInfo(sd, parameters);
+    StorerInfo storerInfo = InternalUtil.extractStorerInfo(sd, parameters);//通过hive的元数据获取该对象
 
     Properties hcatProperties = new Properties();
     HiveStorageHandler storageHandler = HCatUtil.getStorageHandler(conf, storerInfo);

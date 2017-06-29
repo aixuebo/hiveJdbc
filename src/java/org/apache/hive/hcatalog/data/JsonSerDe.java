@@ -85,6 +85,11 @@ import org.codehaus.jackson.JsonToken;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * json方式的序列化与反序列化
+ * 序列化:输入是hive的StructObjectInspector对象,表示一行数据,转换成json字符串,存储在Text中
+ * 反序列化:Text内容 转换成HCatRecord对象
+ */
 @SerDeSpec(schemaProps = {serdeConstants.LIST_COLUMNS,
                           serdeConstants.LIST_COLUMN_TYPES,
                           serdeConstants.TIMESTAMP_FORMATS})

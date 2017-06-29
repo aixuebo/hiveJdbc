@@ -34,26 +34,26 @@ import org.apache.hive.hcatalog.data.schema.HCatSchema;
  *
  * HCatTableInfo - class to communicate table information to {@link HCatInputFormat}
  * and {@link HCatOutputFormat}
- *
+ * 通过hive的元数据获取该对象,代表一个一个hive对应的table表元数据
  */
 public class HCatTableInfo implements Serializable {
 
 
   private static final long serialVersionUID = 1L;
 
-  /** The db and table names */
+  /** The db and table names 表所属的数据库和表名字*/
   private final String databaseName;
   private final String tableName;
 
   /** The table schema. */
-  private final HCatSchema dataColumns;
-  private final HCatSchema partitionColumns;
+  private final HCatSchema dataColumns;//hive表中的列集合
+  private final HCatSchema partitionColumns;//hive表中的分区列集合
 
   /** The table being written to */
-  private final Table table;
+  private final Table table;//hive的表对象
 
   /** The storer info */
-  private StorerInfo storerInfo;
+  private StorerInfo storerInfo;//该数据库表的输入输出格式化等信息
 
   /**
    * Initializes a new HCatTableInfo instance to be used with {@link HCatInputFormat}
@@ -116,6 +116,7 @@ public class HCatTableInfo implements Serializable {
 
   /**
    * @return HCatSchema with all columns (i.e. data and partition columns).
+   * 获取表的所有列以及分区列的总集合
    */
   public HCatSchema getAllColumns() {
     List<HCatFieldSchema> allColumns = Lists.newArrayList(dataColumns.getFields());

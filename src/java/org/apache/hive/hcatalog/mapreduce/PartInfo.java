@@ -29,7 +29,9 @@ import org.apache.hive.hcatalog.data.schema.HCatSchema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** The Class used to serialize the partition information read from the metadata server that maps to a partition. */
+/** The Class used to serialize the partition information read from the metadata server that maps to a partition.
+ * 表示一个分区的元数据信息
+ **/
 public class PartInfo implements Serializable {
 
   private static Logger LOG = LoggerFactory.getLogger(PartInfo.class);
@@ -37,7 +39,7 @@ public class PartInfo implements Serializable {
   private static final long serialVersionUID = 1L;
 
   /** The partition data-schema. */
-  private HCatSchema partitionSchema;
+  private HCatSchema partitionSchema;//该数据块内的数据列信息
 
   /** The information about which input storage handler to use */
   private String storageHandlerClassName;
@@ -48,11 +50,11 @@ public class PartInfo implements Serializable {
   /** HCat-specific properties set at the partition */
   private final Properties hcatProperties;
 
-  /** The data location. */
+  /** The data location. 分区表存储路径*/
   private final String location;
 
   /** The map of partition key names and their values. */
-  private Map<String, String> partitionValues;
+  private Map<String, String> partitionValues;//该分区表对应的分区内容,即分区的key=value的映射
 
   /** Job properties associated with this parition */
   Map<String, String> jobProperties;
@@ -60,6 +62,7 @@ public class PartInfo implements Serializable {
   /**
    * The table info associated with this partition.
    * Not serialized per PartInfo instance. Constant, per table.
+   * 该分区表所关联的主表对象
    */
   transient HCatTableInfo tableInfo;
 

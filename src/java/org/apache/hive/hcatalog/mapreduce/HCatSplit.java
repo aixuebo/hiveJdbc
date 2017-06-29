@@ -32,16 +32,18 @@ import org.apache.hive.hcatalog.data.schema.HCatSchema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** The HCatSplit wrapper around the InputSplit returned by the underlying InputFormat */
+/** The HCatSplit wrapper around the InputSplit returned by the underlying InputFormat
+ * 对数据块进行包装---多了一层该数据块属于哪个分区描述
+ **/
 public class HCatSplit extends InputSplit
   implements Writable, org.apache.hadoop.mapred.InputSplit {
 
   private static final Logger LOG = LoggerFactory.getLogger(HCatSplit.class);
   /** The partition info for the split. */
-  private PartInfo partitionInfo;
+  private PartInfo partitionInfo;//描述该数据块属于哪个hive的分区
 
   /** The split returned by the underlying InputFormat split. */
-  private org.apache.hadoop.mapred.InputSplit baseMapRedSplit;
+  private org.apache.hadoop.mapred.InputSplit baseMapRedSplit;//该数据块,即hdfs上的一个hive具体的数据块
 
   /**
    * Instantiates a new hcat split.
@@ -82,6 +84,7 @@ public class HCatSplit extends InputSplit
   /**
    * Gets the data schema.
    * @return the table schema
+   * 该数据块内的数据列信息
    */
   public HCatSchema getDataSchema() {
     return this.partitionInfo.getPartitionSchema();
@@ -90,6 +93,7 @@ public class HCatSplit extends InputSplit
   /**
    * Gets the table schema.
    * @return the table schema
+   * 该数据块对应的数据表的所有列以及分区列的集合
    */
   public HCatSchema getTableSchema() {
     assert this.partitionInfo.getTableInfo() != null : "TableInfo should have been set at this point.";
@@ -158,12 +162,12 @@ public class HCatSplit extends InputSplit
    */
   @Override
   public void write(DataOutput output) throws IOException {
-    String partitionInfoString = HCatUtil.serialize(partitionInfo);
+    String partitionInfoString = HCatUtil.serialize(partitionInfo);//先序列化分区的描述内容
 
     // write partitionInfo into output
     WritableUtils.writeString(output, partitionInfoString);
 
-    WritableUtils.writeString(output, baseMapRedSplit.getClass().getName());
+    WritableUtils.writeString(output, baseMapRedSplit.getClass().getName());//数据块类
     Writable baseSplitWritable = (Writable) baseMapRedSplit;
     //write  baseSplit into output
     baseSplitWritable.write(output);

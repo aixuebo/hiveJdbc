@@ -33,6 +33,7 @@ import org.apache.hadoop.mapred.OutputFormat;
  * HiveStorageHandler defines a pluggable interface for adding
  * new storage handlers to Hive.  A storage handler consists of
  * a bundle of the following:
+ * 定义一个插件
  *
  *<ul>
  *<li>input format
@@ -50,16 +51,19 @@ import org.apache.hadoop.mapred.OutputFormat;
 public interface HiveStorageHandler extends Configurable {
   /**
    * @return Class providing an implementation of {@link InputFormat}
+   * 定义如何切分文件,以及如何读取一个数据块
    */
   public Class<? extends InputFormat> getInputFormatClass();
 
   /**
    * @return Class providing an implementation of {@link OutputFormat}
+   * 如何将数据写入到一个数据块
    */
   public Class<? extends OutputFormat> getOutputFormatClass();
 
   /**
    * @return Class providing an implementation of {@link SerDe}
+   * 如何将数据序列化和反序列化,然后这结果存储到OutputFormat中
    */
   public Class<? extends SerDe> getSerDeClass();
 

@@ -33,6 +33,7 @@ import org.apache.hive.hcatalog.data.schema.HCatSchema;
 
 /**
  * The InputFormat to use to read data from HCatalog.
+ * 必须设置要读取哪个数据库表,因为数据库表就是输入
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -92,7 +93,7 @@ public class HCatInputFormat extends HCatBaseInputFormat {
     hCatInputFormat.inputJobInfo = InputJobInfo.create(dbName, tableName, filter, null);
 
     try {
-      InitializeInput.setInput(conf, hCatInputFormat.inputJobInfo);
+      InitializeInput.setInput(conf, hCatInputFormat.inputJobInfo);//向conf中添加序列化后的信息
     } catch (Exception e) {
       throw new IOException(e);
     }
@@ -104,6 +105,7 @@ public class HCatInputFormat extends HCatBaseInputFormat {
    * @deprecated as of 0.13, slated for removal with 0.15
    * Use {@link #setInput(org.apache.hadoop.conf.Configuration, String, String, String)} instead,
    * to specify a partition filter to directly initialize the input with.
+   * 重新序列化
    */
   @Deprecated
   public HCatInputFormat setFilter(String filter) throws IOException {
@@ -148,6 +150,7 @@ public class HCatInputFormat extends HCatBaseInputFormat {
    * Return partitioning columns for this input, can only be called after setInput is called.
    * @return partitioning columns of the table specified by the job.
    * @throws IOException
+   * 获取该表的分区字段
    */
   public static HCatSchema getPartitionColumns(Configuration conf) throws IOException {
     InputJobInfo inputInfo = (InputJobInfo) HCatUtil.deserialize(
@@ -162,6 +165,7 @@ public class HCatInputFormat extends HCatBaseInputFormat {
    * Return data columns for this input, can only be called after setInput is called.
    * @return data columns of the table specified by the job.
    * @throws IOException
+   * 获取该表的数据字段
    */
   public static HCatSchema getDataColumns(Configuration conf) throws IOException {
     InputJobInfo inputInfo = (InputJobInfo) HCatUtil.deserialize(

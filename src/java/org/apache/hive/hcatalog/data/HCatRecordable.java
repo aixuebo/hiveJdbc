@@ -24,6 +24,12 @@ import org.apache.hadoop.io.Writable;
 
 /**
  * Interface that determines whether we can implement a HCatRecord on top of it
+ * 支持hadoop的序列化接口,说明该对象可以在hadoop的节点间传递
+ * get和set等java接口,作用是可以在java中获取一个属性或者设置一个属性
+ *
+ * 因此该接口的意义
+ * 1.import的时候，从数据源中通过java方式set和get到HCatRecordable对象,然后该对象通过Writable接口传输给hadoop
+ * 2.export的时候,从hadoop通过Writable接口转换成HCatRecordable对象,因此java对象就可以通过get和set访问数据
  */
 public interface HCatRecordable extends Writable {
 

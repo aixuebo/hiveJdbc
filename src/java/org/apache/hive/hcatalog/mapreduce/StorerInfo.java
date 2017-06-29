@@ -22,7 +22,9 @@ package org.apache.hive.hcatalog.mapreduce;
 import java.io.Serializable;
 import java.util.Properties;
 
-/** Information about the storer to use for writing the data. */
+/** Information about the storer to use for writing the data.
+ * 通过hive的元数据获取该对象, 表示hive表关于SerDe的内容
+ */
 public class StorerInfo implements Serializable {
 
   /** The serialization version */
@@ -31,11 +33,11 @@ public class StorerInfo implements Serializable {
   /** The properties for the storage handler */
   private Properties properties;
 
-  private String ofClass;
+  private String ofClass;//OutputFormat
 
-  private String ifClass;
+  private String ifClass;//OrcInputFormat
 
-  private String serdeClass;
+  private String serdeClass;//SerDe Library
 
   private String storageHandlerClass;
 
