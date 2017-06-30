@@ -44,6 +44,7 @@ import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoUtils;
 
 /**
  * Describes a GenericFunc node.
+ * 说明表达式是一个函数
  */
 public class ExprNodeGenericFuncDesc extends ExprNodeDesc implements
     Serializable {

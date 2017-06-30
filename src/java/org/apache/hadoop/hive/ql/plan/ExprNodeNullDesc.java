@@ -25,7 +25,7 @@ import org.apache.hadoop.io.NullWritable;
 
 /**
  * ExprNodeNullDesc.
- *
+ * 表达式为null
  */
 public class ExprNodeNullDesc extends ExprNodeDesc implements Serializable {
 

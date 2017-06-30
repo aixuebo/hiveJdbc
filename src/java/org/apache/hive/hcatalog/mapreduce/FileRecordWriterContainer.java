@@ -50,14 +50,15 @@ import org.apache.hive.hcatalog.data.HCatRecord;
 /**
  * Part of the FileOutput*Container classes See {@link FileOutputFormatContainer} for more
  * information
+ * 将数据写入到hive中---有分区信息
  */
 abstract class FileRecordWriterContainer extends RecordWriterContainer {
 
   protected final HiveStorageHandler storageHandler;
-  protected final SerDe serDe;
-  protected final ObjectInspector objectInspector;
+  protected final SerDe serDe;//如何序列化要写入的数据
+  protected final ObjectInspector objectInspector;//要写入的数据类型,其中包含了分区列,该分区列可能是动态分区,也可能是静态分区
 
-  private final List<Integer> partColsToDel;
+  private final List<Integer> partColsToDel;//分区列集合以及该分区列在schema中的序号
 
   protected OutputJobInfo jobInfo;
   protected TaskAttemptContext context;
@@ -113,14 +114,14 @@ abstract class FileRecordWriterContainer extends RecordWriterContainer {
     SerDe localSerDe = localFileWriter.getLocalSerDe();
     OutputJobInfo localJobInfo = localFileWriter.getLocalJobInfo();
 
-    for (Integer colToDel : partColsToDel) {
+    for (Integer colToDel : partColsToDel) {//移除分区字段对应的值
       value.remove(colToDel);
     }
 
     // The key given by user is ignored
     try {
       localWriter.write(NullWritable.get(),
-          localSerDe.serialize(value.getAll(), localObjectInspector));
+          localSerDe.serialize(value.getAll(), localObjectInspector));//将数据序列化成hive需要的字节,存储到文件中
     } catch (SerDeException e) {
       throw new IOException("Failed to serialize object", e);
     }

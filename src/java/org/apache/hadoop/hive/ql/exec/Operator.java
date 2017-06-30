@@ -218,9 +218,9 @@ public abstract class Operator<T extends OperatorDesc> implements Serializable,C
   protected transient Reporter reporter;
   protected transient String id;//锟斤拷锟矫讹拷锟襟创斤拷锟斤拷时锟斤拷,锟斤拷锟斤拷seqId锟斤拷锟斤拷,锟斤拷锟斤拷一锟斤拷ID
   // object inspectors for input rows
-  // We will increase the size of the array on demand 锟斤拷锟斤拷锟叫硷拷锟斤拷
+  // We will increase the size of the array on demand 输入的数据列的schema,每一个父类对应一个schema,因此有多个父类,所以是多个schema
   protected transient ObjectInspector[] inputObjInspectors = new ObjectInspector[1];
-  // for output rows of this operator
+  // for output rows of this operator  输出列的schema
   protected transient ObjectInspector outputObjInspector;
 
   /**
@@ -401,6 +401,10 @@ public abstract class Operator<T extends OperatorDesc> implements Serializable,C
   /**
    * Calls initialize on each of the children with outputObjetInspector as the
    * output row format.
+   * 初始化每一个子类操作对象
+   * 比如
+   * select * from biao where xxx
+   * 因为filter的子类是scan table,因此当执行filter的时候,也要初始化scan table
    */
   protected void initializeChildren(Configuration hconf) throws HiveException {
     state = State.INIT;
@@ -668,7 +672,7 @@ public abstract class Operator<T extends OperatorDesc> implements Serializable,C
    * Cache childOperators in an array for faster access. childOperatorsArray is
    * accessed per row, so it's important to make the access efficient.
    */
-  protected transient Operator<? extends OperatorDesc>[] childOperatorsArray = null;
+  protected transient Operator<? extends OperatorDesc>[] childOperatorsArray = null;//子类操作
   protected transient int[] childOperatorsTag;
 
   // counters for debugging
@@ -810,12 +814,13 @@ public abstract class Operator<T extends OperatorDesc> implements Serializable,C
     return 10 * cntr;
   }
 
+  //继续向后执行,执行后面的子类的任务
   protected void forward(Object row, ObjectInspector rowInspector)
       throws HiveException {
 
     if (counterNameToEnum != null) {
       if ((++outputRows % 1000) == 0) {
-        incrCounter(numOutputRowsCntr, outputRows);
+        incrCounter(numOutputRowsCntr, outputRows);//记录输出的行数
         outputRows = 0;
       }
     }
@@ -833,22 +838,23 @@ public abstract class Operator<T extends OperatorDesc> implements Serializable,C
           "Internal Hive error during operator initialization.");
     }
 
-    if ((childOperatorsArray == null) || (getDone())) {
+    if ((childOperatorsArray == null) || (getDone())) {//完成了或者没有子类了,则不再继续操作
       return;
     }
 
-    int childrenDone = 0;
-    for (int i = 0; i < childOperatorsArray.length; i++) {
+    int childrenDone = 0;//记录子类已经完成的任务
+    for (int i = 0; i < childOperatorsArray.length; i++) {//子类的任务去执行
       Operator<? extends OperatorDesc> o = childOperatorsArray[i];
       if (o.getDone()) {
         childrenDone++;
       } else {
-        o.process(row, childOperatorsTag[i]);
+        o.process(row, childOperatorsTag[i]);//递归去完成,暂时不去关注详细了
       }
     }
 
     // if all children are done, this operator is also done
-    if (childrenDone == childOperatorsArray.length) {
+    //比如select * from biao where xxx limit 10 ,filter不需要把biao内数据都扫描,只要子类扫描了10条数据,完成了,那么作为父的filter也自动完成了
+    if (childrenDone == childOperatorsArray.length) {//说明子类全部完成了.因此设置该类也完成了
       setDone(true);
     }
   }
@@ -1158,7 +1164,7 @@ public abstract class Operator<T extends OperatorDesc> implements Serializable,C
 
   /**
    * this is called in operators in map or reduce tasks.
-   *
+   * 累加输出的行数
    * @param name
    * @param amount
    */
@@ -1320,8 +1326,8 @@ public abstract class Operator<T extends OperatorDesc> implements Serializable,C
     }
   }
 
-  protected static String numInputRowsCntr = "NUM_INPUT_ROWS";
-  protected static String numOutputRowsCntr = "NUM_OUTPUT_ROWS";
+  protected static String numInputRowsCntr = "NUM_INPUT_ROWS";//记录输入的行数
+  protected static String numOutputRowsCntr = "NUM_OUTPUT_ROWS";//记录输出的行数
   protected static String timeTakenCntr = "TIME_TAKEN";
   protected static String fatalErrorCntr = "FATAL_ERROR";
   private static String counterNameFormat = "CNTR_NAME_%s_%s";

@@ -48,6 +48,7 @@ public abstract class HCatBaseOutputFormat extends OutputFormat<WritableComparab
    * @param conf the Configuration object
    * @return the table schema
    * @throws IOException if HCatOutputFormat.setOutput has not been called for the passed context
+   * 还原输出需要的列信息
    */
   public static HCatSchema getTableSchema(Configuration conf) throws IOException {
     OutputJobInfo jobInfo = getJobInfo(conf);
@@ -119,7 +120,7 @@ public abstract class HCatBaseOutputFormat extends OutputFormat<WritableComparab
   /**
    * Configure the output storage handler with allowing specification of missing dynamic partvals
    * @param jobContext the job context
-   * @param dynamicPartVals
+   * @param dynamicPartVals 动态分区的具体的值
    * @throws IOException
    */
   @SuppressWarnings("unchecked")
@@ -130,12 +131,12 @@ public abstract class HCatBaseOutputFormat extends OutputFormat<WritableComparab
       OutputJobInfo jobInfo = (OutputJobInfo) HCatUtil.deserialize(conf.get(HCatConstants.HCAT_KEY_OUTPUT_INFO));
       HiveStorageHandler storageHandler = HCatUtil.getStorageHandler(jobContext.getConfiguration(),jobInfo.getTableInfo().getStorerInfo());
 
-      Map<String, String> partitionValues = jobInfo.getPartitionValues();
+      Map<String, String> partitionValues = jobInfo.getPartitionValues();//设置分区的值
       String location = jobInfo.getLocation();
 
-      if (dynamicPartVals != null) {
+      if (dynamicPartVals != null) {//说明设置了动态分区
         // dynamic part vals specified
-        List<String> dynamicPartKeys = jobInfo.getDynamicPartitioningKeys();
+        List<String> dynamicPartKeys = jobInfo.getDynamicPartitioningKeys();//获取动态分区列
         if (dynamicPartVals.size() != dynamicPartKeys.size()) {
           throw new HCatException(ErrorType.ERROR_INVALID_PARTITION_VALUES,
             "Unable to configure dynamic partitioning for storage handler, mismatch between"
@@ -143,7 +144,7 @@ public abstract class HCatBaseOutputFormat extends OutputFormat<WritableComparab
               + "] and number of partition values required[" + dynamicPartKeys.size() + "]");
         }
         for (int i = 0; i < dynamicPartKeys.size(); i++) {
-          partitionValues.put(dynamicPartKeys.get(i), dynamicPartVals.get(i));
+          partitionValues.put(dynamicPartKeys.get(i), dynamicPartVals.get(i));//设置动态分区的值,变成静态分区
         }
 
 //            // re-home location, now that we know the rest of the partvals
@@ -190,7 +191,14 @@ public abstract class HCatBaseOutputFormat extends OutputFormat<WritableComparab
     }
   }
 
-
+    /**
+     * 设置自定义输出schema的时候,调用该方法
+     * @param jobInfo
+     * @param schema     自定义输出的列集合
+     * @param partMap  自定义的分区字段
+     * @throws HCatException
+     * @throws IOException
+     */
   protected static void setPartDetails(OutputJobInfo jobInfo, final HCatSchema schema,
                      Map<String, String> partMap) throws HCatException, IOException {
     List<Integer> posOfPartCols = new ArrayList<Integer>();
@@ -203,12 +211,12 @@ public abstract class HCatBaseOutputFormat extends OutputFormat<WritableComparab
     // Note that, output storage handlers never sees partition columns in data
     // or schema.
 
-    HCatSchema schemaWithoutParts = new HCatSchema(schema.getFields());
+    HCatSchema schemaWithoutParts = new HCatSchema(schema.getFields());//设置的全部列---最终是没有分区的列集合
     for (String partKey : partMap.keySet()) {
       Integer idx;
-      if ((idx = schema.getPosition(partKey)) != null) {
-        posOfPartCols.add(idx);
-        schemaWithoutParts.remove(schema.get(partKey));
+      if ((idx = schema.getPosition(partKey)) != null) {//说明列中有分区字段
+        posOfPartCols.add(idx);//设置分区字段在schema中的列的序号
+        schemaWithoutParts.remove(schema.get(partKey));//移除该分区列
       }
     }
 
@@ -218,12 +226,12 @@ public abstract class HCatBaseOutputFormat extends OutputFormat<WritableComparab
     // output schema and partcols
 
     if (jobInfo.isDynamicPartitioningUsed()) {
-      for (String partKey : jobInfo.getDynamicPartitioningKeys()) {
+      for (String partKey : jobInfo.getDynamicPartitioningKeys()) {//动态分区列
         Integer idx;
         if ((idx = schema.getPosition(partKey)) != null) {
-          posOfPartCols.add(idx);
-          posOfDynPartCols.add(idx);
-          schemaWithoutParts.remove(schema.get(partKey));
+          posOfPartCols.add(idx);//是分区列
+          posOfDynPartCols.add(idx);//是动态分区列
+          schemaWithoutParts.remove(schema.get(partKey));//移除该列
         }
       }
     }

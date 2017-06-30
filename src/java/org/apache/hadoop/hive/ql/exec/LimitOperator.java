@@ -31,10 +31,10 @@ import org.apache.hadoop.hive.ql.plan.api.OperatorType;
 public class LimitOperator extends Operator<LimitDesc> implements Serializable {
   private static final long serialVersionUID = 1L;
 
-  protected transient int limit;
+  protected transient int limit;//限制数量
   protected transient int leastRow;
-  protected transient int currCount;
-  protected transient boolean isMap;
+  protected transient int currCount;//当前处理的数据行数
+  protected transient boolean isMap;//是否是map阶段操作
 
   @Override
   protected void initializeOp(Configuration hconf) throws HiveException {
@@ -47,10 +47,10 @@ public class LimitOperator extends Operator<LimitDesc> implements Serializable {
 
   @Override
   public void processOp(Object row, int tag) throws HiveException {
-    if (currCount < limit) {
+    if (currCount < limit) {//说明不满足条件
       forward(row, inputObjInspectors[tag]);
       currCount++;
-    } else {
+    } else {//说明已经停止运算了
       setDone(true);
     }
   }

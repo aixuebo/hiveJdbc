@@ -43,12 +43,13 @@ public class OrcSerde implements SerDe {
 
   private static final Log LOG = LogFactory.getLog(OrcSerde.class);
 
-  private final OrcSerdeRow row = new OrcSerdeRow();
-  private ObjectInspector inspector = null;
+  private final OrcSerdeRow row = new OrcSerdeRow();//代表一行数据
+  private ObjectInspector inspector = null;//该数据的schema,即hive中的一个struct
 
+  //不做特殊的序列化,只是将数据的内容以及schema保存而已
   final class OrcSerdeRow implements Writable {
-    private Object realRow;
-    private ObjectInspector inspector;
+    private Object realRow;//一行数据的全部内容
+    private ObjectInspector inspector;//一行数据在hive中的数据格式,他是一个struct
 
     @Override
     public void write(DataOutput dataOutput) throws IOException {
@@ -69,6 +70,7 @@ public class OrcSerde implements SerDe {
     }
   }
 
+  //构造hive的schema,即一行数据的格式
   @Override
   public void initialize(Configuration conf, Properties table) {
     // Read the configuration parameters
@@ -83,7 +85,7 @@ public class OrcSerde implements SerDe {
         columnNames.add(name);
       }
     }
-    if (columnTypeProperty == null) {
+    if (columnTypeProperty == null) {//默认配置String类型
       // Default type: all string
       StringBuilder sb = new StringBuilder();
       for (int i = 0; i < columnNames.size(); i++) {
@@ -103,11 +105,13 @@ public class OrcSerde implements SerDe {
     inspector = OrcStruct.createObjectInspector(rootType);
   }
 
+  //序列化方式
   @Override
   public Class<? extends Writable> getSerializedClass() {
     return OrcSerdeRow.class;
   }
 
+  //仅仅保存数据而已
   @Override
   public Writable serialize(Object realRow, ObjectInspector inspector) {
     row.realRow = realRow;
@@ -115,6 +119,7 @@ public class OrcSerde implements SerDe {
     return row;
   }
 
+  //直接转换的就是row对象
   @Override
   public Object deserialize(Writable writable) throws SerDeException {
     return writable;

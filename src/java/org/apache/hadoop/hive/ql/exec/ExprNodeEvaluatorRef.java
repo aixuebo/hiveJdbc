@@ -23,6 +23,7 @@ import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 
 /**
  * Returns evaluation result of other evaluator
+ * 该表达式是另外一个表达式的引用
  */
 public class ExprNodeEvaluatorRef extends ExprNodeEvaluator {
 

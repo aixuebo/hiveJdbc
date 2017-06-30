@@ -98,6 +98,7 @@ public final class ExprNodeEvaluatorFactory {
     return null;
   }
 
+  //»º´æ
   private static class EvaluatorContext {
 
     private final Map<String, ExprNodeEvaluator> cached = new HashMap<String, ExprNodeEvaluator>();

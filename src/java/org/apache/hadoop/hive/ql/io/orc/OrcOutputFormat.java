@@ -59,12 +59,13 @@ public class OrcOutputFormat extends FileOutputFormat<NullWritable, OrcSerdeRow>
     public void write(NullWritable nullWritable,
                       OrcSerdeRow row) throws IOException {
       if (writer == null) {
-        options.inspector(row.getInspector());
-        writer = OrcFile.createWriter(path, options);
+        options.inspector(row.getInspector());//设置orc文件的schema
+        writer = OrcFile.createWriter(path, options);//创建一个orc文件
       }
-      writer.addRow(row.getRow());
+      writer.addRow(row.getRow());//将每一行数据添加到orc文件中,orc会维护
     }
 
+    //参数就是OrcSerdeRow对象
     @Override
     public void write(Writable row) throws IOException {
       OrcSerdeRow serdeRow = (OrcSerdeRow) row;
@@ -113,6 +114,7 @@ public class OrcOutputFormat extends FileOutputFormat<NullWritable, OrcSerdeRow>
                          Properties tableProperties,
                          Progressable reporter) throws IOException {
     OrcFile.WriterOptions options = OrcFile.writerOptions(conf);
+    //设置orc的配置信息
     if (tableProperties.containsKey(OrcFile.STRIPE_SIZE)) {
       options.stripeSize(Long.parseLong
                            (tableProperties.getProperty(OrcFile.STRIPE_SIZE)));

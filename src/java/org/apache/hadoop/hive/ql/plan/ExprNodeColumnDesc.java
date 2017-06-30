@@ -28,23 +28,26 @@ import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoFactory;
 
 /**
  * ExprNodeColumnDesc.
- *
+ * 表示一个列节点
  */
 public class ExprNodeColumnDesc extends ExprNodeDesc implements Serializable {
   private static final long serialVersionUID = 1L;
 
   /**
    * The column name.
+   * 列名字
    */
   private String column;
 
   /**
    * The alias of the table.
+   * 该列所属表
    */
   private String tabAlias;
 
   /**
    * Is the column a partitioned column.
+   * 是否是分区字段或者虚拟字段
    */
   private boolean isPartitionColOrVirtualCol;
 

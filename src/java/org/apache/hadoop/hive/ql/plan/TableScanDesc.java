@@ -28,6 +28,7 @@ import org.apache.hadoop.hive.ql.metadata.VirtualColumn;
  * Table Scan Descriptor Currently, data is only read from a base source as part
  * of map-reduce framework. So, nothing is stored in the descriptor. But, more
  * things will be added here as table scan is invoked as part of local work.
+ * 如何扫描一个表
  **/
 @Explain(displayName = "TableScan")
 public class TableScanDesc extends AbstractOperatorDesc {

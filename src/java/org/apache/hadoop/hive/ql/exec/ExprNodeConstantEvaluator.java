@@ -25,12 +25,13 @@ import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 
 /**
  * ExprNodeConstantEvaluator.
- *
+ * 判断表达式是常量
  */
 public class ExprNodeConstantEvaluator extends ExprNodeEvaluator<ExprNodeConstantDesc> {
 
-  transient ConstantObjectInspector writableObjectInspector;
+  transient ConstantObjectInspector writableObjectInspector;//常量对象
 
+  //参数表达式表示的就是一个常量
   public ExprNodeConstantEvaluator(ExprNodeConstantDesc expr) {
     super(expr);
     writableObjectInspector = expr.getWritableObjectInspector();
@@ -41,6 +42,7 @@ public class ExprNodeConstantEvaluator extends ExprNodeEvaluator<ExprNodeConstan
     return writableObjectInspector;
   }
 
+  //无论数据是什么,返回值都是常量
   @Override
   protected Object _evaluate(Object row, int version) throws HiveException {
     return writableObjectInspector.getWritableConstantValue();

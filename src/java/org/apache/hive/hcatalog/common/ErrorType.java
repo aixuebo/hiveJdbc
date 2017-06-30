@@ -32,7 +32,7 @@ public enum ErrorType {
   /* HCat Output Format related errors 2000 - 2999 */
   ERROR_INVALID_TABLE                 (2000, "Table specified does not exist"),
   ERROR_SET_OUTPUT                    (2001, "Error setting output information"),
-  ERROR_DUPLICATE_PARTITION           (2002, "Partition already present with given partition key values"),
+  ERROR_DUPLICATE_PARTITION           (2002, "Partition already present with given partition key values"),//说明当前分区已经存在
   ERROR_NON_EMPTY_TABLE               (2003, "Non-partitioned table already contains data"),
   ERROR_NOT_INITIALIZED               (2004, "HCatOutputFormat not initialized, setOutput has to be called"),
   ERROR_INIT_STORAGE_HANDLER          (2005, "Error initializing storage handler instance"),

@@ -43,16 +43,17 @@ public class FilterOperator extends Operator<FilterDesc> implements
    *
    */
   public static enum Counter {
-    FILTERED, PASSED
+    FILTERED, //表示过滤掉,不通过
+    PASSED//说明判断true,表示通过
   }
 
   private final transient LongWritable filtered_count, passed_count;
-  private transient ExprNodeEvaluator conditionEvaluator;
-  private transient PrimitiveObjectInspector conditionInspector;
-  private transient int consecutiveFails;
+  private transient ExprNodeEvaluator conditionEvaluator;//判断条件表达式
+  private transient PrimitiveObjectInspector conditionInspector;//表达式的返回值类型
+  private transient int consecutiveFails;//连续出现多少次是false的时候
   private transient int consecutiveSearches;
   private transient IOContext ioContext;
-  transient int heartbeatInterval;
+  transient int heartbeatInterval;//心跳间隔
 
   public FilterOperator() {
     super();
@@ -66,9 +67,9 @@ public class FilterOperator extends Operator<FilterDesc> implements
   protected void initializeOp(Configuration hconf) throws HiveException {
     try {
       heartbeatInterval = HiveConf.getIntVar(hconf,
-          HiveConf.ConfVars.HIVESENDHEARTBEAT);
-      conditionEvaluator = ExprNodeEvaluatorFactory.get(conf.getPredicate());
-      if (HiveConf.getBoolVar(hconf, HiveConf.ConfVars.HIVEEXPREVALUATIONCACHE)) {
+          HiveConf.ConfVars.HIVESENDHEARTBEAT);//心跳间隔
+      conditionEvaluator = ExprNodeEvaluatorFactory.get(conf.getPredicate());//判断条件表达式
+      if (HiveConf.getBoolVar(hconf, HiveConf.ConfVars.HIVEEXPREVALUATIONCACHE)) {//是否需要缓存
         conditionEvaluator = ExprNodeEvaluatorFactory.toCachedEval(conditionEvaluator);
       }
 
@@ -82,12 +83,21 @@ public class FilterOperator extends Operator<FilterDesc> implements
     initializeChildren(hconf);
   }
 
+    /**
+     *
+     * @param row 表示具体的一行数据
+     *          The object representing the row.
+     * @param tag
+     *          The tag of the row usually means which parent this row comes from.
+     *          Rows with the same tag should have exactly the same rowInspector
+     * @throws HiveException
+     */
   @Override
   public void processOp(Object row, int tag) throws HiveException {
     ObjectInspector rowInspector = inputObjInspectors[tag];
     if (conditionInspector == null) {
       conditionInspector = (PrimitiveObjectInspector) conditionEvaluator
-          .initialize(rowInspector);
+          .initialize(rowInspector);//初始化表达式的类型
     }
 
     // If the input is sorted, and we are executing a search based on the arguments to this filter,
@@ -119,7 +129,7 @@ public class FilterOperator extends Operator<FilterDesc> implements
       }
     }
 
-    Object condition = conditionEvaluator.evaluate(row);
+    Object condition = conditionEvaluator.evaluate(row);//获取表达式的值
 
     // If we are currently performing a binary search on the input, don't forward the results
     // Currently this value is set when a query is optimized using a compact index.  The map reduce
@@ -131,18 +141,18 @@ public class FilterOperator extends Operator<FilterDesc> implements
     }
 
     Boolean ret = (Boolean) conditionInspector
-        .getPrimitiveJavaObject(condition);
-    if (Boolean.TRUE.equals(ret)) {
+        .getPrimitiveJavaObject(condition);//强制转换成boolean值
+    if (Boolean.TRUE.equals(ret)) {//说明通过
       forward(row, rowInspector);
       passed_count.set(passed_count.get() + 1);
-      consecutiveFails = 0;
-    } else {
+      consecutiveFails = 0;//连续出现多少次是false的时候
+    } else {//说明不通过
       filtered_count.set(filtered_count.get() + 1);
       consecutiveFails++;
 
       // In case of a lot of consecutive failures, send a heartbeat in order to
       // avoid timeout
-      if (((consecutiveFails % heartbeatInterval) == 0) && (reporter != null)) {
+      if (((consecutiveFails % heartbeatInterval) == 0) && (reporter != null)) {//进行报告
         reporter.progress();
       }
     }

@@ -33,6 +33,7 @@ import org.apache.hive.hcatalog.data.HCatRecord;
 /**
  * Record writer container for tables using static partitioning. See
  * {@link FileOutputFormatContainer} for more information
+ * 向静态分区中写入数据
  */
 class StaticPartitionFileRecordWriterContainer extends FileRecordWriterContainer {
   /**

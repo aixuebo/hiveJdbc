@@ -58,6 +58,7 @@ public class ExprNodeConstantDesc extends ExprNodeDesc implements Serializable {
     return value;
   }
 
+  //获取一个常量对象
   @Override
   public ConstantObjectInspector getWritableObjectInspector() {
     PrimitiveCategory pc = ((PrimitiveTypeInfo)getTypeInfo())

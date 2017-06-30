@@ -2010,7 +2010,7 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
   private Operator genHavingPlan(String dest, QB qb, Operator input)
       throws SemanticException {
 
-    ASTNode havingExpr = qb.getParseInfo().getHavingForClause(dest);
+    ASTNode havingExpr = qb.getParseInfo().getHavingForClause(dest);//获取hiving的内容
 
     OpParseContext inputCtx = opParseCtx.get(input);
     RowResolver inputRR = inputCtx.getRowResolver();
@@ -2033,7 +2033,7 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
   private Operator genFilterPlan(String dest, QB qb, Operator input)
       throws SemanticException {
 
-    ASTNode whereExpr = qb.getParseInfo().getWhrForClause(dest);
+    ASTNode whereExpr = qb.getParseInfo().getWhrForClause(dest);//获取where条件
     return genFilterPlan(qb, (ASTNode) whereExpr.getChild(0), input);
   }
 
@@ -2043,9 +2043,10 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
    * @param qb
    *          current query block
    * @param condn
-   *          The condition to be resolved
+   *          The condition to be resolved 过滤条件
    * @param input
-   *          the input operator
+   *          the input operator 如何扫描数据,比如scan一个表
+   * 对表进行过滤
    */
   @SuppressWarnings("nls")
   private Operator genFilterPlan(QB qb, ASTNode condn, Operator input)
@@ -2055,7 +2056,7 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
     RowResolver inputRR = inputCtx.getRowResolver();
     Operator output = putOpInsertMap(OperatorFactory.getAndMakeChild(
         new FilterDesc(genExprNodeDesc(condn, inputRR), false), new RowSchema(
-            inputRR.getColumnInfos()), input), inputRR);
+            inputRR.getColumnInfos()), input), inputRR);//对join的时候on进行条件过滤,比如命名扫描的是user表,但是因为使用了on,因此可以对scan表创建父操作FilterDesc
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("Created Filter Plan for " + qb.getId() + " row schema: "
@@ -6529,6 +6530,7 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
   /**
    * Extract the filters from the join condition and push them on top of the
    * source operators. This procedure traverses the query tree recursively,
+   * 对join的on内容进行过滤,可以减少scan表的范围
    */
   private void pushJoinFilters(QB qb, QBJoinTree joinTree,
       Map<String, Operator> map) throws SemanticException {
@@ -6539,10 +6541,10 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
     int pos = 0;
     for (String src : joinTree.getBaseSrc()) {
       if (src != null) {
-        Operator srcOp = map.get(src);
-        ArrayList<ASTNode> filter = filters.get(pos);
+        Operator srcOp = map.get(src);//找到一个scan的表
+        ArrayList<ASTNode> filter = filters.get(pos);//找到filter条件
         for (ASTNode cond : filter) {
-          srcOp = genFilterPlan(qb, cond, srcOp);
+          srcOp = genFilterPlan(qb, cond, srcOp);//对表进行过滤
         }
         map.put(src, srcOp);
       }
@@ -7485,6 +7487,7 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
     return false;
   }
 
+  //对body进行操作过滤
   @SuppressWarnings("nls")
   private Operator genBodyPlan(QB qb, Operator input) throws SemanticException {
     QBParseInfo qbp = qb.getParseInfo();
@@ -8065,16 +8068,16 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
       try {
     	//该表每一行对应的列集合
         StructObjectInspector rowObjectInspector = (StructObjectInspector) tab
-            .getDeserializer().getObjectInspector();
+            .getDeserializer().getObjectInspector();//该表的列类型schema
         List<? extends StructField> fields = rowObjectInspector
-            .getAllStructFieldRefs();
+            .getAllStructFieldRefs();//所有的schema列
         for (int i = 0; i < fields.size(); i++) {
           /**
            * if the column is a skewed column, use ColumnInfo accordingly
            */
           ColumnInfo colInfo = new ColumnInfo(fields.get(i).getFieldName(),
               TypeInfoUtils.getTypeInfoFromObjectInspector(fields.get(i)
-                  .getFieldObjectInspector()), alias, false);
+                  .getFieldObjectInspector()), alias, false);//创建一个列对象
           //设置该列是否是偏移列
           colInfo.setSkewedCol((isSkewedCol(alias, qb, fields.get(i)
               .getFieldName())) ? true : false);
@@ -8092,7 +8095,7 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
         // TODO: use the right type by calling part_col.getType() instead of
         // String.class. See HIVE-3059.
         rwsch.put(alias, part_col.getName(), new ColumnInfo(part_col.getName(),
-            TypeInfoFactory.stringTypeInfo, alias, true));
+            TypeInfoFactory.stringTypeInfo, alias, true));//分区列都是String类型的
       }
 
       // put all virutal columns in RowResolver.添加该表的虚拟列
@@ -8107,7 +8110,7 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
       }
 
       // Create the root of the operator tree
-      TableScanDesc tsDesc = new TableScanDesc(alias, vcList);
+      TableScanDesc tsDesc = new TableScanDesc(alias, vcList);//如何扫描一个表
       setupStats(tsDesc, qb.getParseInfo(), tab, alias, rwsch);
 
       SplitSample sample = nameToSplitSample.get(alias_id);//获取该表的抽样信息
@@ -8117,7 +8120,7 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
       }
 
       top = putOpInsertMap(OperatorFactory.get(tsDesc,
-          new RowSchema(rwsch.getColumnInfos())), rwsch);
+          new RowSchema(rwsch.getColumnInfos())), rwsch);//创建一个TableScanOperator操作
 
       // Add this to the list of top operators - we always start from a table
       // scan
@@ -8213,7 +8216,7 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
       }
     } else {//不进行抽样处理
       boolean testMode = conf.getBoolVar(HiveConf.ConfVars.HIVETESTMODE);
-      if (testMode) {
+      if (testMode) {//true说明是测试模式
         String tabName = tab.getTableName();
 
         // has the user explicitly asked not to sample this table
@@ -8380,6 +8383,11 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
     Map<String, Operator> aliasToOpInfo = new HashMap<String, Operator>();
 
     // Recurse over the subqueries to fill the subquery part of the plan
+      /**
+       * 1.每一个select from 等语法就会调用一个该方法,产生一个Operator
+         2.如果有子查询的,就不断递归找到一个select子查询,然后调用产生Operator
+       * 3.子查询其实也相当于一个表,因为子查询的结果就是一个表
+       */
     //先循环所有的子查询和视图
     for (String alias : qb.getSubqAliases()) {
       QBExpr qbexpr = qb.getSubqForAlias(alias);//获取真正子查询或者视图对应的sql
@@ -8389,7 +8397,7 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
 
     // Recurse over all the source tables
     //循环每一个用到的数据库表
-    for (String alias : qb.getTabAliases()) {
+    for (String alias : qb.getTabAliases()) {//循环每一个用到的table表,获取该表的对应的Operator,即每一个表都有一个Operator
       Operator op = genTablePlan(alias, qb);
       aliasToOpInfo.put(alias, op);
     }
@@ -8428,10 +8436,10 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
 
 
     // process join
-    if (qb.getParseInfo().getJoinExpr() != null) {
+    if (qb.getParseInfo().getJoinExpr() != null) {//处理join操作.并且对on后面的条件进行过滤,可以对scan table转换成filter
       ASTNode joinExpr = qb.getParseInfo().getJoinExpr();
 
-      if (joinExpr.getToken().getType() == HiveParser.TOK_UNIQUEJOIN) {
+      if (joinExpr.getToken().getType() == HiveParser.TOK_UNIQUEJOIN) {//唯一的join
         QBJoinTree joinTree = genUniqueJoinTree(qb, joinExpr, aliasToOpInfo);
         qb.setQbJoinTree(joinTree);
       } else {
@@ -8891,6 +8899,9 @@ AS selectStatement
 
   /**
    * Generates an expression node descriptor for the expression with TypeCheckCtx.
+   * 对一行数据的schame添加一个表达式进行操作,比如进行过滤
+   * expr就是表达式节点
+   * input就是操作的一行数据的schema
    */
   public ExprNodeDesc genExprNodeDesc(ASTNode expr, RowResolver input)
       throws SemanticException {

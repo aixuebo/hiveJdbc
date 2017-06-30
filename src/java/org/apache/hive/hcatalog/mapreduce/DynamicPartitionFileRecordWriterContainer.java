@@ -49,13 +49,14 @@ import org.slf4j.LoggerFactory;
 /**
  * Record writer container for tables using dynamic partitioning. See
  * {@link FileOutputFormatContainer} for more information
+ * 向动态分区中写入数据
  */
 class DynamicPartitionFileRecordWriterContainer extends FileRecordWriterContainer {
   private static final Logger LOG = LoggerFactory.getLogger(DynamicPartitionFileRecordWriterContainer.class);
-  private final List<Integer> dynamicPartCols;
-  private int maxDynamicPartitions;
+  private final List<Integer> dynamicPartCols//动态分区列在schema中的序号;
+  private int maxDynamicPartitions;//动态分区最多数量
 
-  private final Map<String, RecordWriter<? super WritableComparable<?>, ? super Writable>> baseDynamicWriters;
+  private final Map<String, RecordWriter<? super WritableComparable<?>, ? super Writable>> baseDynamicWriters;//每一个动态分区对应一个writer
   private final Map<String, SerDe> baseDynamicSerDe;
   private final Map<String, org.apache.hadoop.mapred.OutputCommitter> baseDynamicCommitters;
   private final Map<String, org.apache.hadoop.mapred.TaskAttemptContext> dynamicContexts;
@@ -136,12 +137,12 @@ class DynamicPartitionFileRecordWriterContainer extends FileRecordWriterContaine
     // be done before we delete cols.
     List<String> dynamicPartValues = new ArrayList<String>();
     for (Integer colToAppend : dynamicPartCols) {
-      dynamicPartValues.add(value.get(colToAppend).toString());
+      dynamicPartValues.add(value.get(colToAppend).toString());//获取动态列组成的真实值
     }
 
     String dynKey = dynamicPartValues.toString();
-    if (!baseDynamicWriters.containsKey(dynKey)) {
-      if ((maxDynamicPartitions != -1) && (baseDynamicWriters.size() > maxDynamicPartitions)) {
+    if (!baseDynamicWriters.containsKey(dynKey)) {//找到该动态分区对应的writer
+      if ((maxDynamicPartitions != -1) && (baseDynamicWriters.size() > maxDynamicPartitions)) {//说明超出最大分区数量了
         throw new HCatException(ErrorType.ERROR_TOO_MANY_DYNAMIC_PTNS,
             "Number of dynamic partitions being created "
                 + "exceeds configured max allowable partitions[" + maxDynamicPartitions

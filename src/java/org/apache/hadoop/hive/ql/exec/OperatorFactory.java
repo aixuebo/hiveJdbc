@@ -61,8 +61,8 @@ public final class OperatorFactory {
    * @param <T>
    */
   public static final class OpTuple<T extends OperatorDesc> {
-    public Class<T> descClass;
-    public Class<? extends Operator<T>> opClass;
+    public Class<T> descClass;//表示一个OperatorDesc对象的class
+    public Class<? extends Operator<T>> opClass;//表示操作OperatorDesc类型的Operator操作类
 
     public OpTuple(Class<T> descClass, Class<? extends Operator<T>> opClass) {
       this.descClass = descClass;
@@ -87,7 +87,7 @@ public final class OperatorFactory {
     opvec.add(new OpTuple<MapJoinDesc>(MapJoinDesc.class, MapJoinOperator.class));
     opvec.add(new OpTuple<SMBJoinDesc>(SMBJoinDesc.class, SMBMapJoinOperator.class));
     opvec.add(new OpTuple<LimitDesc>(LimitDesc.class, LimitOperator.class));
-    opvec.add(new OpTuple<TableScanDesc>(TableScanDesc.class, TableScanOperator.class));
+    opvec.add(new OpTuple<TableScanDesc>(TableScanDesc.class, TableScanOperator.class));//扫描表操作
     opvec.add(new OpTuple<UnionDesc>(UnionDesc.class, UnionOperator.class));
     opvec.add(new OpTuple<UDTFDesc>(UDTFDesc.class, UDTFOperator.class));
     opvec.add(new OpTuple<LateralViewJoinDesc>(LateralViewJoinDesc.class,
@@ -106,6 +106,7 @@ public final class OperatorFactory {
         MuxOperator.class));
   }
 
+  //创建一个操作对象
   public static <T extends OperatorDesc> Operator<T> get(Class<T> opClass) {
 
     for (OpTuple o : opvec) {
@@ -124,6 +125,7 @@ public final class OperatorFactory {
         + opClass.getName());
   }
 
+  //创建一个操作对象,并且设置该操作需要的列属性schema
   public static <T extends OperatorDesc> Operator<T> get(Class<T> opClass,
       RowSchema rwsch) {
 
@@ -134,12 +136,13 @@ public final class OperatorFactory {
 
   /**
    * Returns an operator given the conf and a list of children operators.
+   * 创建一个操作,并且设置子操作
    */
   public static <T extends OperatorDesc> Operator<T> get(T conf,
     Operator<? extends OperatorDesc>... oplist) {
-    Operator<T> ret = get((Class<T>) conf.getClass());
+    Operator<T> ret = get((Class<T>) conf.getClass());//通过OperatorDesc的class获取Operator操作
     ret.setConf(conf);
-    makeChild(ret, oplist);
+    makeChild(ret, oplist);//设置子操作
     return (ret);
   }
 
@@ -153,6 +156,7 @@ public final class OperatorFactory {
       return;
     }
 
+    //设置子关系
     ArrayList<Operator<? extends OperatorDesc>> clist =
       new ArrayList<Operator<? extends OperatorDesc>>();
     for (Operator<? extends OperatorDesc> op : oplist) {
@@ -160,7 +164,7 @@ public final class OperatorFactory {
     }
     ret.setChildOperators(clist);
 
-    // Add this parent to the children
+    // Add this parent to the children 添加父依赖
     for (Operator<? extends OperatorDesc> op : oplist) {
       List<Operator<? extends OperatorDesc>> parents = op.getParentOperators();
       if (parents == null) {
@@ -176,8 +180,8 @@ public final class OperatorFactory {
    */
   public static <T extends OperatorDesc> Operator<T> get(T conf,
       RowSchema rwsch, Operator... oplist) {
-    Operator<T> ret = get(conf, oplist);
-    ret.setSchema(rwsch);
+    Operator<T> ret = get(conf, oplist);//通过OperatorDesc的class获取Operator操作
+    ret.setSchema(rwsch);//为该操作设置列属性的类型信息
     return (ret);
   }
 

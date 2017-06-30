@@ -27,7 +27,7 @@ import org.apache.hadoop.hive.serde2.objectinspector.primitive.PrimitiveObjectIn
 // change the void to the first matching argument
 /**
  * ExprNodeNullEvaluator.
- *
+ * 表达式的返回值是null
  */
 public class ExprNodeNullEvaluator extends ExprNodeEvaluator<ExprNodeNullDesc> {
 
@@ -37,9 +37,10 @@ public class ExprNodeNullEvaluator extends ExprNodeEvaluator<ExprNodeNullDesc> {
 
   @Override
   public ObjectInspector initialize(ObjectInspector rowInspector) throws HiveException {
-    return outputOI = PrimitiveObjectInspectorFactory.writableVoidObjectInspector;
+    return outputOI = PrimitiveObjectInspectorFactory.writableVoidObjectInspector;//此时表达式为null作为输出对象
   }
 
+  //无论行数据是什么,都返回null
   @Override
   protected Object _evaluate(Object row, int version) throws HiveException {
     return null;

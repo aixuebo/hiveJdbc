@@ -28,8 +28,8 @@ import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
  */
 public abstract class ExprNodeEvaluator<T extends ExprNodeDesc> {
 
-  protected final T expr;
-  protected ObjectInspector outputOI;
+  protected final T expr;//输入的表达式
+  protected ObjectInspector outputOI;//表达式的返回值hive类型
 
   public ExprNodeEvaluator(T expr) {
     this.expr = expr;
@@ -45,6 +45,8 @@ public abstract class ExprNodeEvaluator<T extends ExprNodeDesc> {
   /**
    * Initialize should be called once and only once. Return the ObjectInspector
    * for the return value, given the rowInspector.
+   * 初始化表达式的类型
+   * 参数是这个表的列的表达式集合
    */
   public abstract ObjectInspector initialize(ObjectInspector rowInspector) throws HiveException;
 
@@ -81,6 +83,7 @@ public abstract class ExprNodeEvaluator<T extends ExprNodeDesc> {
 
   /**
    * Evaluate value
+   * 执行表达式,返回表达式具体的值
    */
   protected abstract Object _evaluate(Object row, int version) throws HiveException;
 

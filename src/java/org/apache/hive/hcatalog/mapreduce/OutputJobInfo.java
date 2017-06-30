@@ -44,12 +44,12 @@ public class OutputJobInfo implements Serializable {
   private static final long serialVersionUID = 1L;
 
   /** The table info provided by user. */
-  private HCatTableInfo tableInfo;
+  private HCatTableInfo tableInfo;//表示hive中要输出的表的元数据---通过读取hive元数据转换的
 
   /** The output schema. This is given to us by user.  This wont contain any
    * partition columns ,even if user has specified them.
    * */
-  private HCatSchema outputSchema;
+  private HCatSchema outputSchema;//通过读取hive的表元数据,获取的表内所有字段以及所有的分区字段集合
 
   /** The location of the partition being written */
   private String location;
@@ -65,15 +65,16 @@ public class OutputJobInfo implements Serializable {
    */
   private Map<String, String> partitionValues;
 
-  private List<Integer> posOfPartCols;
-  private List<Integer> posOfDynPartCols;
+  //设置自定义输出schema的时候,调用该方法
+  private List<Integer> posOfPartCols;//分区列在schema中的序号---包含静态分区列以及动态分区列
+  private List<Integer> posOfDynPartCols;//动态分区列在schema中的序号
 
   private Properties properties;
 
-  private int maxDynamicPartitions;
+  private int maxDynamicPartitions;//最大动态分区数量
 
   /** List of keys for which values were not specified at write setup time, to be infered at write time */
-  private List<String> dynamicPartitioningKeys;
+  private List<String> dynamicPartitioningKeys;//通过计算表的分区与设置的partitionValues分区集合的差,因此计算出动态分区的字段有哪些
 
   private boolean harRequested;
 

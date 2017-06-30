@@ -35,13 +35,14 @@ import org.apache.hive.hcatalog.data.HCatRecord;
 /**
  * Part of the DefaultOutput*Container classes
  * See {@link DefaultOutputFormatContainer} for more information
+ * 输出表示向hive中写入数据---没有分区
  */
 class DefaultRecordWriterContainer extends RecordWriterContainer {
 
-  private final HiveStorageHandler storageHandler;
-  private final SerDe serDe;
-  private final OutputJobInfo jobInfo;
-  private final ObjectInspector hcatRecordOI;
+  private final HiveStorageHandler storageHandler;//如何真实的写入数据,即包含格式
+  private final SerDe serDe;//真实的序列化与反序列化类
+  private final OutputJobInfo jobInfo;//写入哪些字段
+  private final ObjectInspector hcatRecordOI;//写入字段组成的hive对象
 
   /**
    * @param context current JobContext
@@ -52,7 +53,7 @@ class DefaultRecordWriterContainer extends RecordWriterContainer {
   public DefaultRecordWriterContainer(TaskAttemptContext context,
                     org.apache.hadoop.mapred.RecordWriter<? super WritableComparable<?>, ? super Writable> baseRecordWriter) throws IOException, InterruptedException {
     super(context, baseRecordWriter);
-    jobInfo = HCatOutputFormat.getJobInfo(context.getConfiguration());
+    jobInfo = HCatOutputFormat.getJobInfo(context.getConfiguration());//写入哪些字段
     storageHandler = HCatUtil.getStorageHandler(context.getConfiguration(), jobInfo.getTableInfo().getStorerInfo());
     HCatOutputFormat.configureOutputStorageHandler(context);
     serDe = ReflectionUtils.newInstance(storageHandler.getSerDeClass(), context.getConfiguration());
@@ -74,7 +75,7 @@ class DefaultRecordWriterContainer extends RecordWriterContainer {
   public void write(WritableComparable<?> key, HCatRecord value) throws IOException,
     InterruptedException {
     try {
-      getBaseRecordWriter().write(null, serDe.serialize(value.getAll(), hcatRecordOI));
+      getBaseRecordWriter().write(null, serDe.serialize(value.getAll(), hcatRecordOI));//序列化每一个属性具体的值以及每一个属性在hive中的类型
     } catch (SerDeException e) {
       throw new IOException("Failed to serialize object", e);
     }

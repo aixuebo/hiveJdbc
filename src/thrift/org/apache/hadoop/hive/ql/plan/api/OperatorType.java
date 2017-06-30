@@ -18,7 +18,7 @@ public enum OperatorType implements org.apache.thrift.TEnum {
   FILTER(3),
   FORWARD(4),
   GROUPBY(5),
-  LIMIT(6),
+  LIMIT(6),//limit²Ù×÷
   SCRIPT(7),
   SELECT(8),
   TABLESCAN(9),

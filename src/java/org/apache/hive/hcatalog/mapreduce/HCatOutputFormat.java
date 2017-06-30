@@ -60,7 +60,7 @@ public class HCatOutputFormat extends HCatBaseOutputFormat {
 
   static final private Logger LOG = LoggerFactory.getLogger(HCatOutputFormat.class);
 
-  private static int maxDynamicPartitions;
+  private static int maxDynamicPartitions;//最大动态分区数量
   private static boolean harRequested;
 
   /**
@@ -78,6 +78,7 @@ public class HCatOutputFormat extends HCatBaseOutputFormat {
    * @param credentials the Credentials object
    * @param outputJobInfo the table output information for the job
    * @throws IOException the exception in communicating with the metadata server
+   * 设置输出的字段信息 以及设置动态分区内容
    */
   @SuppressWarnings("unchecked")
   public static void setOutput(Configuration conf, Credentials credentials,
@@ -87,7 +88,7 @@ public class HCatOutputFormat extends HCatBaseOutputFormat {
     try {
 
       HiveConf hiveConf = HCatUtil.getHiveConf(conf);
-      client = HCatUtil.getHiveMetastoreClient(hiveConf);
+      client = HCatUtil.getHiveMetastoreClient(hiveConf);//获取元数据客户端
       Table table = HCatUtil.getTable(client, outputJobInfo.getDatabaseName(),
         outputJobInfo.getTableName());//获取该table的元数据
 
@@ -99,8 +100,9 @@ public class HCatOutputFormat extends HCatBaseOutputFormat {
           throw new HCatException(ErrorType.ERROR_NOT_SUPPORTED, "Store into a table with an automatic index from Pig/Mapreduce is not supported");
         }
       }
-      StorageDescriptor sd = table.getTTable().getSd();
+      StorageDescriptor sd = table.getTTable().getSd();//该表的序列化描述
 
+      //因为表是支持序列化的,因此如果该表要求压缩，以及分桶以及排序是没办法完成的,只能hive去完成,外面没办法完成,外面能完成的只是将数据转换成序列化hive要求的格式,存储成文件，没有办法进行压缩、排序等处理
       if (sd.isCompressed()) {
         throw new HCatException(ErrorType.ERROR_NOT_SUPPORTED, "Store into a compressed partition from Pig/Mapreduce is not supported");
       }
@@ -121,7 +123,7 @@ public class HCatOutputFormat extends HCatBaseOutputFormat {
       }
       conf.set(HCatConstants.HCAT_OUTPUT_ID_HASH,idHash);
 
-      if (table.getTTable().getPartitionKeysSize() == 0) {
+      if (table.getTTable().getPartitionKeysSize() == 0) {//因为表没有分区
         if ((outputJobInfo.getPartitionValues() != null) && (!outputJobInfo.getPartitionValues().isEmpty())) {
           // attempt made to save partition values in non-partitioned table - throw error.
           throw new HCatException(ErrorType.ERROR_INVALID_PARTITION_VALUES,
@@ -130,10 +132,10 @@ public class HCatOutputFormat extends HCatBaseOutputFormat {
         // non-partitioned table
         outputJobInfo.setPartitionValues(new HashMap<String, String>());
 
-      } else {
+      } else {//说明表有分区
         // partitioned table, we expect partition values
         // convert user specified map to have lower case key names
-        Map<String, String> valueMap = new HashMap<String, String>();
+        Map<String, String> valueMap = new HashMap<String, String>();//已经设置的分区
         if (outputJobInfo.getPartitionValues() != null) {
           for (Map.Entry<String, String> entry : outputJobInfo.getPartitionValues().entrySet()) {
             valueMap.put(entry.getKey().toLowerCase(), entry.getValue());
@@ -141,13 +143,13 @@ public class HCatOutputFormat extends HCatBaseOutputFormat {
         }
 
         if ((outputJobInfo.getPartitionValues() == null)
-          || (outputJobInfo.getPartitionValues().size() < table.getTTable().getPartitionKeysSize())) {
+          || (outputJobInfo.getPartitionValues().size() < table.getTTable().getPartitionKeysSize())) {//说明有动态分区存在
           // dynamic partition usecase - partition values were null, or not all were specified
           // need to figure out which keys are not specified.
-          List<String> dynamicPartitioningKeys = new ArrayList<String>();
+          List<String> dynamicPartitioningKeys = new ArrayList<String>();//动态分区字段集合
           boolean firstItem = true;
           for (FieldSchema fs : table.getPartitionKeys()) {
-            if (!valueMap.containsKey(fs.getName().toLowerCase())) {
+            if (!valueMap.containsKey(fs.getName().toLowerCase())) {//说明设置的分区不包含真正的分区,因此该分区就是动态分区
               dynamicPartitioningKeys.add(fs.getName().toLowerCase());
             }
           }
@@ -157,7 +159,7 @@ public class HCatOutputFormat extends HCatBaseOutputFormat {
             throw new HCatException(ErrorType.ERROR_INVALID_PARTITION_VALUES, "Invalid partition keys specified");
           }
 
-          outputJobInfo.setDynamicPartitioningKeys(dynamicPartitioningKeys);
+          outputJobInfo.setDynamicPartitioningKeys(dynamicPartitioningKeys);//设置计算好的动态分区字段
           String dynHash;
           if ((dynHash = conf.get(HCatConstants.HCAT_DYNAMIC_PTN_JOBID)) == null) {
             dynHash = String.valueOf(Math.random());
@@ -180,7 +182,7 @@ public class HCatOutputFormat extends HCatBaseOutputFormat {
       StorerInfo storerInfo =
         InternalUtil.extractStorerInfo(table.getTTable().getSd(), table.getParameters());
 
-      List<String> partitionCols = new ArrayList<String>();
+      List<String> partitionCols = new ArrayList<String>();//表的元数据中的分区字段
       for (FieldSchema schema : table.getPartitionKeys()) {
         partitionCols.add(schema.getName());
       }
@@ -237,12 +239,13 @@ public class HCatOutputFormat extends HCatBaseOutputFormat {
    * @param conf the job Configuration object
    * @param schema the schema for the data
    * @throws IOException
+   * 设置输出的schema,而不是从hive元数据加载
    */
   public static void setSchema(final Configuration conf, final HCatSchema schema) throws IOException {
     OutputJobInfo jobInfo = getJobInfo(conf);
-    Map<String, String> partMap = jobInfo.getPartitionValues();
+    Map<String, String> partMap = jobInfo.getPartitionValues();//获取分区信息
     setPartDetails(jobInfo, schema, partMap);
-    conf.set(HCatConstants.HCAT_KEY_OUTPUT_INFO, HCatUtil.serialize(jobInfo));
+    conf.set(HCatConstants.HCAT_KEY_OUTPUT_INFO, HCatUtil.serialize(jobInfo));//设置schema等信息
   }
 
   /**

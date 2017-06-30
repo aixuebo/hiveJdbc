@@ -56,6 +56,7 @@ import java.util.Map;
 /**
  * File-based storage (ie RCFile, Text, etc) implementation of OutputFormatContainer.
  * This implementation supports the following HCatalog features: partitioning, dynamic partitioning, Hadoop Archiving, etc.
+ * 用于动态分区和静态分区
  */
 class FileOutputFormatContainer extends OutputFormatContainer {
 
@@ -74,7 +75,7 @@ class FileOutputFormatContainer extends OutputFormatContainer {
     //Configure the output key and value classes.
     // This is required for writing null as key for file based tables.
     context.getConfiguration().set("mapred.output.key.class",
-      NullWritable.class.getName());
+      NullWritable.class.getName());//输出的key一定是null,因为所有的hive格式的内容都在schema中被输出到value中了
     String jobInfoString = context.getConfiguration().get(
       HCatConstants.HCAT_KEY_OUTPUT_INFO);
     OutputJobInfo jobInfo = (OutputJobInfo) HCatUtil
@@ -89,13 +90,13 @@ class FileOutputFormatContainer extends OutputFormatContainer {
       sd.getSerializedClass().getName());
 
     RecordWriter<WritableComparable<?>, HCatRecord> rw;
-    if (HCatBaseOutputFormat.getJobInfo(context.getConfiguration()).isDynamicPartitioningUsed()){
+    if (HCatBaseOutputFormat.getJobInfo(context.getConfiguration()).isDynamicPartitioningUsed()){//需要动态分区
       // When Dynamic partitioning is used, the RecordWriter instance initialized here isn't used. Can use null.
       // (That's because records can't be written until the values of the dynamic partitions are deduced.
       // By that time, a new local instance of RecordWriter, with the correct output-path, will be constructed.)
       rw = new DynamicPartitionFileRecordWriterContainer(
           (org.apache.hadoop.mapred.RecordWriter)null, context);
-    } else {
+    } else {//说明是静态分区
       Path parentDir = new Path(context.getConfiguration().get("mapred.work.output.dir"));
       Path childPath = new Path(parentDir,FileOutputFormat.getUniqueName(new JobConf(context.getConfiguration()), "part"));
 
@@ -178,15 +179,15 @@ class FileOutputFormatContainer extends OutputFormatContainer {
     if (!table.isImmutable()){
       return;
     }
-    if (table.getPartitionKeys().size() > 0) {
+    if (table.getPartitionKeys().size() > 0) {//分区存在
       if (!outputInfo.isDynamicPartitioningUsed()) {
         List<String> partitionValues = getPartitionValueList(
-          table, outputInfo.getPartitionValues());
+          table, outputInfo.getPartitionValues());//分区值
         // fully-specified partition
         List<String> currentParts = client.listPartitionNames(outputInfo.getDatabaseName(),
-          outputInfo.getTableName(), partitionValues, (short) 1);
+          outputInfo.getTableName(), partitionValues, (short) 1);//判断当前分区
 
-        if (currentParts.size() > 0) {
+        if (currentParts.size() > 0) {//说明当前分区存在
           // If a table is partitioned and immutable, then the presence
           // of the partition alone is enough to throw an error - we do
           // not need to check for emptiness to decide to throw an error
@@ -195,10 +196,10 @@ class FileOutputFormatContainer extends OutputFormatContainer {
       }
     } else {
       List<String> partitionValues = getPartitionValueList(
-        table, outputInfo.getPartitionValues());
+        table, outputInfo.getPartitionValues());//设置分区值
       // non-partitioned table
 
-      Path tablePath = new Path(table.getTTable().getSd().getLocation());
+      Path tablePath = new Path(table.getTTable().getSd().getLocation());//表的路径
       FileSystem fs = tablePath.getFileSystem(context.getConfiguration());
 
       if (!MetaStoreUtils.isDirEmpty(fs,tablePath)){
@@ -214,6 +215,7 @@ class FileOutputFormatContainer extends OutputFormatContainer {
    * @param valueMap the partition value map
    * @return the partition value list
    * @throws java.io.IOException
+   * 获取分区值
    */
   static List<String> getPartitionValueList(Table table, Map<String, String> valueMap) throws IOException {
 

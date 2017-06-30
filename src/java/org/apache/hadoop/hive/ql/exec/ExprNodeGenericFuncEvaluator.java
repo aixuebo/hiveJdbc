@@ -33,7 +33,7 @@ import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorUtils;
 
 /**
  * ExprNodeGenericFuncEvaluator.
- *
+ * 说明表达式是一个函数
  */
 public class ExprNodeGenericFuncEvaluator extends ExprNodeEvaluator<ExprNodeGenericFuncDesc> {
 
@@ -42,7 +42,7 @@ public class ExprNodeGenericFuncEvaluator extends ExprNodeEvaluator<ExprNodeGene
 
   transient GenericUDF genericUDF;
   transient Object rowObject;
-  transient ExprNodeEvaluator[] children;
+  transient ExprNodeEvaluator[] children;//函数的参数对应的表达式集合
   transient GenericUDF.DeferredObject[] deferredChildren;
   transient boolean isEager;
 
@@ -83,7 +83,7 @@ public class ExprNodeGenericFuncEvaluator extends ExprNodeEvaluator<ExprNodeGene
 
   public ExprNodeGenericFuncEvaluator(ExprNodeGenericFuncDesc expr) throws HiveException {
     super(expr);
-    children = new ExprNodeEvaluator[expr.getChildExprs().size()];
+    children = new ExprNodeEvaluator[expr.getChildExprs().size()];//函数的参数对应的表达式集合
     isEager = false;
     for (int i = 0; i < children.length; i++) {
       ExprNodeDesc child = expr.getChildExprs().get(i);
@@ -156,7 +156,7 @@ public class ExprNodeGenericFuncEvaluator extends ExprNodeEvaluator<ExprNodeGene
   protected Object _evaluate(Object row, int version) throws HiveException {
     rowObject = row;
     if (ObjectInspectorUtils.isConstantObjectInspector(outputOI) &&
-        isDeterministic()) {
+        isDeterministic()) {//说明该UDF的结果是一个常量,所以不需要再次计算了
       // The output of this UDF is constant, so don't even bother evaluating.
       return ((ConstantObjectInspector)outputOI).getWritableConstantValue();
     }

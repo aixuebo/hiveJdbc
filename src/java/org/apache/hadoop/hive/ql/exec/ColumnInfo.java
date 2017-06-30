@@ -63,6 +63,13 @@ public class ColumnInfo implements Serializable {
   public ColumnInfo() {
   }
 
+    /**
+     *
+     * @param internalName 列名字
+     * @param type 列类型
+     * @param tabAlias      该列所属表别名
+     * @param isVirtualCol 是否是虚拟列
+     */
   public ColumnInfo(String internalName, TypeInfo type, String tabAlias,
       boolean isVirtualCol) {
     this(internalName, type, tabAlias, isVirtualCol, false);

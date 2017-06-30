@@ -85,7 +85,7 @@ public class TableScanOperator extends Operator<TableScanDesc> implements
       setDone(true);
       return;
     }
-    if (conf != null && conf.isGatherStats()) {
+    if (conf != null && conf.isGatherStats()) {//说明需要收集状态
       gatherStats(row);
     }
     forward(row, inputObjInspectors[tag]);
@@ -185,7 +185,7 @@ public class TableScanOperator extends Operator<TableScanDesc> implements
 
   @Override
   protected void initializeOp(Configuration hconf) throws HiveException {
-    initializeChildren(hconf);
+    initializeChildren(hconf);//初始化子类操作对象
     inputFileChanged = false;
 
     if (conf == null) {
