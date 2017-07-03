@@ -88,11 +88,12 @@ public class HBaseStorageHandler extends DefaultStorageHandler
     }
   }
 
+  //获取hbase的表名字
   private String getHBaseTableName(Table tbl) {
     // Give preference to TBLPROPERTIES over SERDEPROPERTIES
     // (really we should only use TBLPROPERTIES, so this is just
     // for backwards compatibility with the original specs).
-    String tableName = tbl.getParameters().get(HBaseSerDe.HBASE_TABLE_NAME);
+    String tableName = tbl.getParameters().get(HBaseSerDe.HBASE_TABLE_NAME);//获取hbase的表名字
     if (tableName == null) {
       //convert to lower case in case we are getting from serde
       tableName = tbl.getSd().getSerdeInfo().getParameters().get(

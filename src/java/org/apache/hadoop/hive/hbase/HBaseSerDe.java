@@ -61,7 +61,7 @@ import org.apache.hadoop.io.Writable;
 public class HBaseSerDe extends AbstractSerDe {
 
   public static final String HBASE_COLUMNS_MAPPING = "hbase.columns.mapping";
-  public static final String HBASE_TABLE_NAME = "hbase.table.name";
+  public static final String HBASE_TABLE_NAME = "hbase.table.name";//如何获取hbase的表名
   public static final String HBASE_TABLE_DEFAULT_STORAGE_TYPE = "hbase.table.default.storage.type";
   public static final String HBASE_KEY_COL = ":key";
   public static final String HBASE_PUT_TIMESTAMP = "hbase.put.timestamp";

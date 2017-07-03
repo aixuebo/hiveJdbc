@@ -9253,7 +9253,7 @@ b.CREATE [EXTERNAL] TABLE [IF NOT Exists] tableName [(columnNameTypeList)]
     boolean storedAsDirs = false;//是否存储skewed by相关语句被设置,解析STORED AS DIRECTORIES
 
     
-    RowFormatParams rowFormatParams = new RowFormatParams();
+    RowFormatParams rowFormatParams = new RowFormatParams();//如何拆分一行数据、以及一行数据中的列用什么划分、list、map用什么划分、转义字符是什么
     StorageFormat storageFormat = new StorageFormat();
     AnalyzeCreateCommonVars shared = new AnalyzeCreateCommonVars();
 
@@ -9640,14 +9640,15 @@ AS selectStatement
       return;
     }
 
-    boolean isAllCol;
+    boolean isAllCol;//true表示select中有*存在
+    //序号只是针对select group order by三种语法,因此找到三个节点
     ASTNode selectNode = null;
     ASTNode groupbyNode = null;
     ASTNode orderbyNode = null;
 
     // get node type
     int child_count = ast.getChildCount();
-    for (int child_pos = 0; child_pos < child_count; ++child_pos) {
+    for (int child_pos = 0; child_pos < child_count; ++child_pos) {//循环每一个语法节点,找到符合条件的三个语法节点
       ASTNode node = (ASTNode) ast.getChild(child_pos);
       int type = node.getToken().getType();
       if (type == HiveParser.TOK_SELECT) {
@@ -9660,7 +9661,7 @@ AS selectStatement
     }
 
     if (selectNode != null) {
-      int selectExpCnt = selectNode.getChildCount();
+      int selectExpCnt = selectNode.getChildCount();//select中字段数量
 
       // replace each of the position alias in GROUPBY with the actual column name
       //循环所有的group by的语句,找到所有的字段是数字类型的,则将其替换成select中的对应的字段
@@ -9671,7 +9672,7 @@ AS selectStatement
             int pos = Integer.parseInt(node.getText());
             if (pos > 0 && pos <= selectExpCnt) {
               groupbyNode.setChild(child_pos,
-                (BaseTree) selectNode.getChild(pos - 1).getChild(0));
+                (BaseTree) selectNode.getChild(pos - 1).getChild(0));//将序号数字替换成具体的列节点
             } else {
               throw new SemanticException(
                 ErrorMsg.INVALID_POSITION_ALIAS_IN_GROUPBY.getMsg(
@@ -9700,7 +9701,7 @@ AS selectStatement
             if (!isAllCol) {//必须不是*查询,否则没办法对应关系匹配
               int pos = Integer.parseInt(node.getText());
               if (pos > 0 && pos <= selectExpCnt) {
-                colNode.setChild(0, (BaseTree) selectNode.getChild(pos - 1).getChild(0));
+                colNode.setChild(0, (BaseTree) selectNode.getChild(pos - 1).getChild(0));//将序号数字替换成具体的列节点
               } else {
                 throw new SemanticException(
                   ErrorMsg.INVALID_POSITION_ALIAS_IN_ORDERBY.getMsg(

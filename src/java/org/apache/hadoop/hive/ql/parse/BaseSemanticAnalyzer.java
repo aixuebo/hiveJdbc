@@ -129,7 +129,7 @@ public abstract class BaseSemanticAnalyzer {
   protected static final String ORCFILE_SERDE = OrcSerde.class
       .getName();
 
-  //设置行分隔符信息
+  //设置行分隔符信息  如何拆分一行数据、以及一行数据中的列用什么划分、list、map用什么划分、转义字符是什么
   class RowFormatParams {
     String fieldDelim = null;//分隔每一个属性
     String fieldEscape = null;//分隔属性时候用的转义字符
@@ -189,16 +189,30 @@ public abstract class BaseSemanticAnalyzer {
   class StorageFormat {
     String inputFormat = null;
     String outputFormat = null;
-    String storageHandler = null;
+      /**
+       * 比如
+       CREATE TABLE dim_temp.hbase_hive_1(key int, value string)
+       STORED BY 'org.apache.hadoop.hive.hbase.HBaseStorageHandler'
+       WITH SERDEPROPERTIES ("hbase.columns.mapping" = ":key,cf1:val")
+       TBLPROPERTIES ("hbase.table.name" = "xyz");
+       插入hbase中,不需要指定inputFormat和outputFormat,因为这两个是hbase决定的,只需要最终序列化的是writable即可,而PUT的返回值就是writable类型的
+       */
+    String storageHandler = null;//一旦handler存在,则有可能不需要inputFormat和outputFormat,因为handler里面包含了inputFormat和outputFormat等信息
 
     /**
      * 
      * @param child
      * @param shared 全局的参数集合
      * @return
+    //STORED as SEQUENCEFILE |
+    //STORED as TEXTFILE |
+    //STORED as RCFILE |
+    //STORED as ORCFILE |
+    //STORED as INPUTFORMAT xxx OUTPUTFORMAT xxx [INPUTDRIVER xxx OUTPUTDRIVER xxx]
+    //STORED BY handler, WITH SERDEPROPERTIES (key=value,key=value,key) ,注意key=value集合是为xxx存储引擎提供的参数集合
      */
     protected boolean fillStorageFormat(ASTNode child, AnalyzeCreateCommonVars shared) {
-      boolean storageFormat = false;
+      boolean storageFormat = false;//true表示是否解析成功,false表示传入的节点不是要解析的内容.默认是false
       switch(child.getToken().getType()) {
       case HiveParser.TOK_TBLSEQUENCEFILE://SequenceFile
         inputFormat = SEQUENCEFILE_INPUT;
@@ -253,7 +267,7 @@ public abstract class BaseSemanticAnalyzer {
     //设置默认的文件输入/输出类型
     protected void fillDefaultStorageFormat(AnalyzeCreateCommonVars shared) {
       if ((inputFormat == null) && (storageHandler == null)) {//如果没有设置,则去设置
-        if ("SequenceFile".equalsIgnoreCase(conf.getVar(HiveConf.ConfVars.HIVEDEFAULTFILEFORMAT))) {
+        if ("SequenceFile".equalsIgnoreCase(conf.getVar(HiveConf.ConfVars.HIVEDEFAULTFILEFORMAT))) {//获取默认
           inputFormat = SEQUENCEFILE_INPUT;
           outputFormat = SEQUENCEFILE_OUTPUT;
         } else if ("RCFile".equalsIgnoreCase(conf.getVar(HiveConf.ConfVars.HIVEDEFAULTFILEFORMAT))) {
@@ -653,7 +667,7 @@ public abstract class BaseSemanticAnalyzer {
         col.setType(getTypeStringFromAST(typeChild));
 
         // child 2 is the optional comment of the column
-        if (child.getChildCount() == 3) {
+        if (child.getChildCount() == 3) {//添加类的备注
           col.setComment(unescapeSQLString(child.getChild(2).getText()));
         }
       }
@@ -1222,7 +1236,7 @@ create table T (c1 string, c2 string) skewed by (c1,c2) on (('x11','x21'),('x12'
           skewedValues.add(sList);
         }
         break;
-      case HiveParser.TOK_TABCOLVALUE_PAIR:
+      case HiveParser.TOK_TABCOLVALUE_PAIR://一对一对出现的情况
         ArrayList<Node> vLNodes = vAstNode.getChildren();
         for (Node node : vLNodes) {
           if ( ((ASTNode) node).getToken().getType() != HiveParser.TOK_TABCOLVALUES) {
