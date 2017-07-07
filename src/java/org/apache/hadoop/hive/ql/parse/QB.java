@@ -54,7 +54,7 @@ public class QB {
   private boolean isQuery;//true表示该query是子查询中的query
   private boolean isAnalyzeRewrite;
   private CreateTableDesc tblDesc = null; // table descriptor of the final,create table as select 此语法创建的表对象,即使用insert  ...seletc 方式创建的表,因此查询块里面要保留该创建表对象
-  private CreateTableDesc localDirectoryDesc = null ;
+  private CreateTableDesc localDirectoryDesc = null ;//输出到本地文件
 
   // used by PTFs
   /*
@@ -83,6 +83,12 @@ public class QB {
   public QB() {
   }
 
+    /**
+     *
+     * @param outer_id
+     * @param alias
+     * @param isSubQ true表示该sql是属于子查询中的sql
+     */
   public QB(String outer_id, String alias, boolean isSubQ) {
     aliasToTabs = new HashMap<String, String>();
     aliasToSubq = new HashMap<String, QBExpr>();

@@ -805,6 +805,7 @@ public abstract class BaseSemanticAnalyzer {
       this(db, conf, ast, true, false);
     }
 
+    //给定一个节点进行解析
     public tableSpec(Hive db, HiveConf conf, ASTNode ast,
         boolean allowDynamicPartitionsSpec, boolean allowPartialPartitionsSpec)
         throws SemanticException {

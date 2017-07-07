@@ -60,10 +60,10 @@ import org.apache.hadoop.io.Writable;
  */
 public class HBaseSerDe extends AbstractSerDe {
 
-  public static final String HBASE_COLUMNS_MAPPING = "hbase.columns.mapping";
+  public static final String HBASE_COLUMNS_MAPPING = "hbase.columns.mapping";//比如:key,a:b,a:c,d:e
   public static final String HBASE_TABLE_NAME = "hbase.table.name";//如何获取hbase的表名
   public static final String HBASE_TABLE_DEFAULT_STORAGE_TYPE = "hbase.table.default.storage.type";
-  public static final String HBASE_KEY_COL = ":key";
+  public static final String HBASE_KEY_COL = ":key";//定义rowkey
   public static final String HBASE_PUT_TIMESTAMP = "hbase.put.timestamp";
   public static final String HBASE_SCAN_CACHE = "hbase.scan.cache";
   public static final String HBASE_SCAN_CACHEBLOCKS = "hbase.scan.cacheblock";
@@ -83,7 +83,7 @@ public class HBaseSerDe extends AbstractSerDe {
   private boolean useJSONSerialize;
   private LazyHBaseRow cachedHBaseRow;
   private final ByteStream.Output serializeStream = new ByteStream.Output();
-  private int iKey;
+  private int iKey;//rowkey的列序号
   private long putTimestamp;
 
   // used for serializing a field
@@ -164,6 +164,7 @@ public class HBaseSerDe extends AbstractSerDe {
    * @param doColumnRegexMatching whether to do a regex matching on the columns or not
    * @return List<ColumnMapping> which contains the column mapping information by position
    * @throws SerDeException
+   * 解析列信息,然后返回列信息集合
    */
   public static List<ColumnMapping> parseColumnsMapping(String columnsMappingSpec, boolean doColumnRegexMatching)
       throws SerDeException {
@@ -177,27 +178,27 @@ public class HBaseSerDe extends AbstractSerDe {
           + " row key. A valid Hive-HBase table must specify at least one additional column.");
     }
 
-    int rowKeyIndex = -1;
-    List<ColumnMapping> columnsMapping = new ArrayList<ColumnMapping>();
-    String [] columnSpecs = columnsMappingSpec.split(",");
+    int rowKeyIndex = -1;//rowkey是第几个设置的字段
+    List<ColumnMapping> columnsMapping = new ArrayList<ColumnMapping>();//每一个列族-列对象的集合
+    String [] columnSpecs = columnsMappingSpec.split(",");//按照逗号拆分
     ColumnMapping columnMapping = null;
 
-    for (int i = 0; i < columnSpecs.length; i++) {
+    for (int i = 0; i < columnSpecs.length; i++) {//处理每一个列信息
       String mappingSpec = columnSpecs[i].trim();
-      String [] mapInfo = mappingSpec.split("#");
+      String [] mapInfo = mappingSpec.split("#");//按照#号拆分
       String colInfo = mapInfo[0];
 
       int idxFirst = colInfo.indexOf(":");
       int idxLast = colInfo.lastIndexOf(":");
 
-      if (idxFirst < 0 || !(idxFirst == idxLast)) {
+      if (idxFirst < 0 || !(idxFirst == idxLast)) {//说明没有map结构
         throw new SerDeException("Error: the HBase columns mapping contains a badly formed " +
             "column family, column qualifier specification.");
       }
 
       columnMapping = new ColumnMapping();
 
-      if (colInfo.equals(HBASE_KEY_COL)) {
+      if (colInfo.equals(HBASE_KEY_COL)) {//说明是rowkey
         rowKeyIndex = i;
         columnMapping.familyName = colInfo;
         columnMapping.familyNameBytes = Bytes.toBytes(colInfo);
@@ -205,7 +206,7 @@ public class HBaseSerDe extends AbstractSerDe {
         columnMapping.qualifierNameBytes = null;
         columnMapping.hbaseRowKey = true;
       } else {
-        String [] parts = colInfo.split(":");
+        String [] parts = colInfo.split(":");//设置列族和列
         assert(parts.length > 0 && parts.length <= 2);
         columnMapping.familyName = parts[0];
         columnMapping.familyNameBytes = Bytes.toBytes(parts[0]);
@@ -213,9 +214,9 @@ public class HBaseSerDe extends AbstractSerDe {
 
         if (parts.length == 2) {
 
-          if (doColumnRegexMatching && parts[1].endsWith(".*")) {
+          if (doColumnRegexMatching && parts[1].endsWith(".*")) {//可以是.*形式
             // we have a prefix with a wildcard
-            columnMapping.qualifierPrefix = parts[1].substring(0, parts[1].length() - 2);
+            columnMapping.qualifierPrefix = parts[1].substring(0, parts[1].length() - 2);//取消.*
             columnMapping.qualifierPrefixBytes = Bytes.toBytes(columnMapping.qualifierPrefix);
             // we weren't provided any actual qualifier name. Set these to
             // null.
@@ -238,7 +239,7 @@ public class HBaseSerDe extends AbstractSerDe {
       columnsMapping.add(columnMapping);
     }
 
-    if (rowKeyIndex == -1) {
+    if (rowKeyIndex == -1) {//说明没有发现rowkey字段
       columnMapping = new ColumnMapping();
       columnMapping.familyName = HBASE_KEY_COL;
       columnMapping.familyNameBytes = Bytes.toBytes(HBASE_KEY_COL);
@@ -431,20 +432,20 @@ public class HBaseSerDe extends AbstractSerDe {
     return hbaseColumnName.equals(HBASE_KEY_COL);
   }
 
-
+  ///每一个列族-列对象
   static class ColumnMapping {
 
     ColumnMapping() {
       binaryStorage = new ArrayList<Boolean>(2);
     }
 
-    String familyName;
-    String qualifierName;
-    byte [] familyNameBytes;
+    String familyName;//列族
+    String qualifierName;//列族下的列
+    byte [] familyNameBytes;//列族的字节数组形式
     byte [] qualifierNameBytes;
     List<Boolean> binaryStorage;
-    boolean hbaseRowKey;
-    String mappingSpec;
+    boolean hbaseRowKey;//该列是否是rowkey列
+    String mappingSpec;//原始内容,比如列族:列
     String qualifierPrefix;
     byte[] qualifierPrefixBytes;
   }
@@ -454,14 +455,14 @@ public class HBaseSerDe extends AbstractSerDe {
     throws SerDeException {
 
     // Read configuration parameters
-    hbaseColumnsMapping = tbl.getProperty(HBaseSerDe.HBASE_COLUMNS_MAPPING);
-    String columnTypeProperty = tbl.getProperty(serdeConstants.LIST_COLUMN_TYPES);
+    hbaseColumnsMapping = tbl.getProperty(HBaseSerDe.HBASE_COLUMNS_MAPPING);//比如:key,a:b,a:c,d:e
+    String columnTypeProperty = tbl.getProperty(serdeConstants.LIST_COLUMN_TYPES);//获取list字段的的type类型
     putTimestamp = Long.valueOf(tbl.getProperty(HBaseSerDe.HBASE_PUT_TIMESTAMP,"-1"));
 
     doColumnRegexMatching = Boolean.valueOf(tbl.getProperty(HBASE_COLUMNS_REGEX_MATCHING, "true"));
 
     // Parse and initialize the HBase columns mapping
-    columnsMapping = parseColumnsMapping(hbaseColumnsMapping, doColumnRegexMatching);
+    columnsMapping = parseColumnsMapping(hbaseColumnsMapping, doColumnRegexMatching);//解析列信息
 
     // Build the type property string if not supplied
     if (columnTypeProperty == null) {
@@ -527,7 +528,7 @@ public class HBaseSerDe extends AbstractSerDe {
     // Precondition: make sure this is done after the rest of the SerDe initialization is done.
     String hbaseTableStorageType = tbl.getProperty(HBaseSerDe.HBASE_TABLE_DEFAULT_STORAGE_TYPE);
     parseColumnStorageTypes(hbaseTableStorageType);
-    setKeyColumnOffset();
+    setKeyColumnOffset();//设置第几个字段是rowkey
   }
 
   /**
@@ -844,6 +845,7 @@ public class HBaseSerDe extends AbstractSerDe {
     iKey = getRowKeyColumnOffset(columnsMapping);
   }
 
+  //获取是rowkey的列序号
   public static int getRowKeyColumnOffset(List<ColumnMapping> columnsMapping)
       throws SerDeException {
 

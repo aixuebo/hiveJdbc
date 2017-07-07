@@ -53,7 +53,7 @@ import org.slf4j.LoggerFactory;
  */
 class DynamicPartitionFileRecordWriterContainer extends FileRecordWriterContainer {
   private static final Logger LOG = LoggerFactory.getLogger(DynamicPartitionFileRecordWriterContainer.class);
-  private final List<Integer> dynamicPartCols//动态分区列在schema中的序号;
+  private final List<Integer> dynamicPartCols;//动态分区列在schema中的序号;
   private int maxDynamicPartitions;//动态分区最多数量
 
   private final Map<String, RecordWriter<? super WritableComparable<?>, ? super Writable>> baseDynamicWriters;//每一个动态分区对应一个writer

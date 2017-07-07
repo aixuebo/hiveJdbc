@@ -35,15 +35,17 @@ import org.apache.hadoop.hive.ql.plan.OperatorDesc;
 public class QBJoinTree implements Serializable{
   private static final long serialVersionUID = 1L;
   private String leftAlias;//左边的查询表别名
-  private String[] rightAliases;//右边的查询表别名,可以是多个别名,但是没意义
-  private String[] leftAliases;//左边的查询表别名,可以是多个别名,但是没意义
-  private QBJoinTree joinSrc;//关联的可能又是一个join操作结果
-  private String[] baseSrc;//第一个是左边表的别名,第二个是右边表的别名,
+
+  private String[] rightAliases;//右边的查询表别名,即右边的表是由哪些表集合组成的
+  private String[] leftAliases;//左边的查询表别名,即左边的表是由哪些表集合组成的
+
+  private QBJoinTree joinSrc;//说明此时的结果最左边是一个join的结果,然后该结果在和右边的具体的表进行join操作
+  private String[] baseSrc;//第一个是左边表的别名,第二个是右边表的别名,即此时两个数组的内容就是两个真实表的join
   private int nextTag;
   private JoinCond[] joinCond;//通过该字段可以知道两个表到底是什么join,比如是left join 还是right什么的
   private boolean noOuterJoin;//true表示JOIN 、INNER JOIN    false表示LEFT [OUTER] JOIN 、RIGHT [OUTER] JOIN 、FULL [OUTER] JOIN
   private boolean noSemiJoin;//false表示LEFT SEMI JOIN
-  private Map<String, Operator<? extends OperatorDesc>> aliasToOpInfo;
+  private Map<String, Operator<? extends OperatorDesc>> aliasToOpInfo;//每一个表的别名作为key,value是该表的操作
 
   // The subquery identifier from QB.
   // It is of the form topSubQuery:innerSubQuery:....:innerMostSubQuery
@@ -60,19 +62,20 @@ public class QBJoinTree implements Serializable{
   private ArrayList<Boolean> nullsafes;
 
   // filters
-  private ArrayList<ArrayList<ASTNode>> filters;
+  private ArrayList<ArrayList<ASTNode>> filters;//直接join的时候进行过滤的表达式,下标0表示对left表进行过滤,1表示对右边表进行过滤
 
   // outerjoin-pos = other-pos:filter-len, other-pos:filter-len, ...
+  //分别针对左边表和右边表filter处理
   private int[][] filterMap;
 
   // filters for pushing
   private ArrayList<ArrayList<ASTNode>> filtersForPushing;
 
   // user asked for map-side join
-  private boolean mapSideJoin;//true表示存在map端的join
-  private List<String> mapAliases;//map端的join操作需要的表的别名
+  private boolean mapSideJoin;//true表示存在map端的join,即有hint
+  private List<String> mapAliases;//map端的join操作需要的表的别名  小表集合,参与hint
 
-  // big tables that should be streamed标示大表是哪些别名的表
+  // big tables that should be streamed解析STREAMTABLE 这类型的hint操作
   private List<String> streamAliases;
 
   /**

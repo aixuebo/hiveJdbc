@@ -198,6 +198,16 @@ selectExpressionList
     ;
 
 //---------------------- Rules for windowing clauses -------------------------------
+/**
+SELECT a, SUM(b) OVER w
+FROM T
+WINDOW w AS (PARTITION BY c ORDER BY d ROWS UNBOUNDED PRECEDING);
+
+相当于
+SELECT a, SUM(b) OVER (PARTITION BY c ORDER BY d ROWS UNBOUNDED PRECEDING);
+FROM T
+前者定义了一个别名w
+**/
 数据窗口
 格式:WINDOW window_defn,window_defn..
 window_clause 

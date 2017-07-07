@@ -73,7 +73,7 @@ public class GroupByDesc extends AbstractOperatorDesc {
 
   public GroupByDesc(
       final Mode mode,
-      final ArrayList<java.lang.String> outputColumnNames,
+      final ArrayList<java.lang.String> outputColumnNames,//Êä³ö
       final ArrayList<ExprNodeDesc> keys,
       final ArrayList<org.apache.hadoop.hive.ql.plan.AggregationDesc> aggregators,
       final boolean groupKeyNotReductionKey,

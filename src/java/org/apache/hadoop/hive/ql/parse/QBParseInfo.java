@@ -39,7 +39,7 @@ import org.apache.hadoop.hive.ql.parse.BaseSemanticAnalyzer.tableSpec;
  **/
 public class QBParseInfo {
 
-  private final boolean isSubQ;//是否包含子查询
+  private final boolean isSubQ;//true表示该sql是属于子查询中的sql
   private final String alias;//别名,即from (select...) as yyy中的yyy
   private ASTNode joinExpr;//表示from的有join的子句,即FROM fromSource joinToken fromSource [ON expression] joinToken fromSource [ON expression]..
   private ASTNode hints;//select中的hint节点
@@ -75,7 +75,7 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
   private boolean isNoScanAnalyzeCommand; // used for the analyze command (statistics) (noscan),表示设置了NOSCAN
   private boolean isPartialScanAnalyzeCommand; // used for the analyze command (statistics),表示设置了PARTIALSCAN
                                                // (partialscan)
-  private final HashMap<String, tableSpec> tableSpecs; // used for statisticskey为别名,value为分区的table对象
+  private final HashMap<String, tableSpec> tableSpecs; // used for statisticskey为别名,value为分区的table对象,该对象包含了分区信息
 
   private String tableName;   // used for column statistics
   private List<String> colName;     // used for column statistics

@@ -69,7 +69,7 @@ public enum ErrorMsg {
   INVALID_ARGUMENT(10014, "Wrong arguments"),
   INVALID_ARGUMENT_LENGTH(10015, "Arguments length mismatch", "21000"),
   INVALID_ARGUMENT_TYPE(10016, "Argument type mismatch"),
-  INVALID_JOIN_CONDITION_1(10017, "Both left and right aliases encountered in JOIN"),
+  INVALID_JOIN_CONDITION_1(10017, "Both left and right aliases encountered in JOIN"),//说明参与join的表在左右两边都有
   INVALID_JOIN_CONDITION_2(10018, "Neither left nor right aliases encountered in JOIN"),
   INVALID_JOIN_CONDITION_3(10019, "OR not supported in JOIN currently"),
   INVALID_TRANSFORM(10020, "TRANSFORM with other SELECT columns not supported"),

@@ -501,11 +501,11 @@ functionName格式为:IF | ARRAY | MAP | STRUCT | UNIONTYPE | String
         
         //校验函数名是否有意义
         if(FunctionRegistry.impliesOrder(functionName)) {//函数名字是否要排序
-          throw new SemanticException(ErrorMsg.MISSING_OVER_CLAUSE.getMsg(functionName));
+          throw new SemanticException(ErrorMsg.MISSING_OVER_CLAUSE.getMsg(functionName));//不能是有顺序的表达式
         }
-        if (FunctionRegistry.getGenericUDAFResolver(functionName) != null) {
-          if(containsLeadLagUDF(expressionTree)) {
-            throw new SemanticException(ErrorMsg.MISSING_OVER_CLAUSE.getMsg(functionName));
+        if (FunctionRegistry.getGenericUDAFResolver(functionName) != null) {//说明是聚合表达式
+          if(containsLeadLagUDF(expressionTree)) {//说明此函数是lag或者lead函数,则返回true
+            throw new SemanticException(ErrorMsg.MISSING_OVER_CLAUSE.getMsg(functionName));//说明此时lag是不允许排序的
           }
           aggregations.put(expressionTree.toStringTree(), expressionTree);
           FunctionInfo fi = FunctionRegistry.getFunctionInfo(functionName);
@@ -1130,6 +1130,16 @@ a.解析后的是joinToken^ fromSource (KW_ON! expression)?
         break;
 
       case HiveParser.KW_WINDOW:
+          /**
+           SELECT a, SUM(b) OVER w
+           FROM T
+           WINDOW w AS (PARTITION BY c ORDER BY d ROWS UNBOUNDED PRECEDING);
+
+           相当于
+           SELECT a, SUM(b) OVER (PARTITION BY c ORDER BY d ROWS UNBOUNDED PRECEDING);
+           FROM T
+           前者定义了一个别名w
+           */
         if (!qb.hasWindowingSpec(ctx_1.dest) ) {//必须select中有窗口函数,否则不允许有window语法
           throw new SemanticException(generateErrorMessage(ast,
               "Query has no Cluster/Distribute By; but has a Window definition"));
@@ -1161,9 +1171,8 @@ a.解析后的是joinToken^ fromSource (KW_ON! expression)?
       case HiveParser.TOK_UNION:
         // currently, we dont support subq1 union subq2 - the user has to
         // explicitly say:
-        // 明确的说是不支持如下方式:select * from (subq1 union subq2) subqalias
     	  //支持的是SELECT column_name(s) FROM table_name1 UNION SELECT column_name(s) FROM table_name2
-        if (!qbp.getIsSubQ()) {
+        if (!qbp.getIsSubQ()) {//说明只有子查询中才允许使用union语法
           throw new SemanticException(generateErrorMessage(ast,
               ErrorMsg.UNION_NOTIN_SUBQ.getMsg()));
         }
@@ -1357,8 +1366,8 @@ a.解析后的是joinToken^ fromSource (KW_ON! expression)?
         //使用了以下语法:ANALYZE TABLE tableName [ PARTITION (name=value,name=value,name) ] COMPUTE STATISTICS [NOSCAN]  [PARTIALSCAN]  [FOR COLUMNS "column1","column2"]
         if (qb.getParseInfo().isAnalyzeCommand()) {//需要分析表
           // allow partial partition specification for nonscan since noscan is fast.
-          tableSpec ts = new tableSpec(db, conf, (ASTNode) ast.getChild(0), true, this.noscan);
-          if (ts.specType == SpecType.DYNAMIC_PARTITION) { // dynamic partitions
+          tableSpec ts = new tableSpec(db, conf, (ASTNode) ast.getChild(0), true, this.noscan);//通过元数据,解析分区以及动态分区字段
+          if (ts.specType == SpecType.DYNAMIC_PARTITION) { // dynamic partitions 说明有动态分区
             try {
               ts.partitions = db.getPartitionsByNames(ts.tableHandle, ts.partSpec);
             } catch (HiveException e) {
@@ -1402,16 +1411,16 @@ a.解析后的是joinToken^ fromSource (KW_ON! expression)?
           newParentInput = aliasToViewInfo.get(alias).getSecond();//视图依赖的父输入
         }
         //视图或者子查询对应的sql对象
-        QBExpr qbexpr = qb.getSubqForAlias(alias);
-        getMetaData(qbexpr, newParentInput);
+        QBExpr qbexpr = qb.getSubqForAlias(alias);//因为是子查询,所以迭代每一个子查询的表,获取元数据
+        getMetaData(qbexpr, newParentInput);//递归去获取子查询中表的元数据信息
         if (wasView) {//移除对应的视图
           viewsExpanded.remove(viewsExpanded.size() - 1);
         }
       }
 
-      RowFormatParams rowFormatParams = new RowFormatParams();
+      RowFormatParams rowFormatParams = new RowFormatParams();//一行数据如何解析
       AnalyzeCreateCommonVars shared = new AnalyzeCreateCommonVars();
-      StorageFormat storageFormat = new StorageFormat();
+      StorageFormat storageFormat = new StorageFormat();//数据如何序列化与反序列化
 
       LOG.info("Get metadata for destination tables");
       // Go over all the destination structures and populate the related
@@ -1430,7 +1439,7 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
         ASTNode ast = qbp.getDestForClause(name);
         switch (ast.getToken().getType()) {
         case HiveParser.TOK_TAB: {//结果输出到一个table中
-          tableSpec ts = new tableSpec(db, conf, ast);
+          tableSpec ts = new tableSpec(db, conf, ast);//获取该table的元数据
           if (ts.tableHandle.isView()) {//视图不允许被用于数据load和insert
             throw new SemanticException(ErrorMsg.DML_AGAINST_VIEW.getMsg());
           }
@@ -1627,11 +1636,19 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
   /**
    * 解析join后面的on表达式的关联部分,比如 on a.id = b.id 则这部分解析的是a.id或者b.id
    * @param joinTree
-   * @param condn a.id
+   * @param condn 此时传递的是a.id 或者b.id,即等号的左右的某一个部分
    * @param leftAliases 空集合
    * @param rightAliases 空集合
    * @param fields
    * @throws SemanticException
+   * 该边可能的内容有以下类型
+  1).表别名,比如table1.id
+  因此看看该表属于join的哪部分,左边还是右边,分别加入到leftAliases或者rightAliases中,表示从左边还是右边获取该表
+  2).常数
+  3).属性比如id,用于函数中的某一个字段
+  4).函数,解析每一个函数的参数
+  5).一个额外的参数,比如id   会当作一个属性处理
+  6).两个额外的参数
    */
   @SuppressWarnings("nls")
   private void parseJoinCondPopulateAlias(QBJoinTree joinTree, ASTNode condn,
@@ -1643,12 +1660,12 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
     //原式=select * from biao left join biao1 on biao1.id = biao.id and biao.name = 'xxx'中的biao1.id = biao.id and biao.name = 'xxx'部分
     case HiveParser.TOK_TABLE_OR_COL:
       String tableOrCol = unescapeIdentifier(condn.getChild(0).getText()
-          .toLowerCase());
+          .toLowerCase());//真实的表
       unparseTranslator.addIdentifierTranslation((ASTNode) condn.getChild(0));
       //
       //查看tableOrCol别名是左边还是右边树里面的别名
-      if (isPresent(joinTree.getLeftAliases(), tableOrCol)) {
-        if (!leftAliases.contains(tableOrCol)) {
+      if (isPresent(joinTree.getLeftAliases(), tableOrCol)) {//确定左边的join的集合已经包含了该表了
+        if (!leftAliases.contains(tableOrCol)) {//说明该表条件是在左边表中存在
           leftAliases.add(tableOrCol);
         }
       } else if (isPresent(joinTree.getRightAliases(), tableOrCol)) {
@@ -1664,7 +1681,7 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
             .getChild(0)));
       }
       break;
-    case HiveParser.Identifier:
+    case HiveParser.Identifier://说明是一个属性名字,用于struct等类型里面
       // it may be a field name, return the identifier and let the caller decide
       // whether it is or not
       if (fields != null) {
@@ -1682,10 +1699,10 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
     case HiveParser.TOK_STRINGLITERALSEQUENCE:
     case HiveParser.TOK_CHARSETLITERAL:
     case HiveParser.KW_TRUE:
-    case HiveParser.KW_FALSE:
+    case HiveParser.KW_FALSE://以上说明是常数
       break;
 
-    case HiveParser.TOK_FUNCTION:
+    case HiveParser.TOK_FUNCTION://说明是函数
       // check all the arguments
       for (int i = 1; i < condn.getChildCount(); i++) {
         parseJoinCondPopulateAlias(joinTree, (ASTNode) condn.getChild(i),
@@ -1807,8 +1824,9 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
    *          join condition
    * @param leftSrc
    *          left sources
-   *  @param type 表示是left还是right join关联
+   *  @param type 表示是left还是right join关联 还是什么其他join方式
    * @throws SemanticException
+   * 解析join中的on信息
    */
   private void parseJoinCondition(QBJoinTree joinTree, ASTNode joinCond,
       List<String> leftSrc, JoinType type) throws SemanticException {
@@ -1821,16 +1839,18 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
       throw new SemanticException(ErrorMsg.INVALID_JOIN_CONDITION_3
           .getMsg(joinCond));
 
-    case HiveParser.KW_AND://AND 继续对and左右两边的表达式进一步解析
-      parseJoinCondition(joinTree, (ASTNode) joinCond.getChild(0), leftSrc, type);
-      parseJoinCondition(joinTree, (ASTNode) joinCond.getChild(1), leftSrc, type);
+    case HiveParser.KW_AND://AND 继续对and左右两边的表达式进一步解析 比如b1.name = b2.name and b1.id = b2.id
+      parseJoinCondition(joinTree, (ASTNode) joinCond.getChild(0), leftSrc, type);//解析b1.name = b2.name
+      parseJoinCondition(joinTree, (ASTNode) joinCond.getChild(1), leftSrc, type);//解析b1.id = b2.id
       break;
 
+    //下面解析一个表达式,比如b1.id = b2.id
     case HiveParser.EQUAL_NS://<=> 不等于符号
     case HiveParser.EQUAL://'=' | '==' //等于
       ASTNode leftCondn = (ASTNode) joinCond.getChild(0);//符号左边
-      ArrayList<String> leftCondAl1 = new ArrayList<String>();
-      ArrayList<String> leftCondAl2 = new ArrayList<String>();
+        //分别记录符号左边用到的表是 left的左边还是右边表
+      ArrayList<String> leftCondAl1 = new ArrayList<String>();//左边表存放在这里
+      ArrayList<String> leftCondAl2 = new ArrayList<String>();//右边表存放在这里
       parseJoinCondPopulateAlias(joinTree, leftCondn, leftCondAl1, leftCondAl2,
           null);
 
@@ -1852,43 +1872,43 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
             .getMsg(joinCond));
       }
 
-      if (leftCondAl1.size() != 0) {
-        if ((rightCondAl1.size() != 0)
-            || ((rightCondAl1.size() == 0) && (rightCondAl2.size() == 0))) {
+      if (leftCondAl1.size() != 0) {//使用的是左边的表
+        if ((rightCondAl1.size() != 0) //比配b1.id=b1.name,即符号左右俩边都是用同一个表
+            || ((rightCondAl1.size() == 0) && (rightCondAl2.size() == 0))) {//匹配b1.id=常数 或者函数等形式  ,总之就是左边是表,右边是常数
           if (type.equals(JoinType.LEFTOUTER) ||
               type.equals(JoinType.FULLOUTER)) {
-            if (conf.getBoolVar(HiveConf.ConfVars.HIVEOUTERJOINSUPPORTSFILTERS)) {
+            if (conf.getBoolVar(HiveConf.ConfVars.HIVEOUTERJOINSUPPORTSFILTERS)) {//直接对该数据进行过滤
               joinTree.getFilters().get(0).add(joinCond);
             } else {
               LOG.warn(ErrorMsg.OUTERJOIN_USES_FILTERS);
               joinTree.getFiltersForPushing().get(0).add(joinCond);
             }
           } else {
-            joinTree.getFiltersForPushing().get(0).add(joinCond);
+            joinTree.getFiltersForPushing().get(0).add(joinCond);//如果不是left join,说明是right join 或者join,因此用于下推
           }
-        } else if (rightCondAl2.size() != 0) {
+        } else if (rightCondAl2.size() != 0) {//说明比配b1.id=b2.name,即符号左右俩边都是用不同的表
           populateAliases(leftCondAl1, leftCondAl2, leftCondn, joinTree,
               leftSrc);
           populateAliases(rightCondAl1, rightCondAl2, rightCondn, joinTree,
               leftSrc);
-          boolean nullsafe = joinCond.getToken().getType() == HiveParser.EQUAL_NS;
+          boolean nullsafe = joinCond.getToken().getType() == HiveParser.EQUAL_NS;//<=>语法
           joinTree.getNullSafes().add(nullsafe);
         }
-      } else if (leftCondAl2.size() != 0) {
-        if ((rightCondAl2.size() != 0)
-            || ((rightCondAl1.size() == 0) && (rightCondAl2.size() == 0))) {
+      } else if (leftCondAl2.size() != 0) {//使用的是右边的表
+        if ((rightCondAl2.size() != 0)//比配b1.id=b1.name,即符号左右俩边都是用同一个表
+            || ((rightCondAl1.size() == 0) && (rightCondAl2.size() == 0))) {//匹配b1.id=常数 或者函数等形式  ,总之就是右边是表,左边是常数
           if (type.equals(JoinType.RIGHTOUTER)
               || type.equals(JoinType.FULLOUTER)) {
-            if (conf.getBoolVar(HiveConf.ConfVars.HIVEOUTERJOINSUPPORTSFILTERS)) {
+            if (conf.getBoolVar(HiveConf.ConfVars.HIVEOUTERJOINSUPPORTSFILTERS)) {//直接可以过滤
               joinTree.getFilters().get(1).add(joinCond);
             } else {
               LOG.warn(ErrorMsg.OUTERJOIN_USES_FILTERS);
-              joinTree.getFiltersForPushing().get(1).add(joinCond);
+              joinTree.getFiltersForPushing().get(1).add(joinCond);//过滤下推
             }
           } else {
-            joinTree.getFiltersForPushing().get(1).add(joinCond);
+            joinTree.getFiltersForPushing().get(1).add(joinCond);//过滤下推
           }
-        } else if (rightCondAl1.size() != 0) {
+        } else if (rightCondAl1.size() != 0) {//说明比配b1.id=b2.name,即符号左右俩边都是用不同的表
           populateAliases(leftCondAl1, leftCondAl2, leftCondn, joinTree,
               leftSrc);
           populateAliases(rightCondAl1, rightCondAl2, rightCondn, joinTree,
@@ -1925,7 +1945,7 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
       break;
 
     default:
-      boolean isFunction = (joinCond.getType() == HiveParser.TOK_FUNCTION);
+      boolean isFunction = (joinCond.getType() == HiveParser.TOK_FUNCTION);//如果on后面不是or  不是and  也不是具体的表达式b1.id=b2.id,那么剩下的就一定是函数表达式了,比如b1.name like 'xxxx'等操作
 
       // Create all children
       int childrenBegin = (isFunction ? 1 : 0);
@@ -2046,6 +2066,7 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
    *          The condition to be resolved 过滤条件
    * @param input
    *          the input operator 如何扫描数据,比如scan一个表
+   * 用于where条件
    * 对表进行过滤
    */
   @SuppressWarnings("nls")
@@ -2513,10 +2534,11 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
   // This function returns the grouping sets along with the grouping expressions
   // Even if rollups and cubes are present in the query, they are converted to
   // grouping sets at this point
+    //收集group by的节点 以及窗口函数信息
   private ObjectPair<List<ASTNode>, List<Integer>> getGroupByGroupingSetsForClause(
       QBParseInfo parseInfo, String dest) throws SemanticException {
-    List<Integer> groupingSets = new ArrayList<Integer>();
-    List<ASTNode> groupByExprs = getGroupByForClause(parseInfo, dest);
+    List<Integer> groupingSets = new ArrayList<Integer>();//存储窗口函数
+    List<ASTNode> groupByExprs = getGroupByForClause(parseInfo, dest);//group by的节点
     if (parseInfo.getDestRollups().contains(dest)) {
       groupingSets = getGroupingSetsForRollup(groupByExprs.size());
     } else if (parseInfo.getDestCubes().contains(dest)) {
@@ -2736,7 +2758,7 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
     RowResolver out_rwsch = new RowResolver();
     ASTNode trfm = null;
     Integer pos = Integer.valueOf(0);
-    RowResolver inputRR = opParseCtx.get(input).getRowResolver();
+    RowResolver inputRR = opParseCtx.get(input).getRowResolver();//获取输入源的字段信息
     // SELECT * or SELECT TRANSFORM(*)
     boolean selectStar = false;
     int posn = 0;
@@ -2745,7 +2767,7 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
       posn++;
     }
 
-    boolean subQuery = qb.getParseInfo().getIsSubQ();
+    boolean subQuery = qb.getParseInfo().getIsSubQ();//该sql是否是子查询的sql
     boolean isInTransform = (selExprList.getChild(posn).getChild(0).getType() ==
         HiveParser.TOK_TRANSFORM);
     if (isInTransform) {
@@ -3613,7 +3635,7 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
   @SuppressWarnings("nls")
   private Operator genGroupByPlanMapGroupByOperator(QB qb,
       String dest,
-      List<ASTNode> grpByExprs,
+      List<ASTNode> grpByExprs,//group by的语法块
       Operator inputOperatorInfo,
       GroupByDesc.Mode mode,
       Map<String, GenericUDAFEvaluator> genericUDAFEvaluators,
@@ -3621,21 +3643,21 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
       boolean groupingSetsPresent) throws SemanticException {
 
     RowResolver groupByInputRowResolver = opParseCtx.get(inputOperatorInfo)
-        .getRowResolver();
+        .getRowResolver();//存储输入的格式
     QBParseInfo parseInfo = qb.getParseInfo();
-    RowResolver groupByOutputRowResolver = new RowResolver();
+    RowResolver groupByOutputRowResolver = new RowResolver();//设置group by输出的格式
     groupByOutputRowResolver.setIsExprResolver(true);
-    ArrayList<ExprNodeDesc> groupByKeys = new ArrayList<ExprNodeDesc>();
-    ArrayList<String> outputColumnNames = new ArrayList<String>();
+    ArrayList<ExprNodeDesc> groupByKeys = new ArrayList<ExprNodeDesc>();//group by的表达式
+    ArrayList<String> outputColumnNames = new ArrayList<String>();//输出列名字
     ArrayList<AggregationDesc> aggregations = new ArrayList<AggregationDesc>();
     Map<String, ExprNodeDesc> colExprMap = new HashMap<String, ExprNodeDesc>();
-    for (int i = 0; i < grpByExprs.size(); ++i) {
+    for (int i = 0; i < grpByExprs.size(); ++i) {//循环每一个group by语法
       ASTNode grpbyExpr = grpByExprs.get(i);
       ExprNodeDesc grpByExprNode = genExprNodeDesc(grpbyExpr,
           groupByInputRowResolver);
 
       groupByKeys.add(grpByExprNode);
-      String field = getColumnInternalName(i);
+      String field = getColumnInternalName(i);//设置列名字,为col_序号
       outputColumnNames.add(field);
       groupByOutputRowResolver.putExpression(grpbyExpr,
           new ColumnInfo(field, grpByExprNode.getTypeInfo(), "", false));
@@ -3684,14 +3706,14 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
 
     // For each aggregation
     HashMap<String, ASTNode> aggregationTrees = parseInfo
-        .getAggregationExprsForClause(dest);
+        .getAggregationExprsForClause(dest);//获取聚合函数
     assert (aggregationTrees != null);
 
     boolean containsDistinctAggr = false;
     for (Map.Entry<String, ASTNode> entry : aggregationTrees.entrySet()) {
       ASTNode value = entry.getValue();
-      String aggName = unescapeIdentifier(value.getChild(0).getText());
-      ArrayList<ExprNodeDesc> aggParameters = new ArrayList<ExprNodeDesc>();
+      String aggName = unescapeIdentifier(value.getChild(0).getText());//聚合函数名字
+      ArrayList<ExprNodeDesc> aggParameters = new ArrayList<ExprNodeDesc>();//聚合函数需要的参数
       new ArrayList<Class<?>>();
       // 0 is the function name
       for (int i = 1; i < value.getChildCount(); i++) {
@@ -4893,9 +4915,9 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
     QBParseInfo parseInfo = qb.getParseInfo();
 
     ObjectPair<List<ASTNode>, List<Integer>> grpByExprsGroupingSets =
-        getGroupByGroupingSetsForClause(parseInfo, dest);
+        getGroupByGroupingSetsForClause(parseInfo, dest);//收集group by的节点 以及窗口函数信息
 
-    List<ASTNode> grpByExprs = grpByExprsGroupingSets.getFirst();
+    List<ASTNode> grpByExprs = grpByExprsGroupingSets.getFirst();//group by的内容
     List<Integer> groupingSets = grpByExprsGroupingSets.getSecond();
     boolean groupingSetsPresent = !groupingSets.isEmpty();
 
@@ -6256,7 +6278,7 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
     RowResolver inputRS = opParseCtx.get(child).getRowResolver();
     RowResolver outputRS = new RowResolver();
     ArrayList<String> outputColumns = new ArrayList<String>();
-    ArrayList<ExprNodeDesc> reduceKeys = new ArrayList<ExprNodeDesc>();
+    ArrayList<ExprNodeDesc> reduceKeys = new ArrayList<ExprNodeDesc>();//计算reduce的key,即group by的key
 
     // Compute join keys and store in reduceKeys
     ArrayList<ASTNode> exprs = joinTree.getExpressions().get(pos);
@@ -6322,7 +6344,7 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
     QBJoinTree leftChild = joinTree.getJoinSrc();
     Operator joinSrcOp = null;
     if (leftChild != null) {
-      Operator joinOp = genJoinOperator(qb, leftChild, map);
+      Operator joinOp = genJoinOperator(qb, leftChild, map);//递归操作
       ArrayList<ASTNode> filter = joinTree.getFiltersForPushing().get(0);
       for (ASTNode cond : filter) {
         joinOp = genFilterPlan(qb, cond, joinOp);
@@ -6331,18 +6353,18 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
       joinSrcOp = genJoinReduceSinkChild(qb, joinTree, joinOp, null, 0);
     }
 
-    Operator[] srcOps = new Operator[joinTree.getBaseSrc().length];
+    Operator[] srcOps = new Operator[joinTree.getBaseSrc().length];//获取左边和右边两个表的扫描操作
 
     HashSet<Integer> omitOpts = null; // set of input to the join that should be
     // omitted by the output
     int pos = 0;
     for (String src : joinTree.getBaseSrc()) {
       if (src != null) {
-        Operator srcOp = map.get(src.toLowerCase());
+        Operator srcOp = map.get(src.toLowerCase());//本来要扫描的表
 
         // for left-semi join, generate an additional selection & group-by
         // operator before ReduceSink
-        ArrayList<ASTNode> fields = joinTree.getRHSSemijoinColumns(src);
+        ArrayList<ASTNode> fields = joinTree.getRHSSemijoinColumns(src);//semi join需要的列
         if (fields != null) {
           // the RHS table columns should be not be output from the join
           if (omitOpts == null) {
@@ -6392,8 +6414,8 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
       Operator input) throws SemanticException {
 
     RowResolver inputRR = opParseCtx.get(input).getRowResolver();
-    ArrayList<ExprNodeDesc> colList = new ArrayList<ExprNodeDesc>();
-    ArrayList<String> columnNames = new ArrayList<String>();
+    ArrayList<ExprNodeDesc> colList = new ArrayList<ExprNodeDesc>();//获取选择的列集合对象
+    ArrayList<String> columnNames = new ArrayList<String>();//选择的列name集合
 
     // construct the list of columns that need to be projected
     for (ASTNode field : fields) {
@@ -6406,7 +6428,7 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
     // create selection operator
     Operator output = putOpInsertMap(OperatorFactory.getAndMakeChild(
         new SelectDesc(colList, columnNames, false), new RowSchema(inputRR
-            .getColumnInfos()), input), inputRR);
+            .getColumnInfos()), input), inputRR);//仅仅查询这些列
 
     output.setColumnExprMap(input.getColumnExprMap());
     return output;
@@ -6531,18 +6553,19 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
    * Extract the filters from the join condition and push them on top of the
    * source operators. This procedure traverses the query tree recursively,
    * 对join的on内容进行过滤,可以减少scan表的范围
+   *
    */
   private void pushJoinFilters(QB qb, QBJoinTree joinTree,
       Map<String, Operator> map) throws SemanticException {
-    if (joinTree.getJoinSrc() != null) {
+    if (joinTree.getJoinSrc() != null) {//递归操作
       pushJoinFilters(qb, joinTree.getJoinSrc(), map);
     }
-    ArrayList<ArrayList<ASTNode>> filters = joinTree.getFiltersForPushing();
+    ArrayList<ArrayList<ASTNode>> filters = joinTree.getFiltersForPushing();//获取左右两个表的filter节点表达式
     int pos = 0;
     for (String src : joinTree.getBaseSrc()) {
       if (src != null) {
         Operator srcOp = map.get(src);//找到一个scan的表
-        ArrayList<ASTNode> filter = filters.get(pos);//找到filter条件
+        ArrayList<ASTNode> filter = filters.get(pos);//找到filter条件,找到第几个表需要过滤的条件
         for (ASTNode cond : filter) {
           srcOp = genFilterPlan(qb, cond, srcOp);//对表进行过滤
         }
@@ -6558,7 +6581,7 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
 
 
     //获取hint标签,并且解析
-    ASTNode hints = qb.getParseInfo().getHints();
+    ASTNode hints = qb.getParseInfo().getHints();//比如 MAPJOIN(time_dim),其中time_dim表示小表,要加入内存的表
     for (int pos = 0; pos < hints.getChildCount(); pos++) {
       ASTNode hint = (ASTNode) hints.getChild(pos);
       if (((ASTNode) hint.getChild(0)).getToken().getType() == HiveParser.TOK_MAPJOIN) {//仅仅解析mapjoin节点
@@ -6750,17 +6773,17 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
       joinTree.setBaseSrc(children);
       joinTree.setId(qb.getId());
       joinTree.getAliasToOpInfo().put(
-          getModifiedAlias(qb, alias), aliasToOpInfo.get(alias));
-    } else if (isJoinToken(left)) {//遇见JOIN 、INNER JOIN、CROSS JOIN、LEFT [OUTER] JOIN 、RIGHT [OUTER] JOIN 、FULL [OUTER] JOIN 、LEFT SEMI JOIN字符串
-      QBJoinTree leftTree = genJoinTree(qb, left, aliasToOpInfo);
-      joinTree.setJoinSrc(leftTree);
+          getModifiedAlias(qb, alias), aliasToOpInfo.get(alias));//设置该表别名以及该表的操作
+    } else if (isJoinToken(left)) {//遇见JOIN 、INNER JOIN、CROSS JOIN、LEFT [OUTER] JOIN 、RIGHT [OUTER] JOIN 、FULL [OUTER] JOIN 、LEFT SEMI JOIN字符串 不断的递归的过程,因为可能是多个表join
+      QBJoinTree leftTree = genJoinTree(qb, left, aliasToOpInfo);//先计算两个表的join,返回join后的结果
+      joinTree.setJoinSrc(leftTree);//对join后的结果进行处理
       String[] leftChildAliases = leftTree.getLeftAliases();
       String leftAliases[] = new String[leftChildAliases.length + 1];
       for (int i = 0; i < leftChildAliases.length; i++) {
         leftAliases[i] = leftChildAliases[i];
       }
       leftAliases[leftChildAliases.length] = leftTree.getRightAliases()[0];
-      joinTree.setLeftAliases(leftAliases);
+      joinTree.setLeftAliases(leftAliases);//设置左边都有哪些表关联的
     } else {
       assert (false);
     }
@@ -6798,6 +6821,7 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
       assert false;
     }
 
+    //分别对左边表和右边表的表达式
     ArrayList<ArrayList<ASTNode>> expressions = new ArrayList<ArrayList<ASTNode>>();
     expressions.add(new ArrayList<ASTNode>());
     expressions.add(new ArrayList<ASTNode>());
@@ -6829,11 +6853,12 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
     // will be removed later on, once the cost-based
     // infrastructure is in place
     //检查是否存在hint,即map端的join操作
-    if (qb.getParseInfo().getHints() != null) {
+    if (qb.getParseInfo().getHints() != null) {//处理哪些表是小表
     	//获取hint关键字所有的需要map-side端的join标签集合
       List<String> mapSideTables = getMapSideJoinTables(qb);
-      List<String> mapAliases = joinTree.getMapAliases();
+      List<String> mapAliases = joinTree.getMapAliases();//小表集合,参与hint
 
+      //循环每一个小表
       for (String mapTbl : mapSideTables) {//循环每一个标签,查看标签是否是left端或者right端表的别名,是的话,则设置map-side的表名字集合
         boolean mapTable = false;
         for (String leftAlias : joinTree.getLeftAliases()) {
@@ -6847,7 +6872,7 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
           }
         }
 
-        if (mapTable) {
+        if (mapTable) {//说明该小表存在
           if (mapAliases == null) {
             mapAliases = new ArrayList<String>();
           }
@@ -6870,7 +6895,7 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
 
     for (Node hintNode : qb.getParseInfo().getHints().getChildren()) {
       ASTNode hint = (ASTNode) hintNode;
-      if (hint.getChild(0).getType() == HiveParser.TOK_STREAMTABLE) {
+      if (hint.getChild(0).getType() == HiveParser.TOK_STREAMTABLE) {//解析STREAMTABLE 这类型的hint操作
         for (int i = 0; i < hint.getChild(1).getChildCount(); i++) {
           if (streamAliases == null) {
             streamAliases = new ArrayList<String>();
@@ -7062,9 +7087,10 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
   // D can be merged with A-B into single join If and only if C and D has same join type
   // In this case, A-B-D join will be executed first and ABD-C join will be executed in next
     //如果c和d的join 类型相同,比如都是and,那么a-b join之后,c是不能与之进行join的,那么应该先让ab -d去join,然后结果在与c进行join
+  //对join后的表与新的表进行join
   private void mergeJoinTree(QB qb) {
     QBJoinTree tree = qb.getQbJoinTree();
-    if (tree.getJoinSrc() == null) {
+    if (tree.getJoinSrc() == null) {//说明里面没有join过的表
       return;
     }
     // make array with QBJoinTree : outer most(0) --> inner most(n)
@@ -7084,7 +7110,7 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
         if (node == null) {
           continue;
         }
-        JoinType currType = getType(node.getJoinCond());
+        JoinType currType = getType(node.getJoinCond());//返回join方式
         if (prevType != null && prevType != currType) {
           break;
         }
@@ -7123,6 +7149,7 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
   }
 
   // Join types should be all the same for merging (or returns null)
+    //保证所有的表join方式相同
   private JoinType getType(JoinCond[] conds) {
     JoinType type = conds[0].getJoinType();
     for (int k = 1; k < conds.length; k++) {
@@ -8110,10 +8137,10 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
       }
 
       // Create the root of the operator tree
-      TableScanDesc tsDesc = new TableScanDesc(alias, vcList);//如何扫描一个表
+      TableScanDesc tsDesc = new TableScanDesc(alias, vcList);//创建一个scan任务
       setupStats(tsDesc, qb.getParseInfo(), tab, alias, rwsch);
 
-      SplitSample sample = nameToSplitSample.get(alias_id);//获取该表的抽样信息
+      SplitSample sample = nameToSplitSample.get(alias_id);//获取该表的抽样信息,因此有limit,因此设置scan任务一个limit
       if (sample != null && sample.getRowCount() != null) {
         tsDesc.setRowLimit(sample.getRowCount());
         nameToSplitSample.remove(alias_id);
@@ -8212,7 +8239,7 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
             colsEqual, alias, rwsch, qb.getMetaData(), null);
         tableOp = OperatorFactory.getAndMakeChild(new FilterDesc(
             samplePredicate, true),
-            new RowSchema(rwsch.getColumnInfos()), top);
+            new RowSchema(rwsch.getColumnInfos()), top);//因为是抽样,因此在最上面加了一层filter
       }
     } else {//不进行抽样处理
       boolean testMode = conf.getBoolVar(HiveConf.ConfVars.HIVETESTMODE);
@@ -8361,11 +8388,12 @@ c.TABLE tableName [ PARTITION (name=value,name=value,name) ]
     }
   }
 
+  //用于子查询sql的执行计划
   private Operator genPlan(QBExpr qbexpr) throws SemanticException {
-    if (qbexpr.getOpcode() == QBExpr.Opcode.NULLOP) {
+    if (qbexpr.getOpcode() == QBExpr.Opcode.NULLOP) {//说明子查询就一个sql
       return genPlan(qbexpr.getQB());
     }
-    if (qbexpr.getOpcode() == QBExpr.Opcode.UNION) {
+    if (qbexpr.getOpcode() == QBExpr.Opcode.UNION) {//说明子查询是有两组sql 进行union组成的
       Operator qbexpr1Ops = genPlan(qbexpr.getQBExpr1());
       Operator qbexpr2Ops = genPlan(qbexpr.getQBExpr2());
 
@@ -10100,9 +10128,11 @@ AS selectStatement
     return wfSpec;
   }
 
+  //说明此函数是lag或者lead函数,则返回true
+  //如果该表达式最终内部嵌套了一个lag或者lead函数,则返回true
   private boolean containsLeadLagUDF(ASTNode expressionTree) {
     int exprTokenType = expressionTree.getToken().getType();
-    if (exprTokenType == HiveParser.TOK_FUNCTION) {
+    if (exprTokenType == HiveParser.TOK_FUNCTION) {//说明此函数是lag或者lead函数,则返回true
       assert (expressionTree.getChildCount() != 0);
       if (expressionTree.getChild(0).getType() == HiveParser.Identifier) {
         String functionName = unescapeIdentifier(expressionTree.getChild(0)

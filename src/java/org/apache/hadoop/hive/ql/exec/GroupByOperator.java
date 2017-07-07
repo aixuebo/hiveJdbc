@@ -71,6 +71,7 @@ import org.apache.hadoop.io.Text;
 
 /**
  * GroupBy operator implementation.
+ * ½øÐÐgroup by²Ù×÷
  */
 public class GroupByOperator extends Operator<GroupByDesc> implements
     Serializable {

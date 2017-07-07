@@ -40,7 +40,7 @@ public class QBMetaData {
   public static final int DEST_REDUCE = 4;
   public static final int DEST_LOCAL_FILE = 5;
 
-  private final HashMap<String, Table> aliasToTable;//记录校验好的数据库table对象的别名作为key,value是对应的table对象
+  private final HashMap<String, Table> aliasToTable;//记录校验好的数据库table对象的别名作为key,value是对应的table元数据对象
   private final HashMap<String, Table> nameToDestTable;//记录每一个key别名 对应那个表
   private final HashMap<String, Partition> nameToDestPartition;
   private final HashMap<String, String> nameToDestFile;
