@@ -114,7 +114,7 @@ public class SessionManager extends CompositeService {
       handleToSession.put(session.getSessionHandle(), session);
     }
     try {
-      executeSessionHooks(session);
+      executeSessionHooks(session);//执行该session的钩子方法
     } catch (Exception e) {
       throw new HiveSQLException("Failed to execute session hooks", e);
     }
@@ -179,10 +179,10 @@ public class SessionManager extends CompositeService {
     threadLocalUserName.remove();
   }
 
-  // execute session hooks
+  // execute session hooks 执行session的hook操作
   private void executeSessionHooks(HiveSession session) throws Exception {
     List<HiveSessionHook> sessionHooks = HookUtils.getHooks(hiveConf,
-        HiveConf.ConfVars.HIVE_SERVER2_SESSION_HOOK, HiveSessionHook.class);//session的hook信息
+        HiveConf.ConfVars.HIVE_SERVER2_SESSION_HOOK, HiveSessionHook.class);//session的hook钩子集合
     for (HiveSessionHook sessionHook : sessionHooks) {// 当一个session被创建的时候,就会执行每一个实现该HiveSessionHookContext接口的所有类,这些类要怎么实现都可以.主要目的是知道session创建了一个新的
       sessionHook.run(new HiveSessionHookContextImpl(session));
     }

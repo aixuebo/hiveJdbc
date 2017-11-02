@@ -43,6 +43,7 @@ public class HandleIdentifier {
     this.secretId = secretId;
   }
 
+    //从thrift中还原公钥和私钥
   public HandleIdentifier(THandleIdentifier tHandleId) {
     ByteBuffer bb = ByteBuffer.wrap(tHandleId.getGuid());
     this.publicId = new UUID(bb.getLong(), bb.getLong());
@@ -58,6 +59,7 @@ public class HandleIdentifier {
     return secretId;
   }
 
+    //序列化公钥和私钥
   public THandleIdentifier toTHandleIdentifier() {
     byte[] guid = new byte[16];
     byte[] secret = new byte[16];

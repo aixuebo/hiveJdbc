@@ -19,8 +19,8 @@ package org.apache.hive.service.cli;
 
 import org.apache.hive.service.cli.thrift.TOperationHandle;
 
-
-public class OperationHandle extends Handle {
+//每一个操作有一个主键OperationHandle用于识别
+public class OperationHandle extends Handle { //继承Handle,说明持有一个私钥和公钥对象
 
   private OperationType opType = OperationType.EXECUTE_STATEMENT;//默认是执行sql的操作
   private boolean hasResultSet = false;//true表示设置该操作产生了结果
@@ -30,11 +30,13 @@ public class OperationHandle extends Handle {
     super();
   }
 
+    //更改操作类型
   public OperationHandle(OperationType opType) {
     super();
     this.opType = opType;
   }
 
+    //通过thrift进行反序列化
   public OperationHandle(TOperationHandle tOperationHandle) {
     super(tOperationHandle.getOperationId());
     this.opType = OperationType.getOperationType(tOperationHandle.getOperationType());

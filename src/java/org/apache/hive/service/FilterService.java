@@ -22,7 +22,7 @@ import org.apache.hadoop.hive.conf.HiveConf;
 
 /**
  * FilterService.
- *
+ * 对一个service进行包装,属于包装模式
  */
 public class FilterService implements Service {
 

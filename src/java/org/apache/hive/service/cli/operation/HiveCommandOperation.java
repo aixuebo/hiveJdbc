@@ -161,6 +161,7 @@ public abstract class HiveCommandOperation extends ExecuteStatementOperation {
    * resulting List of strings.
    * @param results list of strings containing the results
    * @param nLines number of lines read at once. If it is <= 0, then read all lines.
+   * 每行是表示一列,即输出内容组成的集合
    */
   private List<String> readResults(int nLines) throws HiveSQLException {
     if (resultReader == null) {

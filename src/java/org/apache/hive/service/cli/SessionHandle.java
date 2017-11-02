@@ -25,18 +25,21 @@ import org.apache.hive.service.cli.thrift.TSessionHandle;
 
 /**
  * SessionHandle.
- *
+ * session持有一个公钥和私钥对象
  */
 public class SessionHandle extends Handle {
 
+    //创建一个公钥和私钥
   public SessionHandle() {
     super();
   }
 
+  //参数传递过来一个公钥和私钥
   public SessionHandle(HandleIdentifier handleId) {
     super(handleId);
   }
 
+    //参数传递过来一个公钥和私钥
   public SessionHandle(TSessionHandle tSessionHandle) {
     super(tSessionHandle.getSessionId());
   }
@@ -46,6 +49,7 @@ public class SessionHandle extends Handle {
     return getHandleIdentifier().getPublicId();
   }
 
+    //thrift形式表示一个session持有的公钥和私钥
   public TSessionHandle toTSessionHandle() {
     TSessionHandle tSessionHandle = new TSessionHandle();
     tSessionHandle.setSessionId(getHandleIdentifier().toTHandleIdentifier());

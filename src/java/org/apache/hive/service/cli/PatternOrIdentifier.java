@@ -24,7 +24,7 @@ package org.apache.hive.service.cli;
  */
 public class PatternOrIdentifier {
 
-  boolean isPattern = false;
+  boolean isPattern = false;//true表示text内容是正则,false表示text内容就是纯文本
   String text;
 
   public PatternOrIdentifier(String tpoi) {

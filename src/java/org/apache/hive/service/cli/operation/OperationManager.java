@@ -34,13 +34,14 @@ import org.apache.hive.service.cli.session.HiveSession;
 
 /**
  * OperationManager.
- *
+ * 一个服务,用于在服务端不断的提供操作的服务入口
  */
 public class OperationManager extends AbstractService {
 
   private HiveConf hiveConf;
-  private final Map<OperationHandle, Operation> handleToOperation =
-      new HashMap<OperationHandle, Operation>();
+  //持有所有的操作集合,每一个操作有一个主键OperationHandle用于识别
+  private final Map<OperationHandle, Operation> handleToOperation = new HashMap<OperationHandle, Operation>();
+
 
   public OperationManager() {
     super("OperationManager");
@@ -123,6 +124,7 @@ public class OperationManager extends AbstractService {
     return operation;
   }
 
+    //一个session对象以及对应的操作类型,返回该操作对象
   public synchronized Operation getOperation(OperationHandle operationHandle) throws HiveSQLException {
     Operation operation = handleToOperation.get(operationHandle);
     if (operation == null) {
@@ -139,14 +141,17 @@ public class OperationManager extends AbstractService {
     return handleToOperation.remove(opHandle);
   }
 
+  //返回操作的状态
   public OperationState getOperationState(OperationHandle opHandle) throws HiveSQLException {
     return getOperation(opHandle).getState();
   }
 
+  //取消该操作
   public void cancelOperation(OperationHandle opHandle) throws HiveSQLException {
     getOperation(opHandle).cancel();
   }
 
+  //关闭该操作
   public void closeOperation(OperationHandle opHandle) throws HiveSQLException {
     Operation operation = removeOperation(opHandle);
     if (operation == null) {
@@ -155,11 +160,13 @@ public class OperationManager extends AbstractService {
     operation.close();
   }
 
+  //返回操作的结果schema
   public TableSchema getOperationResultSetSchema(OperationHandle opHandle)
       throws HiveSQLException {
     return getOperation(opHandle).getResultSetSchema();
   }
 
+  //返回操作的结果集
   public RowSet getOperationNextRowSet(OperationHandle opHandle) throws HiveSQLException {
     return getOperation(opHandle).getNextRowSet();
   }

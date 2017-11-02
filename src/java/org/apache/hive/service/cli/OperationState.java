@@ -26,13 +26,14 @@ import org.apache.hive.service.cli.thrift.TOperationState;
  */
 public enum OperationState {
   INITIALIZED(TOperationState.INITIALIZED_STATE),//初始化完成
+  PENDING(TOperationState.PENDING_STATE),//等待去执行
   RUNNING(TOperationState.RUNNING_STATE),//运行中
   FINISHED(TOperationState.FINISHED_STATE),//完成
   CANCELED(TOperationState.CANCELED_STATE),//取消
   CLOSED(TOperationState.CLOSED_STATE),//关闭
   ERROR(TOperationState.ERROR_STATE),//异常
-  UNKNOWN(TOperationState.UKNOWN_STATE),//未知
-  PENDING(TOperationState.PENDING_STATE);//等待
+  UNKNOWN(TOperationState.UKNOWN_STATE);//未知
+
 
   private final TOperationState tOperationState;//thrift的状态对象
 

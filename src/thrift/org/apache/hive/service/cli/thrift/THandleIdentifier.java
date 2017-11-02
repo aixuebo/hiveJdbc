@@ -43,8 +43,8 @@ public class THandleIdentifier implements org.apache.thrift.TBase<THandleIdentif
     schemes.put(TupleScheme.class, new THandleIdentifierTupleSchemeFactory());
   }
 
-  private ByteBuffer guid; // required 公钥需要的字节数组
-  private ByteBuffer secret; // required 私钥需要的字节数组
+  private ByteBuffer guid; // required 公钥需要的字节数组  16个字节数组,即2个long
+  private ByteBuffer secret; // required 私钥需要的字节数组 16个字节数组,即2个long
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {

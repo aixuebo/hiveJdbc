@@ -20,9 +20,10 @@ package org.apache.hive.service.cli.operation;
 
 public class TableTypeMappingFactory {
 
+  //表示hive支持的表的类型,和传统数据库支持的表的类型
   public enum TableTypeMappings {
     HIVE,
-    CLASSIC
+    CLASSIC//传统数据库只支持table和view两种
   }
   private static TableTypeMapping hiveTableTypeMapping = new HiveTableTypeMapping();
   private static TableTypeMapping classicTableTypeMapping = new ClassicTableTypeMapping();

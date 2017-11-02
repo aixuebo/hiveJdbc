@@ -44,7 +44,7 @@ public abstract class ExecuteStatementOperation extends Operation {
 
   public static ExecuteStatementOperation newExecuteStatementOperation(
       HiveSession parentSession, String statement, Map<String, String> confOverlay, boolean runAsync) {
-    String[] tokens = statement.trim().split("\\s+");
+    String[] tokens = statement.trim().split("\\s+");//°´ÕÕ¿Õ¸ñ²ð·Ö
     String command = tokens[0].toLowerCase();
 
     if ("set".equals(command)) {

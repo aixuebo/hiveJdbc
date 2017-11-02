@@ -119,8 +119,10 @@ public abstract class Operation {
 
   public abstract void close() throws HiveSQLException;
 
+  //获取返回的列的schema数据
   public abstract TableSchema getResultSetSchema() throws HiveSQLException;
 
+  //查询下一批的结果集
   public abstract RowSet getNextRowSet(FetchOrientation orientation, long maxRows) throws HiveSQLException;
 
   public RowSet getNextRowSet() throws HiveSQLException {

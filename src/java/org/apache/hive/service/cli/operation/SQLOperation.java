@@ -82,9 +82,9 @@ public class SQLOperation extends ExecuteStatementOperation {
 
   private void runInternal() throws HiveSQLException {
     setState(OperationState.RUNNING);
-    String statement_trimmed = statement.trim();
+    String statement_trimmed = statement.trim();//具体的sql
     String[] tokens = statement_trimmed.split("\\s");
-    String cmd_1 = statement_trimmed.substring(tokens[0].length()).trim();//取消第一个命令
+    String cmd_1 = statement_trimmed.substring(tokens[0].length()).trim();
 
     int ret = 0;
     String errorMessage = "";
@@ -217,7 +217,7 @@ public class SQLOperation extends ExecuteStatementOperation {
     driver.setMaxRows((int)maxRows);
 
     try {
-      ////该方法不会内存溢出么?因为抓取结果的数据很大,都存储在rows参数里面好像存储不够
+      //该方法不会内存溢出么?因为抓取结果的数据很大,都存储在rows参数里面好像存储不够
       driver.getResults(rows);//获取结果集存储在rows中
 
       getSerDe();

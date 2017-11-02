@@ -78,12 +78,18 @@ public class HiveSessionImpl implements HiveSession {
   private IMetaStoreClient metastoreClient = null;
   private final Set<OperationHandle> opHandleSet = new HashSet<OperationHandle>();//该session下的操作集合
 
+    /**
+     *
+     * @param username
+     * @param password
+     * @param sessionConf 该session用户提交的配置信息
+     */
   public HiveSessionImpl(String username, String password, Map<String, String> sessionConf) {
     this.username = username;
     this.password = password;
 
     if (sessionConf != null) {
-      for (Map.Entry<String, String> entry : sessionConf.entrySet()) {
+      for (Map.Entry<String, String> entry : sessionConf.entrySet()) {//覆盖hive有的内容
         hiveConf.set(entry.getKey(), entry.getValue());
       }
     }
@@ -355,7 +361,7 @@ public class HiveSessionImpl implements HiveSession {
         metastoreClient.close();
       }
       // Iterate through the opHandles and close their operations
-      for (OperationHandle opHandle : opHandleSet) {
+      for (OperationHandle opHandle : opHandleSet) {//关闭该session正在执行的操作
         operationManager.closeOperation(opHandle);
       }
       opHandleSet.clear();
@@ -403,6 +409,7 @@ public class HiveSessionImpl implements HiveSession {
     }
   }
 
+  //获取一个session的结果集
   @Override
   public TableSchema getResultSetMetadata(OperationHandle opHandle) throws HiveSQLException {
     acquire();

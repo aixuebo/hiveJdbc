@@ -25,7 +25,7 @@ import org.apache.hadoop.hive.conf.HiveConf;
  * HiveSessionHookContextImpl.
  * Session hook context implementation which is created by session  manager
  * and passed to hook invocation.
- *
+ * 每一个session持有一个上下文对象
  */
 public class HiveSessionHookContextImpl implements HiveSessionHookContext {
 
@@ -46,6 +46,7 @@ public class HiveSessionHookContextImpl implements HiveSessionHookContext {
     return hiveSession.getUserName();
   }
 
+  //返回该session 的公钥和私钥对象
   @Override
   public String getSessionHandle() {
     return hiveSession.getSessionHandle().toString();

@@ -49,6 +49,7 @@ import org.apache.hadoop.util.Progressable;
  * HiveHFileOutputFormat implements HiveOutputFormat for HFile bulk
  * loading.  Until HBASE-1861 is implemented, it can only be used
  * for loading a table with a single column family.
+ * 他仅仅用于单独的一个列族情况,但是我不太理解,这么优秀的节省网络IO的方式,为什么没有推广起来
  */
 public class HiveHFileOutputFormat extends
     HFileOutputFormat implements

@@ -33,6 +33,7 @@ import org.apache.commons.logging.LogFactory;
  * ServerOptionsProcessor.
  * Process arguments given to servers (-hiveconf property=value)
  * Set properties in System properties
+ * 命令行解析,解析cli的命令参数
  */
 public class ServerOptionsProcessor {
   protected static final Log LOG = LogFactory.getLog(ServerOptionsProcessor.class.getName());

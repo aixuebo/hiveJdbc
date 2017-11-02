@@ -27,6 +27,7 @@ import org.apache.hive.service.cli.thrift.TRowSet;
 /**
  * RowSet.
  * 存储一行一行的数据
+ * 表示的是一个结果集
  */
 public class RowSet {
 

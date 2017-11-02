@@ -39,6 +39,7 @@ public interface HiveSession {
   /**
    * Set the session manager for the session
    * @param sessionManager
+   * 进行管理session集合的开始和关闭的对象
    */
   public void setSessionManager(SessionManager sessionManager);
 
@@ -53,6 +54,7 @@ public interface HiveSession {
    */
   public void setOperationManager(OperationManager operationManager);
 
+  //session的公钥和私钥
   public SessionHandle getSessionHandle();
 
   public String getUsername();

@@ -34,6 +34,7 @@ public abstract class Handle {
     this.handleId = handleId;
   }
 
+  //参数说明客户端传过来的公钥和私钥
   public Handle(THandleIdentifier tHandleIdentifier) {
     this.handleId = new HandleIdentifier(tHandleIdentifier);
   }

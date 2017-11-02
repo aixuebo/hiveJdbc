@@ -24,10 +24,10 @@ import java.util.Map;
 
 /**
  * EmbeddedCLIServiceClient.
- *
+ * 嵌入式服务,是内部有一个真正的服务存在
  */
 public class EmbeddedCLIServiceClient extends CLIServiceClient {
-  private final ICLIService cliService;
+  private final ICLIService cliService;//内部真正的服务
 
   public EmbeddedCLIServiceClient(ICLIService cliService) {
     this.cliService = cliService;
