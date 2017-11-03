@@ -285,7 +285,7 @@ public class HiveConnection implements java.sql.Connection {
       }
 
       // For remote JDBC client, try to set the hive var using 'set hivevar:key=value'
-      for (Entry<String, String> hiveVar : hiveVarMap.entrySet()) {//设置hive的sql中需要的变量,比如-hivevar today=2017-06-06
+      for (Entry<String, String> hiveVar : hiveVarMap.entrySet()) {//设置hive的sql中需要的变量,比如set hivevar: today=2017-06-06
         stmt.execute("set hivevar:" + hiveVar.getKey() + "=" + hiveVar.getValue());
       }
       stmt.close();

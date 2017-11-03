@@ -69,10 +69,10 @@ public class HiveQueryResultSet extends HiveBaseResultSet {
   //如何构建一个查询结果集
   public static class Builder {
 
-    private TCLIService.Iface client = null;
-    private TOperationHandle stmtHandle = null;
-    private TSessionHandle sessHandle  = null;
-    private HiveStatement hiveStatement = null;
+    private TCLIService.Iface client = null;//服务器接口对象
+    private TOperationHandle stmtHandle = null;//server端返回的操作标识
+    private TSessionHandle sessHandle  = null;//server端返回的session的公钥和私钥
+    private HiveStatement hiveStatement = null;//执行的sql的对象
 
     /**
      * Sets the limit for the maximum number of rows that any ResultSet object produced by this

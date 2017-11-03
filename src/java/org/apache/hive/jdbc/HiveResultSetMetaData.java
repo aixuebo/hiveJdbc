@@ -30,9 +30,9 @@ import org.apache.hadoop.hive.serde.serdeConstants;
  * hive元数据的查询结果
  */
 public class HiveResultSetMetaData implements java.sql.ResultSetMetaData {
-  private final List<String> columnNames;
-  private final List<String> columnTypes;
-  private final List<JdbcColumnAttributes> columnAttributes;
+  private final List<String> columnNames;//结果集的schema的name
+  private final List<String> columnTypes;//结果集的schema的类型
+  private final List<JdbcColumnAttributes> columnAttributes;//结果集的schema的额外类型
 
   public HiveResultSetMetaData(List<String> columnNames,
       List<String> columnTypes,
@@ -60,6 +60,7 @@ public class HiveResultSetMetaData implements java.sql.ResultSetMetaData {
     return JdbcColumn.columnDisplaySize(columnType, columnAttributes.get(column - 1));
   }
 
+  //获取列的name
   public String getColumnLabel(int column) throws SQLException {
     return columnNames.get(column - 1);
   }
@@ -68,6 +69,7 @@ public class HiveResultSetMetaData implements java.sql.ResultSetMetaData {
     return columnNames.get(column - 1);
   }
 
+  //获取列的类型
   public int getColumnType(int column) throws SQLException {
     if (columnTypes == null) {
       throw new SQLException(

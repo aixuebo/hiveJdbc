@@ -243,7 +243,7 @@ public class HiveDriver implements Driver {
     Properties urlProps = (defaults != null) ? new Properties(defaults)
         : new Properties();
 
-    if (url == null || !url.startsWith(Utils.URL_PREFIX)) {//url必须合法
+    if (url == null || !url.startsWith(Utils.URL_PREFIX)) {//url必须合法---必须以jdbc:hive2://开头
       throw new SQLException("Invalid connection url: " + url);
     }
 

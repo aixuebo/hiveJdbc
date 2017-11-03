@@ -22,8 +22,9 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+//查询hive的元数据内容
 public abstract class HiveMetaDataResultSet<M> extends HiveBaseResultSet {
-  protected final List<M> data;
+  protected final List<M> data;//具体的值
 
   @SuppressWarnings("unchecked")
   public HiveMetaDataResultSet(final List<String> columnNames

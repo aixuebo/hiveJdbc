@@ -46,6 +46,7 @@ import org.apache.hive.service.cli.thrift.TSessionHandle;
 /**
  * HivePreparedStatement.
  * 预编译sql
+ * 其实最终执行的还是HiveStatement去真正执行sql,只是预编译这个对象类提供一个特殊功能,将?号改成具体的值,组成真实的sql,然后调用HiveStatement去执行真的sql
  */
 public class HivePreparedStatement extends HiveStatement implements PreparedStatement {
   private final String sql;

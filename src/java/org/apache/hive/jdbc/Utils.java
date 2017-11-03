@@ -29,6 +29,13 @@ import java.util.regex.Pattern;
 import org.apache.hive.service.cli.thrift.TStatus;
 import org.apache.hive.service.cli.thrift.TStatusCode;
 
+// 格式 jdbc:hive2://ip:port/db;user=foo;password=bar?hive.server2.transport.mode=http;hive.server2.thrift.http.path=hs2#hive.server2.thrift.http.path1=hs2;hive.server2.thrift.http.path2=hs2
+/**
+ * db 表示数据库
+ * ;user=foo;password=bar 表示sessionVars
+ * ?hive.server2.transport.mode=http;hive.server2.thrift.http.path=hs2 用于解析hiveConfs信息
+ * #hive.server2.thrift.http.path1=hs2;hive.server2.thrift.http.path2=hs2 用于解析hiveVars内容
+ */
 public class Utils {
   /**
     * The required prefix for the connection URL.
@@ -53,8 +60,8 @@ public class Utils {
     private int port;
     private String dbName = DEFAULT_DATABASE;//数据库name
     //mysql://rdsmmee6zmmee6z.mysql.rds.aliyuncs.com:3306/passport;aa=bb?rewriteBatchedStatements=true&amp;useUnicode=true&amp;characterEncoding=utf8 解析rewriteBatchedStatements=true&amp;useUnicode=true&amp;characterEncoding=utf8中key-value
-    private Map<String,String> hiveConfs = new HashMap<String,String>();//用于配置hive的环境信息,比如hive.auto.convert.join=false;
-    //解析#号之后的key-value参数,用于设置hive的sql中需要的变量,比如-hivevar today=2017-06-06
+    private Map<String,String> hiveConfs = new HashMap<String,String>();//用于配置hive的环境信息,比如set hive.auto.convert.join=false;
+    //解析#号之后的key-value参数,用于设置hive的sql中需要的变量,比如set hivevar: today=2017-06-06
     private Map<String,String> hiveVars = new HashMap<String,String>();
     //jdbc数据库字符后面的参数,即用;拆分的key-value,例如mysql://rdsmmee6zmmee6z.mysql.rds.aliyuncs.com:3306/passport;aa=bb?rewriteBatchedStatements=true&amp;useUnicode=true&amp;characterEncoding=utf8解析aa=bb
     private Map<String,String> sessionVars = new HashMap<String,String>();
@@ -196,7 +203,7 @@ public class Utils {
   public static JdbcConnectionParams parseURL(String uri) throws IllegalArgumentException {
     JdbcConnectionParams connParams = new JdbcConnectionParams();
 
-    if (!uri.startsWith(URL_PREFIX)) {
+    if (!uri.startsWith(URL_PREFIX)) {//必须jdbc:hive2://开头
       throw new IllegalArgumentException("Bad URL format");
     }
 
@@ -233,7 +240,7 @@ public class Utils {
     }
 
     // key=value pattern
-    Pattern pattern = Pattern.compile("([^;]*)=([^;]*)[;]?");
+    Pattern pattern = Pattern.compile("([^;]*)=([^;]*)[;]?");//按照分号分组,里面是配置的信息
 
     // dbname and session settings
     String sessVars = jdbcURI.getPath();

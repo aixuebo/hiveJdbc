@@ -43,8 +43,8 @@ import org.apache.hive.service.cli.thrift.TSessionHandle;
  */
 public class HiveStatement implements java.sql.Statement {
   private TCLIService.Iface client;
-  private TOperationHandle stmtHandle = null;//发送sql请求后的处理器
-  private final TSessionHandle sessHandle;//客户端的session
+  private TOperationHandle stmtHandle = null;//发送sql请求后的处理器---该处理器发送给服务器的时候,服务器 可以找到该session对应的操作,从而进行close等操作
+  private final TSessionHandle sessHandle;//客户端的session--包含公钥和私钥
   Map<String,String> sessConf = new HashMap<String,String>();
   private int fetchSize = 50;
   /**
@@ -200,7 +200,7 @@ public class HiveStatement implements java.sql.Statement {
       execReq.setConfOverlay(sessConf);
       TExecuteStatementResp execResp = client.ExecuteStatement(execReq);//发送请求给服务端
       Utils.verifySuccessWithInfo(execResp.getStatus());//校验服务端返回的请求
-      stmtHandle = execResp.getOperationHandle();
+      stmtHandle = execResp.getOperationHandle();//可能是异步的操作,产生的是服务器端的一个标识符
     } catch (SQLException eS) {
       throw eS;
     } catch (Exception ex) {
@@ -214,9 +214,9 @@ public class HiveStatement implements java.sql.Statement {
       // materialised here.
       TGetOperationStatusReq statusReq = new TGetOperationStatusReq(stmtHandle);
       boolean requestComplete = false;
-      while (!requestComplete) {
+      while (!requestComplete) {//一直循环,移植到请求全部完成
         try {
-          TGetOperationStatusResp statusResp = client.GetOperationStatus(statusReq);
+          TGetOperationStatusResp statusResp = client.GetOperationStatus(statusReq);//获取服务器该操作的状态
           Utils.verifySuccessWithInfo(statusResp.getStatus());
           if (statusResp.isSetOperationState()) {
             switch (statusResp.getOperationState()) {
@@ -232,7 +232,7 @@ public class HiveStatement implements java.sql.Statement {
             case UKNOWN_STATE:
               throw new SQLException("Unknown query", "HY000");
             case INITIALIZED_STATE:
-            case RUNNING_STATE:
+            case RUNNING_STATE://说明请求已经开始了,因此可以退出了
               break;
             }
           }

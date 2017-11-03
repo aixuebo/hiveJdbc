@@ -60,11 +60,11 @@ import org.apache.hive.service.cli.thrift.TStringValue;
  */
 public abstract class HiveBaseResultSet implements ResultSet {
   protected SQLWarning warningChain = null;
-  protected boolean wasNull = false;
+  protected boolean wasNull = false;//true表示是null
   protected TRow row;//下一行要处理的数据
-  protected List<String> columnNames;
-  protected List<String> columnTypes;
-  protected List<JdbcColumnAttributes> columnAttributes;
+  protected List<String> columnNames;//结果集的schema的name
+  protected List<String> columnTypes;//结果集的schema的类型
+  protected List<JdbcColumnAttributes> columnAttributes;//结果集的schema的额外类型信息
 
   private TableSchema schema;
 
@@ -88,6 +88,7 @@ public abstract class HiveBaseResultSet implements ResultSet {
     throw new SQLException("Method not supported");
   }
 
+  //找到该列的序号
   public int findColumn(String columnName) throws SQLException {
     int columnIndex = columnNames.indexOf(columnName);
     if (columnIndex==-1) {
@@ -351,6 +352,7 @@ public abstract class HiveBaseResultSet implements ResultSet {
     return getLong(findColumn(columnName));
   }
 
+  //返回元数据内容
   public ResultSetMetaData getMetaData() throws SQLException {
     return new HiveResultSetMetaData(columnNames, columnTypes, columnAttributes);
   }
@@ -482,7 +484,7 @@ public abstract class HiveBaseResultSet implements ResultSet {
     if (row == null) {
       throw new SQLException("No row found.");
     }
-    List<TColumnValue> colVals = row.getColVals();
+    List<TColumnValue> colVals = row.getColVals();//从row里面获取该列的具体的值
     if (colVals == null) {
       throw new SQLException("RowSet does not contain any columns!");
     }
