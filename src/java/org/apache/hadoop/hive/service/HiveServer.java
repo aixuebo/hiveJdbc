@@ -90,6 +90,7 @@ public class HiveServer extends ThriftHive {
   /**
    * Handler which implements the Hive Interface This class can be used in lieu
    * of the HiveClient class to get an embedded server.
+   * 一个客户端持有一个该对象,而该对象在 executer的时候上一个没执行完,第二次是不能被执行的
    */
   public static class HiveServerHandler extends HiveMetaStore.HMSHandler
       implements HiveInterface {
