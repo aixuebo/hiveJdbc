@@ -21,6 +21,9 @@ import jline.console.completer.StringsCompleter;
 
 /**
  * JLine completor boolean value (true/false)
+ * 自动补全 true和false字符串
+ *
+ * 比如tr然后会补全true
  */
 class BooleanCompleter extends StringsCompleter {
 

@@ -29,7 +29,7 @@ import jline.console.completer.Completer;
 /**
  * Completor for BeeLine. It dispatches to sub-completors based on the
  * current arguments.
- *
+ * 自动补全功能
  */
 class BeeLineCompleter implements Completer {
   private final BeeLine beeLine;
@@ -42,9 +42,9 @@ class BeeLineCompleter implements Completer {
   }
 
   public int complete(String buf, int pos, List cand) {
-    if (buf != null && buf.startsWith(BeeLine.COMMAND_PREFIX)
-        && !buf.startsWith(BeeLine.COMMAND_PREFIX + "all")
-        && !buf.startsWith(BeeLine.COMMAND_PREFIX + "sql")) {
+    if (buf != null && buf.startsWith(BeeLine.COMMAND_PREFIX) //以为!开头
+        && !buf.startsWith(BeeLine.COMMAND_PREFIX + "all") //不匹配!all
+        && !buf.startsWith(BeeLine.COMMAND_PREFIX + "sql")) {//不匹配!sql
       return beeLine.getCommandCompletor().complete(buf, pos, cand);
     } else {
       if (beeLine.getDatabaseConnection() != null && beeLine.getDatabaseConnection().getSQLCompleter() != null) {

@@ -27,6 +27,7 @@ import java.util.List;
 import jline.console.completer.Completer;
 import jline.console.completer.StringsCompleter;
 
+//自动补全表名字
 class TableNameCompletor implements Completer {
   private final BeeLine beeLine;
 
@@ -37,11 +38,18 @@ class TableNameCompletor implements Completer {
     this.beeLine = beeLine;
   }
 
+    /**
+     *
+     * @param buf buffer是当前用户输入的内容
+     * @param pos cursor表示光标的位置
+     * @param cand 最终推荐的匹配的候选集合
+     * @return 返回从cand候选集合中查找合适的第几个元素作为返回值
+     */
   public int complete(String buf, int pos, List cand) {
-    if (beeLine.getDatabaseConnection() == null) {
+    if (beeLine.getDatabaseConnection() == null) {//必须要有数据库连接信息
       return -1;
     }
-    return new StringsCompleter(beeLine.getDatabaseConnection().getTableNames(true))
-        .complete(buf, pos, cand);
+    return new StringsCompleter(beeLine.getDatabaseConnection().getTableNames(true))//获取全部的表集合
+        .complete(buf, pos, cand);//在表集合中进行补全buffer的匹配的内容
   }
 }

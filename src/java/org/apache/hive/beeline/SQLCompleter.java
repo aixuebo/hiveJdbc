@@ -42,6 +42,7 @@ class SQLCompleter extends StringsCompleter {
     super(completions);
   }
 
+  //记录sql的关键字,关键字都是用于自动补全的基础
   public static Set<String> getSQLCompleters(BeeLine beeLine, boolean skipmeta)
       throws IOException, SQLException {
     Set<String> completions = new TreeSet<String>();

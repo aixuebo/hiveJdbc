@@ -29,7 +29,7 @@ package org.apache.hive.beeline;
  * Note this does not handle escaping of the quote char.
  * The new SeparatedValuesOutputFormat supports that. The formats supported by
  * this class are deprecated.
- *
+ * 输出的内容是列的集合,用分隔符分割,比如csv的,即value1,value1,value1,value1
  */
 class DeprecatedSeparatedValuesOutputFormat implements OutputFormat {
 
@@ -45,19 +45,19 @@ class DeprecatedSeparatedValuesOutputFormat implements OutputFormat {
   public int print(Rows rows) {
     int count = 0;
     while (rows.hasNext()) {
-      if (count == 0 && !beeLine.getOpts().getShowHeader()) {
-        rows.next();
+      if (count == 0 && !beeLine.getOpts().getShowHeader()) {//说明第一行,并且不打印title
+        rows.next();//获取下一条数据
         count++;
         continue;
       }
-      printRow(rows, (Rows.Row) rows.next());
+      printRow(rows, (Rows.Row) rows.next());//打印每一行数据
       count++;
     }
     return count - 1; // sans header row
   }
 
   public void printRow(Rows rows, Rows.Row row) {
-    String[] vals = row.values;
+    String[] vals = row.values;//数据内容
     StringBuilder buf = new StringBuilder();
     for (int i = 0; i < vals.length; i++) {
       buf.append(buf.length() == 0 ? "" : "" + getSeparator())

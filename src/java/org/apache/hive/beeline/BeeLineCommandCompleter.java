@@ -26,7 +26,7 @@ import jline.console.completer.Completer;
 import jline.console.completer.NullCompleter;
 import jline.console.completer.StringsCompleter;
 
-//持有所有支持的命令集合
+//持有所有支持的命令集合---自动补全功能
 class BeeLineCommandCompleter extends AggregateCompleter {
 
   public BeeLineCommandCompleter(List<Completer> completers) {

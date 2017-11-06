@@ -29,51 +29,51 @@ import java.util.LinkedList;
 
 /**
  * Rows implementation which buffers all rows in a linked list.
- * ½«ËùÓĞµÄÊı¾İ´æ´¢µ½listÖĞ»º´æÆğÀ´,¿ÉÒÔ²»¶ÏµÄ½øĞĞÑ­»·,¶ø²»ĞèÒªÃ¿´Î¶¼ÇëÇóÊı¾İ¿â
- * È±µãÊÇºÄ·ÑÄÚ´æ,Èç¹ûÊı¾İÁ¿´ó,»áµ¼ÖÂOOM
+ * å°†æ‰€æœ‰çš„æ•°æ®å­˜å‚¨åˆ°listä¸­ç¼“å­˜èµ·æ¥,å¯ä»¥ä¸æ–­çš„è¿›è¡Œå¾ªç¯,è€Œä¸éœ€è¦æ¯æ¬¡éƒ½è¯·æ±‚æ•°æ®åº“
+ * ç¼ºç‚¹æ˜¯è€—è´¹å†…å­˜,å¦‚æœæ•°æ®é‡å¤§,ä¼šå¯¼è‡´OOM
  */
 class BufferedRows extends Rows {
-  private final LinkedList<Row> list;//titleºÍÊı¾İÄÚÈİ,Ã¿Ò»¸öÔªËØÊÇÒ»ĞĞÊı¾İ
-  private final Iterator<Row> iterator;//Êı¾İlistµÄµü´úÆ÷
+    private final LinkedList<Row> list;//titleå’Œæ•°æ®å†…å®¹,æ¯ä¸€ä¸ªå…ƒç´ æ˜¯ä¸€è¡Œæ•°æ®
+    private final Iterator<Row> iterator;//æ•°æ®listçš„è¿­ä»£å™¨
 
-  BufferedRows(BeeLine beeLine, ResultSet rs) throws SQLException {
-    super(beeLine, rs);
-    list = new LinkedList<Row>();
-    int count = rsMeta.getColumnCount();
-    list.add(new Row(count));//ÉèÖÃtitle
-    while (rs.next()) {
-      list.add(new Row(count, rs));//ÉèÖÃÃ¿Ò»ĞĞÊı¾İ
+    BufferedRows(BeeLine beeLine, ResultSet rs) throws SQLException {
+        super(beeLine, rs);
+        list = new LinkedList<Row>();
+        int count = rsMeta.getColumnCount();
+        list.add(new Row(count));//è®¾ç½®title
+        while (rs.next()) {
+            list.add(new Row(count, rs));//è®¾ç½®æ¯ä¸€è¡Œæ•°æ®
+        }
+        iterator = list.iterator();
     }
-    iterator = list.iterator();
-  }
 
-  public boolean hasNext() {
-    return iterator.hasNext();
-  }
-
-  public Object next() {
-    return iterator.next();
-  }
-
-  @Override
-  public String toString(){
-    return list.toString();
-  }
-
-  @Override
-  void normalizeWidths() {
-    int[] max = null;
-    for (Row row : list) {
-      if (max == null) {
-        max = new int[row.values.length];
-      }
-      for (int j = 0; j < max.length; j++) {
-        max[j] = Math.max(max[j], row.sizes[j] + 1);
-      }
+    public boolean hasNext() {
+        return iterator.hasNext();
     }
-    for (Row row : list) {
-      row.sizes = max;
+
+    public Object next() {
+        return iterator.next();
     }
-  }
+
+    @Override
+    public String toString(){
+        return list.toString();
+    }
+
+    @Override
+    void normalizeWidths() {
+        int[] max = null;
+        for (Row row : list) {
+            if (max == null) {
+                max = new int[row.values.length];
+            }
+            for (int j = 0; j < max.length; j++) {
+                max[j] = Math.max(max[j], row.sizes[j] + 1);
+            }
+        }
+        for (Row row : list) {
+            row.sizes = max;
+        }
+    }
 
 }

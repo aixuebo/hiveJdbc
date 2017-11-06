@@ -50,11 +50,13 @@ class XMLAttributeOutputFormat extends AbstractOutputFormat {
      * @param rows
      * @param header title
      * @param row 一行数据的内容
+     *
+     * <result columnName=value columnName=value columnName=value/>
      */
   @Override
   public void printRow(Rows rows, Rows.Row header, Rows.Row row) {
-    String[] head = header.values;
-    String[] vals = row.values;
+    String[] head = header.values;//列name
+    String[] vals = row.values;//列的值
 
     buf.setLength(0);
     buf.append("  <result");

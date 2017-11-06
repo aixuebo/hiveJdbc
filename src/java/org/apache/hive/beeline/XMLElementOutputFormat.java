@@ -43,10 +43,17 @@ class XMLElementOutputFormat extends AbstractOutputFormat {
     beeLine.output("</resultset>");
   }
 
+    /**
+     *  <result>
+            <columnName>
+                value
+            </columnName>
+     *  </result>
+     */
   @Override
   public void printRow(Rows rows, Rows.Row header, Rows.Row row) {
-    String[] head = header.values;
-    String[] vals = row.values;
+    String[] head = header.values;//列的name
+    String[] vals = row.values;//列的值
 
     beeLine.output("  <result>");
     for (int i = 0; i < head.length && i < vals.length; i++) {

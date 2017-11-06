@@ -57,7 +57,7 @@ class DatabaseConnection {
   //以下是请求信息
   private final String driver;
   private final String url;
-  private final Properties info;
+  private final Properties info;//保存user和密码的信息
 
 
   private Schema schema = null;
@@ -87,6 +87,7 @@ class DatabaseConnection {
             : getDatabaseMetaData().getExtraNameCharacters();
 
     // setup the completer for the database
+    //设置sql提供的补全集合
     sqlCompleter = new ArgumentCompleter(
         new ArgumentCompleter.AbstractArgumentDelimiter() {
           // delimiters for SQL statements are any
@@ -96,9 +97,10 @@ class DatabaseConnection {
           @Override
           public boolean isDelimiterChar(CharSequence buffer, int pos) {
             char c = buffer.charAt(pos);
-            if (Character.isWhitespace(c)) {
+            if (Character.isWhitespace(c)) {//空格是可以拆分的字符
               return true;
             }
+              //不是数字、正常字母、_、不再extraNameCharacters里面的字符都认为是拆分符号
             return !(Character.isLetterOrDigit(c))
                 && c != '_'
                 && extraNameCharacters.indexOf(c) == -1;
@@ -230,7 +232,7 @@ class DatabaseConnection {
     try {
       try {
         if (connection != null && !connection.isClosed()) {
-          beeLine.output(beeLine.loc("closing", connection));
+          beeLine.output(beeLine.loc("closing", connection));//向客户端输出closing对应的信息
           connection.close();
         }
       } catch (Exception e) {
@@ -242,7 +244,7 @@ class DatabaseConnection {
     }
   }
 
-
+  //返回所有数据库表集合
   public String[] getTableNames(boolean force) {
     Schema.Table[] t = getSchema().getTables();
     Set<String> names = new TreeSet<String>();
@@ -280,7 +282,7 @@ class DatabaseConnection {
   }
 
   class Schema {//表示一个数据库
-    private Table[] tables = null;//该数据库下所有的表
+    private Table[] tables = null;//该数据库下所有的表---相当于使用缓存层
 
     Table[] getTables() {
       if (tables != null) {

@@ -260,19 +260,30 @@ public class BeeLine implements Closeable {
   //默认已知的dirver都是hive的driver
   static final SortedSet<String> KNOWN_DRIVERS = new TreeSet<String>(Arrays.asList(
       new String[] {
-          "org.apache.hive.jdbc.HiveDriver",
-          "org.apache.hadoop.hive.jdbc.HiveDriver",
+          "org.apache.hive.jdbc.HiveDriver",//server2
+          "org.apache.hadoop.hive.jdbc.HiveDriver",//server1
       }));
 
 
   static {
     try {
-      Class.forName("jline.console.ConsoleReader");
+      Class.forName("jline.console.ConsoleReader");//从输入流中读取数据内容
     } catch (Throwable t) {
       throw new ExceptionInInitializerError("jline-missing");
     }
   }
 
+    /**
+     -d <driver class>  -u <database url>  -n <username>  -p <password>
+     -w (or) --password-file <file>
+     -a <authType>
+     -i <init file>
+     -e <query sql>
+     -f <script file>
+     -help
+     --hivevar key value
+     --hiveconf key value
+     */
   static {
     // -d <driver class>
     options.addOption(OptionBuilder
@@ -363,7 +374,7 @@ public class BeeLine implements Closeable {
         .create());
   }
 
-
+  //返回jar对应的Manifest文件对象
   static Manifest getManifest() throws IOException {
     URL base = BeeLine.class.getResource("/META-INF/MANIFEST.MF");
     URLConnection c = base.openConnection();
@@ -441,6 +452,7 @@ public class BeeLine implements Closeable {
     return loc(res, new Object[] {param1, param2});
   }
 
+  //通过res这个key,找到资源文件中引用的value,该value需要动态参数,因为动态参数就是第二个参数数组
   String loc(String res, Object[] params) {
     try {
       return MessageFormat.format(resourceBundle.getString(res), params);
@@ -464,6 +476,7 @@ public class BeeLine implements Closeable {
 
   /**
    * Starts the program.
+   * 程序入口
    */
   public static void main(String[] args) throws IOException {
     mainWithInputRedirection(args, null);
@@ -479,6 +492,7 @@ public class BeeLine implements Closeable {
    *
    * @param inputStream
    *          redirected input, or null to use standard input
+   * 程序的入口
    */
   public static void mainWithInputRedirection(String[] args, InputStream inputStream)
       throws IOException {
@@ -1088,7 +1102,7 @@ public class BeeLine implements Closeable {
 
   void debug(String msg) {
     if (getOpts().getVerbose()) {
-      output(getColorBuffer().blue(msg), true, getErrorStream());
+      output(getColorBuffer().blue(msg), true, getErrorStream());//蓝色字打印
     }
   }
 
@@ -1397,7 +1411,7 @@ public class BeeLine implements Closeable {
     }
   }
 
-
+  //对value的值进行xml的编码解析
   static String xmlattrencode(String str) {
     str = replace(str, "\"", "&quot;");
     str = replace(str, "<", "&lt;");

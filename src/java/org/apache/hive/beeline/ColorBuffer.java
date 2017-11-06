@@ -31,10 +31,10 @@ import java.util.List;
  *
  */
 final class ColorBuffer implements Comparable<Object> {
-  private static final ColorBuffer.ColorAttr BOLD = new ColorAttr("\033[1m");
-  private static final ColorBuffer.ColorAttr NORMAL = new ColorAttr("\033[m");
+  private static final ColorBuffer.ColorAttr BOLD = new ColorAttr("\033[1m");//粗体
+  private static final ColorBuffer.ColorAttr NORMAL = new ColorAttr("\033[m");//正常颜色
   private static final ColorBuffer.ColorAttr REVERS = new ColorAttr("\033[7m");
-  private static final ColorBuffer.ColorAttr LINED = new ColorAttr("\033[4m");
+  private static final ColorBuffer.ColorAttr LINED = new ColorAttr("\033[4m");//添加下划线
   private static final ColorBuffer.ColorAttr GREY = new ColorAttr("\033[1;30m");
   private static final ColorBuffer.ColorAttr RED = new ColorAttr("\033[1;31m");
   private static final ColorBuffer.ColorAttr GREEN = new ColorAttr("\033[1;32m");
@@ -44,10 +44,10 @@ final class ColorBuffer implements Comparable<Object> {
   private static final ColorBuffer.ColorAttr MAGENTA = new ColorAttr("\033[1;35m");
   private static final ColorBuffer.ColorAttr INVISIBLE = new ColorAttr("\033[8m");
 
-  private final List<Object> parts = new LinkedList<Object>();
-  private int visibleLength = 0;
+  private final List<Object> parts = new LinkedList<Object>();//存储的字符串内容集合 以及 颜色信息的集合
+  private int visibleLength = 0;//有效的总长度---颜色是不算有效长度的,即该长度表示的是字符串的长度
 
-  private final boolean useColor;
+  private final boolean useColor;//true表示使用颜色
 
 
   public ColorBuffer(boolean useColor) {
@@ -119,6 +119,7 @@ final class ColorBuffer implements Comparable<Object> {
    * Truncate the ColorBuffer to the specified length and return
    * the new ColorBuffer. Any open color tags will be closed.
    * Do nothing if the specified length is <= 0.
+   * 一个个迭代,截取到len个长度为止,颜色是不算有效长度的
    */
   public ColorBuffer truncate(int len) {
     if (len <= 0) {
@@ -134,7 +135,7 @@ final class ColorBuffer implements Comparable<Object> {
         continue;
       }
       String val = next.toString();
-      if (cbuff.getVisibleLength() + val.length() > len) {
+      if (cbuff.getVisibleLength() + val.length() > len) {//只是截取一部分文字,因为全部文字会超出范围
         int partLen = len - cbuff.getVisibleLength();
         val = val.substring(0, partLen);
       }
@@ -167,8 +168,9 @@ final class ColorBuffer implements Comparable<Object> {
     return this;
   }
 
+  //添加一个属性信息--即颜色信息
   private ColorBuffer append(ColorBuffer.ColorAttr attr) {
-    parts.add(attr);
+    parts.add(attr);//颜色是不算有效长度的
     return this;
   }
 
@@ -176,14 +178,16 @@ final class ColorBuffer implements Comparable<Object> {
     return visibleLength;
   }
 
+  //为给定的val 附加一定的颜色
   private ColorBuffer append(ColorBuffer.ColorAttr attr, String val) {
     parts.add(attr);
     parts.add(val);
-    parts.add(NORMAL);
+    parts.add(NORMAL);//将添加后的结果重新恢复为正常颜色
     visibleLength += val.length();
     return this;
   }
 
+  //为给定字符串添加各种颜色
   public ColorBuffer bold(String str) {
     return append(BOLD, str);
   }

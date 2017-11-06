@@ -59,7 +59,7 @@ class BeeLineOpts implements Completer {
   private boolean autosave = false;
   private boolean silent = false;
   private boolean color = false;
-  private boolean showHeader = true;
+  private boolean showHeader = true;//true表示打印列title
   private int headerInterval = 100;
   private boolean fastConnect = true;
   private boolean autoCommit = false;//设置是否自动提交

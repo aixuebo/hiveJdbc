@@ -33,144 +33,145 @@ import java.util.Iterator;
 /**
  * Abstract base class representing a set of rows to be displayed.
  * Holds column values as strings
- * ±íÊ¾Ò»¸öĞĞµÄ¼¯ºÏ
+ * è¡¨ç¤ºä¸€ä¸ªè¡Œçš„é›†åˆ
  */
 abstract class Rows implements Iterator {
-  private final BeeLine beeLine;
-  final ResultSetMetaData rsMeta;
-  final Boolean[] primaryKeys;//Ã¿Ò»¸öÁĞÊÇ·ñÊÇÖ÷¼ü,true±íÊ¾ÊÇÖ÷¼ü
-  final NumberFormat numberFormat;//NumberÀàĞÍµÄÁĞÈçºÎ×ª»»
-  private final String nullStr;
+    private final BeeLine beeLine;
+    final ResultSetMetaData rsMeta;
+    final Boolean[] primaryKeys;//æ¯ä¸€ä¸ªåˆ—æ˜¯å¦æ˜¯ä¸»é”®,trueè¡¨ç¤ºæ˜¯ä¸»é”®
+    final NumberFormat numberFormat;//Numberç±»å‹çš„åˆ—å¦‚ä½•è½¬æ¢
+    private final String nullStr;
 
-  Rows(BeeLine beeLine, ResultSet rs) throws SQLException {
-    this.beeLine = beeLine;
-    nullStr = beeLine.getOpts().getNullString();
-    rsMeta = rs.getMetaData();
-    int count = rsMeta.getColumnCount();//ÁĞµÄÊıÁ¿
-    primaryKeys = new Boolean[count];
-    if (beeLine.getOpts().getNumberFormat().equals("default")) {
-      numberFormat = null;
-    } else {
-      numberFormat = new DecimalFormat(beeLine.getOpts().getNumberFormat());
-    }
-  }
-
-  public void remove() {
-    throw new UnsupportedOperationException();
-  }
-
-  /**
-   * Update all of the rows to have the same size, set to the
-   * maximum length of each column in the Rows.
-   */
-  abstract void normalizeWidths();
-
-  /**
-   * Return whether the specified column (0-based index) is
-   * a primary key. Since this method depends on whether the
-   * JDBC driver property implements {@link ResultSetMetaData#getTableName} (many do not), it
-   * is not reliable for all databases.
-   * »ñÈ¡¸ÃÁĞÊÇ·ñÊÇÖ÷¼ü,²¢ÇÒÉèÖÃ¸ÃÁĞÊÇ·ñÊÇÖ÷¼ü
-   */
-  boolean isPrimaryKey(int col) {
-    if (primaryKeys[col] != null) {
-      return primaryKeys[col].booleanValue();
-    }
-
-    try {
-      // this doesn't always work, since some JDBC drivers (e.g.,
-      // Oracle's) return a blank string from getTableName.
-      String table = rsMeta.getTableName(col + 1);
-      String column = rsMeta.getColumnName(col + 1);
-
-      if (table == null || table.length() == 0 ||
-          column == null || column.length() == 0) {
-        return (primaryKeys[col] = new Boolean(false)).booleanValue();//±í»òÕßÁĞ´æÔÚ,Ôò¿Ï¶¨²»ÊÇÖ÷¼ü
-      }
-
-      ResultSet pks = beeLine.getDatabaseConnection().getDatabaseMetaData().getPrimaryKeys(
-          beeLine.getDatabaseConnection().getDatabaseMetaData().getConnection().getCatalog(), null, table);//»ñÈ¡¸Ã±íµÄÖ÷¼ü½á¹û¼¯
-
-      try {
-        while (pks.next()) {
-          if (column.equalsIgnoreCase(
-              pks.getString("COLUMN_NAME"))) {//»ñÈ¡·µ»Ø½á¹û¼¯ÖĞµÄÖ÷¼üname,ÅĞ¶ÏÊÇ·ñÊÇ´ËÊ±µÄÁĞname
-            return (primaryKeys[col] = new Boolean(true)).booleanValue();//ËµÃ÷ÊÇÖ÷¼ü
-          }
-        }
-      } finally {
-        pks.close();
-      }
-
-      return (primaryKeys[col] = new Boolean(false)).booleanValue();
-    } catch (SQLException sqle) {
-      return (primaryKeys[col] = new Boolean(false)).booleanValue();
-    }
-  }
-
-
-  class Row {//±íÊ¾Ò»ĞĞÊı¾İ
-    final String[] values;//´æ´¢Êı¾İ
-    final boolean isMeta;
-    boolean deleted;
-    boolean inserted;
-    boolean updated;
-    int[] sizes;//Ã¿Ò»¸ö×Ö¶ÎµÄÖµµÄ³¤¶È
-
-      //´æ´¢titleĞÅÏ¢
-    Row(int size) throws SQLException {
-      isMeta = true;
-      values = new String[size];//titleÄÚÈİ
-      sizes = new int[size];//Ã¿Ò»¸ötitleÕ¼ÓÃ¶àÉÙ¸ö³¤¶È
-      for (int i = 0; i < size; i++) {
-        values[i] = rsMeta.getColumnLabel(i + 1);
-        sizes[i] = values[i] == null ? 1 : values[i].length();
-      }
-
-      deleted = false;
-      updated = false;
-      inserted = false;
-    }
-
-    @Override
-    public String toString(){
-      return Arrays.asList(values).toString();
-    }
-
-    Row(int size, ResultSet rs) throws SQLException {
-      isMeta = false;
-      values = new String[size];
-      sizes = new int[size];
-
-      try {
-        deleted = rs.rowDeleted();
-      } catch (Throwable t) {
-      }
-      try {
-        updated = rs.rowUpdated();
-      } catch (Throwable t) {
-      }
-      try {
-        inserted = rs.rowInserted();
-      } catch (Throwable t) {
-      }
-
-      for (int i = 0; i < size; i++) {
-        if (numberFormat != null) {
-          Object o = rs.getObject(i + 1);
-          if (o == null) {
-            values[i] = null;
-          }  else if (o instanceof Number) {
-            values[i] = numberFormat.format(o);
-          } else {
-            values[i] = o.toString();
-          }
+    Rows(BeeLine beeLine, ResultSet rs) throws SQLException {
+        this.beeLine = beeLine;
+        nullStr = beeLine.getOpts().getNullString();
+        rsMeta = rs.getMetaData();
+        int count = rsMeta.getColumnCount();//åˆ—çš„æ•°é‡
+        primaryKeys = new Boolean[count];
+        if (beeLine.getOpts().getNumberFormat().equals("default")) {
+            numberFormat = null;
         } else {
-          values[i] = rs.getString(i + 1);
+            numberFormat = new DecimalFormat(beeLine.getOpts().getNumberFormat());
         }
-        values[i] = values[i] == null ? nullStr : values[i];
-        sizes[i] = values[i].length();
-      }
     }
-  }
+
+    public void remove() {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Update all of the rows to have the same size, set to the
+     * maximum length of each column in the Rows.
+     */
+    abstract void normalizeWidths();
+
+    /**
+     * Return whether the specified column (0-based index) is
+     * a primary key. Since this method depends on whether the
+     * JDBC driver property implements {@link ResultSetMetaData#getTableName} (many do not), it
+     * is not reliable for all databases.
+     * è·å–è¯¥åˆ—æ˜¯å¦æ˜¯ä¸»é”®,å¹¶ä¸”è®¾ç½®è¯¥åˆ—æ˜¯å¦æ˜¯ä¸»é”®
+     */
+    boolean isPrimaryKey(int col) {
+        if (primaryKeys[col] != null) {
+            return primaryKeys[col].booleanValue();
+        }
+
+        try {
+            // this doesn't always work, since some JDBC drivers (e.g.,
+            // Oracle's) return a blank string from getTableName.
+            String table = rsMeta.getTableName(col + 1);
+            String column = rsMeta.getColumnName(col + 1);
+
+            if (table == null || table.length() == 0 ||
+                    column == null || column.length() == 0) {
+                return (primaryKeys[col] = new Boolean(false)).booleanValue();//è¡¨æˆ–è€…åˆ—å­˜åœ¨,åˆ™è‚¯å®šä¸æ˜¯ä¸»é”®
+            }
+
+            ResultSet pks = beeLine.getDatabaseConnection().getDatabaseMetaData().getPrimaryKeys(
+                    beeLine.getDatabaseConnection().getDatabaseMetaData().getConnection().getCatalog(), null, table);//è·å–è¯¥è¡¨çš„ä¸»é”®ç»“æœé›†
+
+            try {
+                while (pks.next()) {
+                    if (column.equalsIgnoreCase(
+                            pks.getString("COLUMN_NAME"))) {//è·å–è¿”å›ç»“æœé›†ä¸­çš„ä¸»é”®name,åˆ¤æ–­æ˜¯å¦æ˜¯æ­¤æ—¶çš„åˆ—name
+                        return (primaryKeys[col] = new Boolean(true)).booleanValue();//è¯´æ˜æ˜¯ä¸»é”®
+                    }
+                }
+            } finally {
+                pks.close();
+            }
+
+            return (primaryKeys[col] = new Boolean(false)).booleanValue();
+        } catch (SQLException sqle) {
+            return (primaryKeys[col] = new Boolean(false)).booleanValue();
+        }
+    }
+
+
+    class Row {//è¡¨ç¤ºä¸€è¡Œæ•°æ®
+        final String[] values;//å­˜å‚¨æ•°æ®
+        final boolean isMeta;//trueè¡¨ç¤ºè¿™ä¸€è¡Œæ˜¯å…ƒæ•°æ®,å³æ˜¯title
+        boolean deleted;
+        boolean inserted;
+        boolean updated;
+        int[] sizes;//æ¯ä¸€ä¸ªå­—æ®µçš„å€¼çš„é•¿åº¦
+
+        //å­˜å‚¨titleä¿¡æ¯
+        Row(int size) throws SQLException {
+            isMeta = true;
+            values = new String[size];//titleå†…å®¹
+            sizes = new int[size];//æ¯ä¸€ä¸ªtitleå ç”¨å¤šå°‘ä¸ªé•¿åº¦
+            for (int i = 0; i < size; i++) {
+                values[i] = rsMeta.getColumnLabel(i + 1);
+                sizes[i] = values[i] == null ? 1 : values[i].length();
+            }
+
+            deleted = false;
+            updated = false;
+            inserted = false;
+        }
+
+        @Override
+        public String toString(){
+            return Arrays.asList(values).toString();
+        }
+
+        //è·å–ä¸€è¡Œçš„å…·ä½“æ•°æ®
+        Row(int size, ResultSet rs) throws SQLException {
+            isMeta = false;
+            values = new String[size];
+            sizes = new int[size];
+
+            try {
+                deleted = rs.rowDeleted();
+            } catch (Throwable t) {
+            }
+            try {
+                updated = rs.rowUpdated();
+            } catch (Throwable t) {
+            }
+            try {
+                inserted = rs.rowInserted();
+            } catch (Throwable t) {
+            }
+
+            for (int i = 0; i < size; i++) {//ä»rsä¸­è¯»å–ä¸€è¡Œä¿¡æ¯
+                if (numberFormat != null) {
+                    Object o = rs.getObject(i + 1);
+                    if (o == null) {
+                        values[i] = null;
+                    }  else if (o instanceof Number) {
+                        values[i] = numberFormat.format(o);
+                    } else {
+                        values[i] = o.toString();
+                    }
+                } else {
+                    values[i] = rs.getString(i + 1);
+                }
+                values[i] = values[i] == null ? nullStr : values[i];
+                sizes[i] = values[i].length();
+            }
+        }
+    }
 }

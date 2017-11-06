@@ -78,6 +78,7 @@ import java.util.zip.ZipEntry;
 /**
  * the completer is original provided in JLine 0.9.94 and is being removed in 2.12. Add the
  * previous implement for usage of the beeline.
+ * 补充class的全路径
  */
 public class ClassNameCompleter extends StringsCompleter {
 
@@ -103,7 +104,7 @@ public class ClassNameCompleter extends StringsCompleter {
 
     // Now add the URL that holds java.lang.String. This is because
     // some JVMs do not report the core classes jar in the list of
-    // class loaders.
+    // class loaders. 主要目的添加java的core包的url
     Class[] systemClasses = new Class[]{String.class, javax.swing.JFrame.class};
 
     for (int i = 0; i < systemClasses.length; i++) {
@@ -119,13 +120,13 @@ public class ClassNameCompleter extends StringsCompleter {
       }
     }
 
-    Set classes = new HashSet();
+    Set classes = new HashSet();//最终符合的class集合
 
-    for (Iterator i = urls.iterator(); i.hasNext(); ) {
+    for (Iterator i = urls.iterator(); i.hasNext(); ) {//循环每一个url,该url是web的,也可以是本地的
       URL url = (URL) i.next();
       File file = new File(url.getFile());
 
-      if (file.isDirectory()) {
+      if (file.isDirectory()) {//从目录读取数据
         Set files = getClassFiles(file.getAbsolutePath(), new HashSet(), file, new int[]{200});
         classes.addAll(files);
 
@@ -136,7 +137,7 @@ public class ClassNameCompleter extends StringsCompleter {
         continue;
       }
 
-      JarFile jf = new JarFile(file);
+      JarFile jf = new JarFile(file);//说明文件是jar包
 
       for (Enumeration e = jf.entries(); e.hasMoreElements(); ) {
         JarEntry entry = (JarEntry) e.nextElement();
@@ -160,16 +161,21 @@ public class ClassNameCompleter extends StringsCompleter {
 
     // now filter classes by changing "/" to "." and trimming the
     // trailing ".class"
+      //最终的class全路径集合
     Set classNames = new TreeSet();
 
     for (Iterator i = classes.iterator(); i.hasNext(); ) {
       String name = (String) i.next();
-      classNames.add(name.replace('/', '.').substring(0, name.length() - 6));
+      classNames.add(name.replace('/', '.').substring(0, name.length() - 6));//刨除.class内容
     }
 
     return (String[]) classNames.toArray(new String[classNames.size()]);
   }
 
+    /**
+     * 查找文件夹directory下所有文件,可以找到子目录最多maxDirectories层,找到文件名字以root开头的,以.class结束的文件,添加到集合holder中
+     * 比如root是com,则如果遇见com/XX.class 则添加到holder的内容是XX.class
+     */
   private static Set getClassFiles(String root, Set holder, File directory, int[] maxDirectories) {
     // we have passed the maximum number of directories to scan
     if (maxDirectories[0]-- < 0) {
@@ -178,7 +184,7 @@ public class ClassNameCompleter extends StringsCompleter {
 
     File[] files = directory.listFiles();
 
-    for (int i = 0; (files != null) && (i < files.length); i++) {
+    for (int i = 0; (files != null) && (i < files.length); i++) {//循环目录下所有文件
       String name = files[i].getAbsolutePath();
 
       if (!(name.startsWith(root))) {
@@ -198,6 +204,8 @@ public class ClassNameCompleter extends StringsCompleter {
    * Get clazz names from a jar file path
    * @param path specifies the jar file's path
    * @return
+   * 从jar包中获取每一个class代表的类集合
+   * 比如java.util.List这样的类全路径集合
    */
   private static List<String> getClassNamesFromJar(String path) {
     List<String> classNames = new ArrayList<String>();
@@ -206,8 +214,8 @@ public class ClassNameCompleter extends StringsCompleter {
       zip = new ZipInputStream(new FileInputStream(path));
       ZipEntry entry = zip.getNextEntry();
       while (entry != null) {
-        if (!entry.isDirectory() && entry.getName().endsWith(clazzFileNameExtension)) {
-          StringBuilder className = new StringBuilder();
+        if (!entry.isDirectory() && entry.getName().endsWith(clazzFileNameExtension)) {//所有的class文件
+          StringBuilder className = new StringBuilder();//将class的path路径的/转换成.,同时将.class取消
           for (String part : entry.getName().split("/")) {
             if (className.length() != 0) {
               className.append(".");
@@ -236,10 +244,12 @@ public class ClassNameCompleter extends StringsCompleter {
     return classNames;
   }
 
+  //true表示是jar文件
   private static boolean isJarFile(String fileName) {
     return fileName.endsWith(jarFileNameExtension);
   }
 
+  //true表示是class文件
   private static boolean isClazzFile(String clazzName) {
     return clazzName.endsWith(clazzFileNameExtension);
   }

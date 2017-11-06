@@ -37,7 +37,7 @@ public abstract class AbstractCommandHandler implements CommandHandler {
   private final BeeLine beeLine;
   private final String name;
   private final String[] names;
-  private final String helpText;
+  private final String helpText;//ÃüÁîµÄ°ïÖúĞÅÏ¢
   private Completer[] parameterCompleters = new Completer[0];
 
   protected transient Throwable lastException;

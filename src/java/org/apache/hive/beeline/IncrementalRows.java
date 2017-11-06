@@ -29,10 +29,11 @@ import java.util.NoSuchElementException;
 /**
  * Rows implementation which returns rows incrementally from result set
  * without any buffering.
+ * 不缓存,每次从RS结果集中获取一行数据
  */
 public class IncrementalRows extends Rows {
   private final ResultSet rs;
-  private final Row labelRow;
+  private final Row labelRow;//title信息的列
   private final Row maxRow;
   private Row nextRow;//下一行数据
   private boolean endOfResult;//true表示查询到结果了
@@ -70,7 +71,7 @@ public class IncrementalRows extends Rows {
 
     if (nextRow == null) {
       try {
-        if (rs.next()) {
+        if (rs.next()) {//获取下一行
           nextRow = new Row(labelRow.sizes.length, rs);
 
           if (normalizingWidths) {
@@ -87,6 +88,7 @@ public class IncrementalRows extends Rows {
     return (nextRow != null);
   }
 
+    //获取下一行数据对象
   public Object next() {
     if (!hasNext()) {
       throw new NoSuchElementException();
