@@ -56,17 +56,17 @@ class BeeLineOpts implements Completer {
   public static final char DEFAULT_DELIMITER_FOR_DSV = '|';
 
   private final BeeLine beeLine;
-  private boolean autosave = false;
+  private boolean autosave = false;//true表示当我们的set key value命令执行后,要不要同步更改配置文件
   private boolean silent = false;
   private boolean color = false;
   private boolean showHeader = true;//true表示打印列title
   private int headerInterval = 100;
-  private boolean fastConnect = true;
+  private boolean fastConnect = true;//false表示自动补全的时候,要补全表和列的信息,因此就有网络开销去查询该数据库下所有的表和列的信息
   private boolean autoCommit = false;//设置是否自动提交
-  private boolean verbose = false;
-  private boolean force = false;
-  private boolean incremental = false;
-  private boolean showWarnings = false;
+  private boolean verbose = false;//true表示打印debug信息
+  private boolean force = false;//true表示执行命令错误了,也会继续执行下一条命令
+  private boolean incremental = false;//使用什么方式读取sql的结果集.false表示使用一次性读取全部数据库结果集,true表示一次只读取一行数据
+  private boolean showWarnings = false;//true表示是否打印警告sql的异常
   private boolean showNestedErrs = false;
   private boolean showElapsedTime = true;
   private boolean entireLineAsCommand = false;
@@ -77,20 +77,20 @@ class BeeLineOpts implements Completer {
   private int maxColumnWidth = 15;
   int timeout = -1;
   private String isolation = DEFAULT_ISOLATION_LEVEL;//设置隔离级别
-  private String outputFormat = "table";
-  private boolean trimScripts = true;
-  private boolean allowMultiLineCommand = true;
+  private String outputFormat = "table";//使用什么形式输出查询的结果集
+  private boolean trimScripts = true;//true表示每一个命令的字符串要进行trim处理
+  private boolean allowMultiLineCommand = true;//true表示sql允许多行显示一个sql
 
   //This can be set for old behavior of nulls printed as empty strings
   private boolean nullEmptyString = false;
 
   private boolean truncateTable = false;
 
-  private final File rcFile = new File(saveDir(), "beeline.properties");
+  private final File rcFile = new File(saveDir(), "beeline.properties");//属性信息配置文件
   private String historyFile = new File(saveDir(), "history").getAbsolutePath();
 
   private String scriptFile = null;//脚本文件
-  private String initFile = null;//初始化文件
+  private String initFile = null;//初始化文件----每次切换一个数据库连接的时候,都进行初始化该文件的命令
   private String authType = null;
   private char delimiterForDSV = DEFAULT_DELIMITER_FOR_DSV;
 
@@ -151,7 +151,7 @@ class BeeLineOpts implements Completer {
     }
   }
 
-
+  //将属性信息保存
   public void save() throws IOException {
     OutputStream out = new FileOutputStream(rcFile);
     save(out);
@@ -164,7 +164,7 @@ class BeeLineOpts implements Completer {
       // don't save maxwidth: it is automatically set based on
       // the terminal configuration
       props.remove(PROPERTY_PREFIX + "maxwidth");
-      props.store(out, beeLine.getApplicationTitle());
+      props.store(out, beeLine.getApplicationTitle());//第二个参数是备注信息
     } catch (Exception e) {
       beeLine.handleException(e);
     }
@@ -238,6 +238,7 @@ class BeeLineOpts implements Completer {
     set(key, value, false);
   }
 
+  //第三个参数true表示安静的修改,false表示要打印日志
   public boolean set(String key, String value, boolean quiet) {
     try {
       beeLine.getReflector().invoke(this, "set" + key, new Object[] {value});

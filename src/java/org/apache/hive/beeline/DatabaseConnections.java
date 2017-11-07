@@ -29,7 +29,7 @@ import java.util.List;
 //相当于数据库连接池
 class DatabaseConnections {
   private final List<DatabaseConnection> connections = new ArrayList<DatabaseConnection>();
-  private int index = -1;
+  private int index = -1;//设置当前使用的是哪个数据库连接
 
   public DatabaseConnection current() {
     if (index != -1) {

@@ -108,18 +108,18 @@ public class BeeLine implements Closeable {
   private static final ResourceBundle resourceBundle =
       ResourceBundle.getBundle(BeeLine.class.getSimpleName());
   private final BeeLineSignalHandler signalHandler = null;
-  private static final String separator = System.getProperty("line.separator");
-  private boolean exit = false;
+  private static final String separator = System.getProperty("line.separator");//回车换行
+  private boolean exit = false;//true表示退出
   private final DatabaseConnections connections = new DatabaseConnections();
   public static final String COMMAND_PREFIX = "!";//命令前缀
   private final Completer beeLineCommandCompleter;//持有所有支持的命令集合
   private Collection<Driver> drivers = null;
   private final BeeLineOpts opts = new BeeLineOpts(this, System.getProperties());
-  private String lastProgress = null;
+  private String lastProgress = null;//上一次的进度内容
   private final Map<SQLWarning, Date> seenWarnings = new HashMap<SQLWarning, Date>();
   private final Commands commands = new Commands(this);
-  private OutputFile scriptOutputFile = null;
-  private OutputFile recordOutputFile = null;
+  private OutputFile scriptOutputFile = null;//脚本文件
+  private OutputFile recordOutputFile = null;//记录内容的文件
   private PrintStream outputStream = new PrintStream(System.out, true);
   private PrintStream errorStream = new PrintStream(System.err, true);
   private ConsoleReader consoleReader;
@@ -136,14 +136,15 @@ public class BeeLine implements Closeable {
   private static final String SCRIPT_OUTPUT_PREFIX = ">>>";
   private static final int SCRIPT_OUTPUT_PAD_SIZE = 5;
 
-  private static final int ERRNO_OK = 0;
-  private static final int ERRNO_ARGS = 1;
-  private static final int ERRNO_OTHER = 2;
+  //beeline的程序的最终状态码
+  private static final int ERRNO_OK = 0;//成功执行
+  private static final int ERRNO_ARGS = 1;//执行过程中遇到exception异常了
+  private static final int ERRNO_OTHER = 2;//说明遇到其他的异常,导致退出程序
 
   private static final String HIVE_VAR_PREFIX = "--hivevar";
   private static final String HIVE_CONF_PREFIX = "--hiveconf";
 
-  //输出格式
+  //输出格式 vertical/table/csv2/tsv2/dsv/csv/tsv/xmlattr/xmlelements
   private final Map<Object, Object> formats = map(new Object[] {
       "vertical", new VerticalOutputFormat(this),
       "table", new TableOutputFormat(this),
@@ -161,99 +162,99 @@ public class BeeLine implements Closeable {
 
   //如何处理各种命令
   final CommandHandler[] commandHandlers = new CommandHandler[] {
-      new ReflectiveCommandHandler(this, new String[] {"quit", "done", "exit"},
+      new ReflectiveCommandHandler(this, new String[] {"quit", "done", "exit"},//三个表示执行的都是同一个命令,即quit命令,关闭当前数据库,并且设置退出beeline客户端---!quit
           null),
-      new ReflectiveCommandHandler(this, new String[] {"connect", "open"},
+      new ReflectiveCommandHandler(this, new String[] {"connect", "open"},//2个表示执行的都是同一个命令,即connect命令,连接一个数据库  ----!connect <url> <username> <password> [driver]
           new Completer[] {new StringsCompleter(getConnectionURLExamples())}),
       new ReflectiveCommandHandler(this, new String[] {"describe"},
+          new Completer[] {new TableNameCompletor(this)}),//获取一个表的详细描述内容 或者所有表的内容 ---!describe tables  或者!describe tableName(具体表名)
+      new ReflectiveCommandHandler(this, new String[] {"indexes"},//获取索引信息----!indexes table
           new Completer[] {new TableNameCompletor(this)}),
-      new ReflectiveCommandHandler(this, new String[] {"indexes"},
+      new ReflectiveCommandHandler(this, new String[] {"primarykeys"},//执行DatabaseMetaData的getPrimaryKeys方法,打印一个表的主键列信息----!primarykeys tableName
           new Completer[] {new TableNameCompletor(this)}),
-      new ReflectiveCommandHandler(this, new String[] {"primarykeys"},
+      new ReflectiveCommandHandler(this, new String[] {"exportedkeys"},//执行DatabaseMetaData的getExportedKeys方法,打印一个表的外键属性信息----!exportedkeys tableName
           new Completer[] {new TableNameCompletor(this)}),
-      new ReflectiveCommandHandler(this, new String[] {"exportedkeys"},
-          new Completer[] {new TableNameCompletor(this)}),
-      new ReflectiveCommandHandler(this, new String[] {"manual"},
+      new ReflectiveCommandHandler(this, new String[] {"manual"},//manual命令读取manual.txt说明文件---!manual
           null),
-      new ReflectiveCommandHandler(this, new String[] {"importedkeys"},
+      new ReflectiveCommandHandler(this, new String[] {"importedkeys"},//执行DatabaseMetaData的getImportedKeys方法,打印一个表的检索表中外键列引用的主键列信息----!importedkeys tableName
           new Completer[] {new TableNameCompletor(this)}),
-      new ReflectiveCommandHandler(this, new String[] {"procedures"},
+      new ReflectiveCommandHandler(this, new String[] {"procedures"},//获取存储过程的描述---!procedures procedureName(存储过程的name)----调用DatabaseMetaData对象的getProcedures方法获取结果
           null),
-      new ReflectiveCommandHandler(this, new String[] {"tables"},
+      new ReflectiveCommandHandler(this, new String[] {"tables"},//执行DatabaseMetaData的getTables方法,打印一个表的属性信息----!tables tableName
           null),
-      new ReflectiveCommandHandler(this, new String[] {"typeinfo"},
+      new ReflectiveCommandHandler(this, new String[] {"typeinfo"},//执行DatabaseMetaData的getTypeInfo方法,打印数据库提供的字段类型信息----!typeinfo
           null),
-      new ReflectiveCommandHandler(this, new String[] {"columns"},
+      new ReflectiveCommandHandler(this, new String[] {"columns"},//执行DatabaseMetaData的getColumns方法,打印一个表的所有列属性信息----!columns tableName
           new Completer[] {new TableNameCompletor(this)}),
-      new ReflectiveCommandHandler(this, new String[] {"reconnect"},
+      new ReflectiveCommandHandler(this, new String[] {"reconnect"},//重新连接当前数据库----!reconnect
           null),
-      new ReflectiveCommandHandler(this, new String[] {"dropall"},
+      new ReflectiveCommandHandler(this, new String[] {"dropall"},//drop table 所有的表----!dropall
           new Completer[] {new TableNameCompletor(this)}),
-      new ReflectiveCommandHandler(this, new String[] {"history"},
+      new ReflectiveCommandHandler(this, new String[] {"history"},//获取历史命令,基于jline工具包记录的---格式!history
           null),
-      new ReflectiveCommandHandler(this, new String[] {"metadata"},
+      new ReflectiveCommandHandler(this, new String[] {"metadata"},//执行DatabaseMetaData对象的方法,即获取数据库的元数据信息---!metadata "" 数据库Name tableName,注意 第一个""参数表示catalog
           new Completer[] {
               new StringsCompleter(getMetadataMethodNames())}),
-      new ReflectiveCommandHandler(this, new String[] {"nativesql"},
+      new ReflectiveCommandHandler(this, new String[] {"nativesql"},//执行Connection的nativeSQL方法-----!nativesql sql
           null),
-      new ReflectiveCommandHandler(this, new String[] {"dbinfo"},
+      new ReflectiveCommandHandler(this, new String[] {"dbinfo"},//执行当前数据库的DatabaseMetaData的若干个方法,并且打印信息,相当于当前数据库的一些描述信息----!dbinfo
           null),
-      new ReflectiveCommandHandler(this, new String[] {"rehash"},
+      new ReflectiveCommandHandler(this, new String[] {"rehash"},//重新刷新自动补全信息---!rehash
           null),
-      new ReflectiveCommandHandler(this, new String[] {"verbose"},
+      new ReflectiveCommandHandler(this, new String[] {"verbose"},//设置用debug模式输出,即set verbose true----!verbose
           null),
-      new ReflectiveCommandHandler(this, new String[] {"run"},
+      new ReflectiveCommandHandler(this, new String[] {"run"},//执行一个脚本文件---脚本中存放了所有的命令集合,用回车换行表示一个单独的命令---!run filePath
           new Completer[] {new FileNameCompleter()}),
-      new ReflectiveCommandHandler(this, new String[] {"batch"},
+      new ReflectiveCommandHandler(this, new String[] {"batch"},//开启和执行一个批处理命令集合----!batch
           null),
-      new ReflectiveCommandHandler(this, new String[] {"list"},
+      new ReflectiveCommandHandler(this, new String[] {"list"},//打印目前所有配置的数据库连接信息----!list   该命令配合go命令使用
           null),
-      new ReflectiveCommandHandler(this, new String[] {"all"},
+      new ReflectiveCommandHandler(this, new String[] {"all"},//对所有数据库都执行all 后面的内容  -----!all sql
           null),
-      new ReflectiveCommandHandler(this, new String[] {"go", "#"},
+      new ReflectiveCommandHandler(this, new String[] {"go", "#"},//切换第几个数据库,跟list命令一起使用 ----!go Integer
           null),
-      new ReflectiveCommandHandler(this, new String[] {"script"},
+      new ReflectiveCommandHandler(this, new String[] {"script"},//开启和关闭一个脚本文件,在开启期间可以添加脚本内容----开启!script filePath,关闭!script
           new Completer[] {new FileNameCompleter()}),
-      new ReflectiveCommandHandler(this, new String[] {"record"},
+      new ReflectiveCommandHandler(this, new String[] {"record"},//开启和关闭一个记录输出内容的文件---开启 !record filePath 关闭 !record
           new Completer[] {new FileNameCompleter()}),
-      new ReflectiveCommandHandler(this, new String[] {"brief"},
+      new ReflectiveCommandHandler(this, new String[] {"brief"},//设置不用debug模式输出,即set verbose false----!brief
           null),
-      new ReflectiveCommandHandler(this, new String[] {"close"},
+      new ReflectiveCommandHandler(this, new String[] {"close"},//关闭当前数据库连接   !close
           null),
-      new ReflectiveCommandHandler(this, new String[] {"closeall"},
+      new ReflectiveCommandHandler(this, new String[] {"closeall"},//关闭所有的数据库 ----!closeall
           null),
-      new ReflectiveCommandHandler(this, new String[] {"isolation"},
+      new ReflectiveCommandHandler(this, new String[] {"isolation"},//设置隔离级别----!isolation TRANSACTION_NONE/TRANSACTION_READ_COMMITTED/TRANSACTION_READ_UNCOMMITTED/TRANSACTION_REPEATABLE_READ/TRANSACTION_SERIALIZABLE
           new Completer[] {new StringsCompleter(getIsolationLevels())}),
-      new ReflectiveCommandHandler(this, new String[] {"outputformat"},
+      new ReflectiveCommandHandler(this, new String[] {"outputformat"},//设置输出的打印形式----!outputformat vertical/table/csv2/tsv2/dsv/csv/tsv/xmlattr/xmlelements
           new Completer[] {new StringsCompleter(
               formats.keySet().toArray(new String[0]))}),
-      new ReflectiveCommandHandler(this, new String[] {"autocommit"},
+      new ReflectiveCommandHandler(this, new String[] {"autocommit"},//设置当前数据库是否是自动提交----!autocommit on/off
           null),
-      new ReflectiveCommandHandler(this, new String[] {"commit"},
+      new ReflectiveCommandHandler(this, new String[] {"commit"},//设置提交当前事务----!commit
           null),
-      new ReflectiveCommandHandler(this, new String[] {"properties"},
+      new ReflectiveCommandHandler(this, new String[] {"properties"},//连接所有的数据库,每一个数据库对应一个配置文件,多个数据源使用空格,分割多个配置文件---!properties filePath1 filePath2
           new Completer[] {new FileNameCompleter()}),
-      new ReflectiveCommandHandler(this, new String[] {"rollback"},
+      new ReflectiveCommandHandler(this, new String[] {"rollback"},//设置回滚当前事务----!rollback
           null),
-      new ReflectiveCommandHandler(this, new String[] {"help", "?"},
+      new ReflectiveCommandHandler(this, new String[] {"help", "?"},//帮助命令 !help
           null),
-      new ReflectiveCommandHandler(this, new String[] {"set"},
+      new ReflectiveCommandHandler(this, new String[] {"set"},//!set key value 修改配置文件
           getOpts().optionCompleters()),
-      new ReflectiveCommandHandler(this, new String[] {"save"},
+      new ReflectiveCommandHandler(this, new String[] {"save"},//将当前配置信息重新写入到beeline的配置文件中----!save
           null),
-      new ReflectiveCommandHandler(this, new String[] {"scan"},
+      new ReflectiveCommandHandler(this, new String[] {"scan"},//打印所有的driver信息----!scan
           null),
-      new ReflectiveCommandHandler(this, new String[] {"sql"},
+      new ReflectiveCommandHandler(this, new String[] {"sql"},//执行一个sql----!sql sql
           null),
-      new ReflectiveCommandHandler(this, new String[] {"sh"},
+      new ReflectiveCommandHandler(this, new String[] {"sh"},//执行一个shell命令----!sh shell,其中shell可以用空格拆分成执行数组参数等信息
           null),
-      new ReflectiveCommandHandler(this, new String[] {"call"},
+      new ReflectiveCommandHandler(this, new String[] {"call"},//执行一个系统调用----!call sql
           null),
       new ReflectiveCommandHandler(this, new String[] {"nullemptystring"},
           new Completer[] {new BooleanCompleter()}),
-      new ReflectiveCommandHandler(this, new String[]{"addlocaldriverjar"},
+      new ReflectiveCommandHandler(this, new String[]{"addlocaldriverjar"},//添加一个driver的jar----!addlocaldriverjar driverJarPath
           null),
-      new ReflectiveCommandHandler(this, new String[]{"addlocaldrivername"},
+      new ReflectiveCommandHandler(this, new String[]{"addlocaldrivername"},//添加一个driver的class----!addlocaldrivername driverClassName
           null)
   };
 
@@ -655,8 +656,8 @@ public class BeeLine implements Closeable {
 
   //解析命令行的参数信息
   int initArgs(String[] args) {
-    List<String> commands = Collections.emptyList();
-    List<String> files = Collections.emptyList();
+    List<String> commands = Collections.emptyList();//要执行初始化的命令
+    List<String> files = Collections.emptyList();//数据库连接对象文件
 
     CommandLine cl;
     BeelineParser beelineParser;
@@ -718,7 +719,7 @@ public class BeeLine implements Closeable {
 
     //执行connect命令,需要的参数依次是url 用户名 密码 driver,期间用空格分割
     if (url != null) {
-      String com = "!connect "
+      String com = "!connect " //进行connect命令,创建一个数据库的连接
           + url + " "
           + (user == null || user.length() == 0 ? "''" : user) + " "
           + (pass == null || pass.length() == 0 ? "''" : pass) + " "
@@ -728,7 +729,7 @@ public class BeeLine implements Closeable {
     }
 
     // now load properties files
-    for (Iterator<String> i = files.iterator(); i.hasNext();) {
+    for (Iterator<String> i = files.iterator(); i.hasNext();) {//加载配置文件,让其创建更多的数据库连接
       dispatch("!properties " + i.next());
     }
 
@@ -795,6 +796,7 @@ public class BeeLine implements Closeable {
     }
   }
 
+  //每次切换一个数据库连接的时候,都进行初始化该文件的命令
   int runInit() {
     String initFile = getOpts().getInitFile();
     if (initFile != null) {
@@ -823,9 +825,14 @@ public class BeeLine implements Closeable {
     }
   }
 
+    /**
+     * 不断的执行命令
+     * @param reader 表示输入源窗口
+     * @param exitOnError true表示遇见异常则退出beeline
+     */
   private int execute(ConsoleReader reader, boolean exitOnError) {
     String line;
-    while (!exit) {
+    while (!exit) {//没有退出,则一直循环
       try {
         // Execute one instruction; terminate on executing a script if there is an error
         // in silent mode, prevent the query and prompt being echoed back to terminal
@@ -848,7 +855,7 @@ public class BeeLine implements Closeable {
   }
 
   public ConsoleReader getConsoleReader(InputStream inputStream) throws IOException {
-    if (inputStream != null) {
+    if (inputStream != null) {//开启一个输入流,用JLine管理
       // ### NOTE: fix for sf.net bug 879425.
       consoleReader = new ConsoleReader(inputStream, getOutputStream());
     } else {
@@ -858,20 +865,20 @@ public class BeeLine implements Closeable {
     //disable the expandEvents for the purpose of backward compatibility
     consoleReader.setExpandEvents(false);
 
-    // setup history
+    // setup history 初始化历史命令文件
     ByteArrayOutputStream hist = null;
-    if (new File(getOpts().getHistoryFile()).isFile()) {
+    if (new File(getOpts().getHistoryFile()).isFile()) {//说明历史文件存在
       try {
         // save the current contents of the history buffer. This gets
         // around a bug in JLine where setting the output before the
         // input will clobber the history input, but setting the
         // input before the output will cause the previous commands
         // to not be saved to the buffer.
-        FileInputStream historyIn = new FileInputStream(getOpts().getHistoryFile());
-        hist = new ByteArrayOutputStream();
+        FileInputStream historyIn = new FileInputStream(getOpts().getHistoryFile());//读取历史文件
+        hist = new ByteArrayOutputStream();//临时存储历史的命令内容
         int n;
-        while ((n = historyIn.read()) != -1) {
-          hist.write(n);
+        while ((n = historyIn.read()) != -1) {//读取每一行的历史文件
+          hist.write(n);//将历史文件写入到输出流中
         }
         historyIn.close();
       } catch (Exception e) {
@@ -881,7 +888,7 @@ public class BeeLine implements Closeable {
 
     try {
       // now set the output for the history
-      consoleReader.setHistory(new FileHistory(new File(getOpts().getHistoryFile())));
+      consoleReader.setHistory(new FileHistory(new File(getOpts().getHistoryFile())));//设置历史命令,即命令都会进入历史命令文件中
     } catch (Exception e) {
       handleException(e);
     }
@@ -920,7 +927,7 @@ public class BeeLine implements Closeable {
         }
     }));
 
-    consoleReader.addCompleter(new BeeLineCompleter(this));
+    consoleReader.addCompleter(new BeeLineCompleter(this));//添加自动补全功能
     return consoleReader;
   }
 
@@ -932,10 +939,12 @@ public class BeeLine implements Closeable {
 
   /**
    * Dispatch the specified line to the appropriate {@link CommandHandler}.
-   *
+   * 执行一个命令
    * @param line
    *          the command-line to dispatch
    * @return true if the command was "successful"
+   * 例如
+   * !metadata xxxx 表示执行commands类的metadata方法,后面xxx表示需要的参数信息,集合用空格进行拆分
    */
   boolean dispatch(String line) {
     if (line == null) {
@@ -954,7 +963,7 @@ public class BeeLine implements Closeable {
 
     line = line.trim();
 
-    // save it to the current script, if any
+    // save it to the current script, if any 保存到当前脚本内
     if (scriptOutputFile != null) {
       scriptOutputFile.addLine(line);
     }
@@ -964,15 +973,15 @@ public class BeeLine implements Closeable {
     }
 
     if (line.startsWith(COMMAND_PREFIX)) {//以!开头,说明是任务命令
-      Map<String, CommandHandler> cmdMap = new TreeMap<String, CommandHandler>();
-      line = line.substring(1);
+      Map<String, CommandHandler> cmdMap = new TreeMap<String, CommandHandler>();//key是执行CommandHandler命令的时候匹配的是哪个命令key,value是具体的命令处理器
+      line = line.substring(1);//取消!
       for (int i = 0; i < commandHandlers.length; i++) {
         String match = commandHandlers[i].matches(line);//说明该命令是否匹配该行数据
         if (match != null) {
           CommandHandler prev = cmdMap.put(match, commandHandlers[i]);
           if (prev != null) {
             return error(loc("multiple-matches",
-                Arrays.asList(prev.getName(), commandHandlers[i].getName())));
+                Arrays.asList(prev.getName(), commandHandlers[i].getName())));//说明命令匹配多个hander,因此存在异常
           }
         }
       }
@@ -1002,17 +1011,18 @@ public class BeeLine implements Closeable {
    *          the line to be tested
    *
    * @return true if continuation required
+   * true表示需要继续解析命令
    */
   boolean needsContinuation(String line) {
-    if (isHelpRequest(line)) {
+    if (isHelpRequest(line)) {//说明是help命令,则不需要继续解析了
       return false;
     }
 
-    if (line.startsWith(COMMAND_PREFIX)) {
+    if (line.startsWith(COMMAND_PREFIX)) {//说明是!开头的命令,也不需要解析了
       return false;
     }
 
-    if (isComment(line)) {
+    if (isComment(line)) {//说明是备注,则不需要继续解析了
       return false;
     }
 
@@ -1022,11 +1032,11 @@ public class BeeLine implements Closeable {
       return false;
     }
 
-    if (!getOpts().isAllowMultiLineCommand()) {
+    if (!getOpts().isAllowMultiLineCommand()) {//说明不允许多行显示一个sql,因此也不需要继续解析了
       return false;
     }
 
-    return !trimmed.endsWith(";");
+    return !trimmed.endsWith(";");//如果不是以;结尾的,说明还要继续解析
   }
 
   /**
@@ -1036,6 +1046,7 @@ public class BeeLine implements Closeable {
    *          the line to be tested
    *
    * @return true if a help request
+   * true表示该命令是help命令
    */
   boolean isHelpRequest(String line) {
     return line.equals("?") || line.equalsIgnoreCase("help");
@@ -1048,6 +1059,7 @@ public class BeeLine implements Closeable {
    *          the line to be tested
    *
    * @return true if a comment
+   * true表示该行数据是备注
    */
   boolean isComment(String line) {
     // SQL92 comment prefix is "--"
@@ -1121,7 +1133,7 @@ public class BeeLine implements Closeable {
     output(msg, newline, getOutputStream());
   }
 
-
+  //打印输出内容,并且可能的话,还要讲结果计入到recordOutputFile文件中
   void output(ColorBuffer msg, boolean newline, PrintStream out) {
     if (newline) {
       out.println(msg.getColor());
@@ -1186,6 +1198,7 @@ public class BeeLine implements Closeable {
    * an error message if we do not.
    *
    * @return true if there is a current, active connection
+   * 确定连接一定存在
    */
   boolean assertConnection() {
     try {
@@ -1242,7 +1255,7 @@ public class BeeLine implements Closeable {
     }
   }
 
-
+  //打印连接的提示信息
   String getPrompt() {
     if (getDatabaseConnection() == null || getDatabaseConnection().getUrl() == null) {
       return "beeline> ";
@@ -1253,7 +1266,7 @@ public class BeeLine implements Closeable {
     }
   }
 
-
+  //打印连接的url
   static String getPrompt(String url) {
     if (url == null || url.length() == 0) {
       url = "beeline";
@@ -1262,9 +1275,9 @@ public class BeeLine implements Closeable {
       url = url.substring(0, url.indexOf(";"));
     }
     if (url.indexOf("?") > -1) {
-      url = url.substring(0, url.indexOf("?"));
+      url = url.substring(0, url.indexOf("?"));//将?参数信息取消掉
     }
-    if (url.length() > 45) {
+    if (url.length() > 45) {//最多打印前45个字节内容
       url = url.substring(0, 45);
     }
     return url;
@@ -1278,15 +1291,16 @@ public class BeeLine implements Closeable {
    * @param rs
    *          the {@link ResultSet} to get the size for
    * @return the size, or -1 if it could not be obtained
+   * 尝试获取当前结果集的数量
    */
   int getSize(ResultSet rs) {
     try {
       if (rs.getType() == rs.TYPE_FORWARD_ONLY) {
         return -1;
       }
-      rs.last();
-      int total = rs.getRow();
-      rs.beforeFirst();
+      rs.last();//移动到最后一个数据
+      int total = rs.getRow();//获取最后一行数据的行号
+      rs.beforeFirst();//恢复到以前的游标位置
       return total;
     } catch (SQLException sqle) {
       return -1;
@@ -1316,23 +1330,23 @@ public class BeeLine implements Closeable {
         new String[] {"TABLE"});
   }
 
-
+  //获取所有列的信息内容---用于自动补全功能的实现
   String[] getColumnNames(DatabaseMetaData meta) throws SQLException {
     Set<String> names = new HashSet<String>();
     info(loc("building-tables"));
     try {
-      ResultSet columns = getColumns("%");
+      ResultSet columns = getColumns("%");//获取每一个列的信息集合
       try {
-        int total = getSize(columns);
-        int index = 0;
+        int total = getSize(columns);//获取的总记录数---用于打印执行进度
+        int index = 0;//已经解析了多少条数据了
 
-        while (columns.next()) {
+        while (columns.next()) {//表示每一个列
           // add the following strings:
           // 1. column name
           // 2. table name
           // 3. tablename.columnname
 
-          progress(index++, total);
+          progress(index++, total);//用于记录执行进度
           String name = columns.getString("TABLE_NAME");
           names.add(name);
           names.add(columns.getString("COLUMN_NAME"));
@@ -1363,12 +1377,13 @@ public class BeeLine implements Closeable {
    * @param line
    *          the line to break up
    * @return an array of individual words
+   * 按照空格拆分字符串
    */
   String[] split(String line) {
     return split(line, " ");
   }
 
-
+  //取消引号
   String dequote(String str) {
     if (str == null) {
       return null;
@@ -1380,7 +1395,7 @@ public class BeeLine implements Closeable {
     return str;
   }
 
-
+  //拆分字符串---拆分成数组
   String[] split(String line, String delim) {
     StringTokenizer tok = new StringTokenizer(line, delim);
     String[] ret = new String[tok.countTokens()];
@@ -1393,7 +1408,7 @@ public class BeeLine implements Closeable {
     return ret;
   }
 
-
+  //将数组中每两个元素,组成一个map的key和value
   static Map<Object, Object> map(Object[] obs) {
     Map<Object, Object> m = new HashMap<Object, Object>();
     for (int i = 0; i < obs.length - 1; i += 2) {
@@ -1418,13 +1433,13 @@ public class BeeLine implements Closeable {
     return str;
   }
 
-
+  //将source中from的内容,替换成to的内容
   static String replace(String source, String from, String to) {
     if (source == null) {
       return null;
     }
 
-    if (from.equals(to)) {
+    if (from.equals(to)) {//说明不用更改,即更改前后数据一致
       return source;
     }
 
@@ -1434,7 +1449,7 @@ public class BeeLine implements Closeable {
     while ((index = source.indexOf(from)) != -1) {
       replaced.append(source.substring(0, index));
       replaced.append(to);
-      source = source.substring(index + from.length());
+      source = source.substring(index + from.length());//source截断,因为已经一部分正常了
     }
     replaced.append(source);
 
@@ -1447,16 +1462,17 @@ public class BeeLine implements Closeable {
    * number of words is correct.
    *
    * @param line
-   *          the line to split
+   *          the line to split 使用空格拆分字符串
    * @param assertLen
-   *          the number of words to assure
+   *          the number of words to assure 断言一定是这个长度的数组
    * @param usage
    *          the message to output if there are an incorrect
-   *          number of words.
+   *          number of words. 打印的错误信息
    * @return the split lines, or null if the assertion failed.
+   * 拆分字符串,并且断言一定拆分后数组length满足条件,否则打印错误信息
    */
   String[] split(String line, int assertLen, String usage) {
-    String[] ret = split(line);
+    String[] ret = split(line);//按照空格拆分字符串
 
     if (ret.length != assertLen) {
       error(usage);
@@ -1473,27 +1489,28 @@ public class BeeLine implements Closeable {
    * @param toWrap
    *          the string to wrap
    * @param len
-   *          the maximum length of any line
+   *          the maximum length of any line 一行最大允许多少长度
    * @param start
    *          the number of spaces to pad at the
    *          beginning of a line
    * @return the wrapped string
+   * 将toWrap按照空格拆分,然后存储成多行数据,每一行最多有len个长度
    */
   String wrap(String toWrap, int len, int start) {
-    StringBuilder buff = new StringBuilder();
-    StringBuilder line = new StringBuilder();
+    StringBuilder buff = new StringBuilder();//存储所有数据
+    StringBuilder line = new StringBuilder();//存储一行的数据
 
     char[] head = new char[start];
-    Arrays.fill(head, ' ');
+    Arrays.fill(head, ' ');//头文件的长度
 
     for (StringTokenizer tok = new StringTokenizer(toWrap, " "); tok.hasMoreTokens();) {
       String next = tok.nextToken();
-      if (line.length() + next.length() > len) {
-        buff.append(line).append(separator).append(head);
-        line.setLength(0);
+      if (line.length() + next.length() > len) {//说明该行现有的数据长度+此时的长度 已经大于最大值了,因此要换行处理
+        buff.append(line).append(separator).append(head);//将line的内容写入到buff中,然后回车换行,然后加入头文件
+        line.setLength(0);//重置lent的位置
       }
 
-      line.append(line.length() == 0 ? "" : " ").append(next);
+      line.append(line.length() == 0 ? "" : " ").append(next);//每一个字符串中间使用空格进行拆分
     }
 
     buff.append(line);
@@ -1508,29 +1525,31 @@ public class BeeLine implements Closeable {
    *          the current progress
    * @param max
    *          the maximum progress, or -1 if unknown
+   * 向输出流中打印进度内容
    */
   void progress(int cur, int max) {
     StringBuilder out = new StringBuilder();
 
     if (lastProgress != null) {
       char[] back = new char[lastProgress.length()];
-      Arrays.fill(back, '\b');
+      Arrays.fill(back, '\b');//\b是acsii的8,即回退键,因此相当于在流中输入上一次内容的回退键内容
       out.append(back);
     }
 
+      //   cur/max (crl*100/max)% 即打印此时位置和总位置,以及此时位置占用的百分比值
     String progress = cur + "/"
     + (max == -1 ? "?" : "" + max) + " "
     + (max == -1 ? "(??%)"
         : ("(" + (cur * 100 / (max == 0 ? 1 : max)) + "%)"));
 
     if (cur >= max && max != -1) {
-      progress += " " + loc("done") + separator;
+      progress += " " + loc("done") + separator;//separator表示回车换行,表示已经完成进度
       lastProgress = null;
     } else {
       lastProgress = progress;
     }
 
-    out.append(progress);
+    out.append(progress);//输出进度内容
 
     outputStream.print(out.toString());
     outputStream.flush();
@@ -1562,7 +1581,7 @@ public class BeeLine implements Closeable {
 
 
   void handleSQLException(SQLException e) {
-    if (e instanceof SQLWarning && !(getOpts().getShowWarnings())) {
+    if (e instanceof SQLWarning && !(getOpts().getShowWarnings())) {//是否打印警告sql的异常
       return;
     }
 
@@ -1674,7 +1693,8 @@ public class BeeLine implements Closeable {
     return scanDrivers(false);
   }
 
-
+  //扫描本地所有的driver实例对象
+    //参数true表示仅仅扫描已经知道的,false表示扫描所有jar包
   Driver[] scanDrivers(boolean knownOnly) throws IOException {
     long start = System.currentTimeMillis();
 
@@ -1689,21 +1709,21 @@ public class BeeLine implements Closeable {
 
     Set driverClasses = new HashSet();
 
-    for (Iterator<String> i = classNames.iterator(); i.hasNext();) {
+    for (Iterator<String> i = classNames.iterator(); i.hasNext();) {//循环所有的class类
       String className = i.next().toString();
 
-      if (className.toLowerCase().indexOf("driver") == -1) {
+      if (className.toLowerCase().indexOf("driver") == -1) {//说明该类肯定不是driver
         continue;
       }
 
       try {
         Class c = Class.forName(className, false,
             Thread.currentThread().getContextClassLoader());
-        if (!Driver.class.isAssignableFrom(c)) {
+        if (!Driver.class.isAssignableFrom(c)) {//说明该类不是driver
           continue;
         }
 
-        if (Modifier.isAbstract(c.getModifiers())) {
+        if (Modifier.isAbstract(c.getModifiers())) {//说明是抽象类,也不可以
           continue;
         }
 
@@ -1717,7 +1737,7 @@ public class BeeLine implements Closeable {
     return (Driver[]) driverClasses.toArray(new Driver[0]);
   }
 
-
+  //老的方式扫描所有的driver实例
   private Driver[] scanDriversOLD(String line) {
     long start = System.currentTimeMillis();
 
@@ -1798,23 +1818,23 @@ public class BeeLine implements Closeable {
 
 
   int print(ResultSet rs) throws SQLException {
-    String format = getOpts().getOutputFormat();
-    OutputFormat f = (OutputFormat) formats.get(format);
+    String format = getOpts().getOutputFormat();//使用什么形式输出查询的结果集
+    OutputFormat f = (OutputFormat) formats.get(format);//找到对应的输出类型的实例
 
-    if (f == null) {
+    if (f == null) {//默认使用table方式
       error(loc("unknown-format", new Object[] {
           format, formats.keySet()}));
       f = new TableOutputFormat(this);
     }
 
     Rows rows;
-
+    //如何读取数据集内容
     if (getOpts().getIncremental()) {
       rows = new IncrementalRows(this, rs);
     } else {
       rows = new BufferedRows(this, rs);
     }
-    return f.print(rows);
+    return f.print(rows);//进行打印数据
   }
 
 
@@ -1829,22 +1849,22 @@ public class BeeLine implements Closeable {
     return stmnt;
   }
 
-
+  //运行一个批处理sql,参数是sql集合
   void runBatch(List<String> statements) {
     try {
       Statement stmnt = createStatement();
       try {
         for (Iterator<String> i = statements.iterator(); i.hasNext();) {
-          stmnt.addBatch(i.next().toString());
+          stmnt.addBatch(i.next().toString());//在Statement中添加一个批处理,将sql都添加到批处理中
         }
-        int[] counts = stmnt.executeBatch();
+        int[] counts = stmnt.executeBatch();//执行批处理
 
         output(getColorBuffer().pad(getColorBuffer().bold("COUNT"), 8)
             .append(getColorBuffer().bold("STATEMENT")));
 
         for (int i = 0; counts != null && i < counts.length; i++) {
           output(getColorBuffer().pad(counts[i] + "", 8)
-              .append(statements.get(i).toString()));
+              .append(statements.get(i).toString()));//打印每一个sql执行的结果影响的行数
         }
       } finally {
         try {
@@ -1861,16 +1881,17 @@ public class BeeLine implements Closeable {
     return runCommands(Arrays.asList(cmds));
   }
 
+  //执行一组命令--返回成功执行的命令次数
   public int runCommands(List<String> cmds) {
-    int successCount = 0;
+    int successCount = 0;//执行成功的命令集合
     try {
       // TODO: Make script output prefixing configurable. Had to disable this since
       // it results in lots of test diffs.
       for (String cmd : cmds) {
-        info(getColorBuffer().pad(SCRIPT_OUTPUT_PREFIX, SCRIPT_OUTPUT_PAD_SIZE).append(cmd));
+        info(getColorBuffer().pad(SCRIPT_OUTPUT_PREFIX, SCRIPT_OUTPUT_PAD_SIZE).append(cmd));//打印命令 >>>cmd
         // if we do not force script execution, abort
         // when a failure occurs.
-        if (dispatch(cmd) || getOpts().getForce()) {
+        if (dispatch(cmd) || getOpts().getForce()) {//执行每一个命令
           ++successCount;
         } else {
           error(loc("abort-on-error", cmd));
@@ -1886,7 +1907,7 @@ public class BeeLine implements Closeable {
   // ////////////////////////
   // Command methods follow
   // ////////////////////////
-
+  //设置自动补全
   void setCompletions() throws SQLException, IOException {
     if (getDatabaseConnection() != null) {
       getDatabaseConnection().setCompletions(getOpts().getFastConnect());

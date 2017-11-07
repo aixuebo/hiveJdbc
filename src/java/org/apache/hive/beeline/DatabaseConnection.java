@@ -80,7 +80,7 @@ class DatabaseConnection {
     return getUrl() + "";
   }
 
-
+  //设置自动补全
   void setCompletions(boolean skipmeta) throws SQLException, IOException {
     final String extraNameCharacters =
         getDatabaseMetaData() == null || getDatabaseMetaData().getExtraNameCharacters() == null ? ""

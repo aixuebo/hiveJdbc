@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.shell.Command;
 /**
  * A {@link Command} implementation that uses reflection to
  * determine the method to dispatch the command.
+ * 反射的方法去执行command里面的方法
  *
  */
 public class ReflectiveCommandHandler extends AbstractCommandHandler {
@@ -52,7 +53,7 @@ public class ReflectiveCommandHandler extends AbstractCommandHandler {
     try {
       Object ob = beeLine.getCommands().getClass().getMethod(getName(),
           new Class[] {String.class})
-          .invoke(beeLine.getCommands(), new Object[] {line});
+          .invoke(beeLine.getCommands(), new Object[] {line});//执行command这个class的xxx方法,传入的参数是一个String字符串的line具体值
       return ob != null && ob instanceof Boolean
           && ((Boolean) ob).booleanValue();
     } catch (Throwable e) {

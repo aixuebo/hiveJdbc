@@ -27,6 +27,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 
+//如何向一个文件内输出内容
 public class OutputFile {
   final File file;
   final PrintWriter out;
