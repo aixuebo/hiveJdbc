@@ -131,6 +131,7 @@ public class HCatTableInfo implements Serializable {
     return storerInfo;
   }
 
+  //hdfs上存储的路径
   public String getTableLocation() {
     return table.getSd().getLocation();
   }
@@ -159,7 +160,7 @@ public class HCatTableInfo implements Serializable {
     HCatSchema schema = HCatUtil.extractSchema(mTable);
     StorerInfo storerInfo =
       InternalUtil.extractStorerInfo(table.getSd(), table.getParameters());
-    HCatSchema partitionColumns = HCatUtil.getPartitionColumns(mTable);
+    HCatSchema partitionColumns = HCatUtil.getPartitionColumns(mTable);//该表的分区列
     return new HCatTableInfo(table.getDbName(), table.getTableName(), schema,
       partitionColumns, storerInfo, table);
   }

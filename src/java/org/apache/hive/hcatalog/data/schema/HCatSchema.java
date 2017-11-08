@@ -31,7 +31,7 @@ import org.apache.hive.hcatalog.common.HCatException;
 
 /**
  * HCatSchema. This class is NOT thread-safe.
- * 定义一个对象
+ * 定义一个对象---通过序号/name两种方式找到该对象的一个属性
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -39,9 +39,9 @@ public class HCatSchema implements Serializable {
 
   private static final long serialVersionUID = 1L;
 
-  private final List<HCatFieldSchema> fieldSchemas;//该对象有若干个属性
+  private final List<HCatFieldSchema> fieldSchemas;//该对象有若干个属性---可以通过序号定位一个属性
   //HCatFieldSchema.getName()->position
-  private final Map<String, Integer> fieldPositionMap;//该属性的name和对应的序号映射
+  private final Map<String, Integer> fieldPositionMap;//该属性的name和对应的序号映射----通过name获取属性的序号,然后通过上面的集合映射,获取属性对象
   private final List<String> fieldNames;//属性名字集合
 
   /**
@@ -114,6 +114,7 @@ public class HCatSchema implements Serializable {
     return this.fieldNames;
   }
 
+  //通过位置获取一个属性
   public HCatFieldSchema get(int position) {
     return fieldSchemas.get(position);
   }
@@ -153,6 +154,8 @@ public class HCatSchema implements Serializable {
     return name == null ? null : name.toLowerCase();
   }
 
+  //打印对象每一个属性的详细信息
+  //demo:fieldName:属性.toString,fieldName:.toString,fieldName:.toString
   @Override
   public String toString() {
     boolean first = true;
@@ -172,6 +175,8 @@ public class HCatSchema implements Serializable {
     return sb.toString();
   }
 
+  //打印对象的所有属性信息--即每一个属性Name和对应的类型
+  //格式 fieldName:fieldType,fieldName:fieldType,fieldName:fieldType
   public String getSchemaAsTypeString() {
     boolean first = true;
     StringBuilder sb = new StringBuilder();

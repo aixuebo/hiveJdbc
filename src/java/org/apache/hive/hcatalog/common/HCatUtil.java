@@ -83,6 +83,7 @@ public class HCatUtil {
   private static final Logger LOG = LoggerFactory.getLogger(HCatUtil.class);
   private static volatile HiveClientCache hiveClientCache;
 
+  //true表示该job以前运行过
   public static boolean checkJobContextIfRunningFromBackend(JobContext j) {
     if (j.getConfiguration().get("pig.job.converted.fetch", "").equals("") &&
           j.getConfiguration().get("mapred.task.id", "").equals("") &&
@@ -98,9 +99,9 @@ public class HCatUtil {
       return "";
     }
     try {
-      ByteArrayOutputStream serialObj = new ByteArrayOutputStream();
-      ObjectOutputStream objStream = new ObjectOutputStream(serialObj);
-      objStream.writeObject(obj);
+      ByteArrayOutputStream serialObj = new ByteArrayOutputStream();//字节输出流
+      ObjectOutputStream objStream = new ObjectOutputStream(serialObj);//对象输出流,底层还是接的字节输出流
+      objStream.writeObject(obj);//将对象写出到输出流中
       objStream.close();
       return encodeBytes(serialObj.toByteArray());
     } catch (Exception e) {

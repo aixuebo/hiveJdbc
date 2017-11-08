@@ -150,6 +150,16 @@ class InitializeInput {
 
   }
 
+    /**
+     * 抽取一个分区信息
+     * @param schema 分区的字段集合
+     * @param sd table的StorageDescriptor
+     * @param parameters
+     * @param conf
+     * @param inputJobInfo
+     * @return
+     * @throws IOException
+     */
   private static PartInfo extractPartInfo(HCatSchema schema, StorageDescriptor sd,
                       Map<String, String> parameters, Configuration conf,
                       InputJobInfo inputJobInfo) throws IOException {

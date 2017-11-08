@@ -148,7 +148,7 @@ similarly for mapKeyType/mapKeyTypeInfo */
   // If map type, contains schema of the value element.
   HCatSchema subSchema = null;
 
-  // populated if column is Map type 被用于map类型
+  // populated if column is Map type 被用于map类型的key类型
   @Deprecated // @deprecated as of 0.13, slated for removal with 0.15
   Type mapKeyType = null;
 
