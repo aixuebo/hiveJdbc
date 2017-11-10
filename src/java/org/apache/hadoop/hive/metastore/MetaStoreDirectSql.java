@@ -79,7 +79,7 @@ class MetaStoreDirectSql {
    */
   public List<Partition> getPartitionsViaSqlFilter(
       String dbName, String tblName, List<String> partNames, Integer max) throws MetaException {
-    String list = repeat(",?", partNames.size()).substring(1);
+    String list = repeat(",?", partNames.size()).substring(1);//产生若干个?,形式组成的字符串
     return getPartitionsViaSqlFilterInternal(dbName, tblName, null,
         "and PARTITIONS.PART_NAME in (" + list + ")", partNames, new ArrayList<String>(), max);
   }
@@ -118,6 +118,7 @@ class MetaStoreDirectSql {
         t.getTableType().equals(TableType.VIRTUAL_VIEW.toString()) : null;
   }
 
+  //true表示该表是一个视图
   private boolean isViewTable(String dbName, String tblName) throws MetaException {
     String queryText = "select TBL_TYPE from TBLS" +
         " inner join DBS on TBLS.DB_ID = DBS.DB_ID " +
@@ -126,7 +127,7 @@ class MetaStoreDirectSql {
     Query query = pm.newQuery("javax.jdo.query.SQL", queryText);
     query.setUnique(true);
     Object result = query.executeWithArray(params);
-    return (result != null) && result.toString().equals(TableType.VIRTUAL_VIEW.toString());
+    return (result != null) && result.toString().equals(TableType.VIRTUAL_VIEW.toString());//查看表类型是否是视图类型
   }
 
   /**
@@ -137,9 +138,9 @@ class MetaStoreDirectSql {
    * @param isView Whether table is a view. Can be passed as null if not immediately
    *               known, then this method will get it only if necessary.
    * @param sqlFilter SQL filter to use. Better be SQL92-compliant. Can be null.
-   * @param paramsForFilter params for ?-s in SQL filter text. Params must be in order.
+   * @param paramsForFilter params for ?-s in SQL filter text. Params must be in order.预编译的sql值
    * @param joinsForFilter if the filter needs additional join statement, they must be in
-   *                       this list. Better be SQL92-compliant.
+   *                       this list. Better be SQL92-compliant.要关联其他的表
    * @param max The maximum number of partitions to return.
    * @return List of partition objects. FieldSchema is currently not populated.
    */
@@ -166,7 +167,7 @@ class MetaStoreDirectSql {
       + "  inner join DBS on TBLS.DB_ID = DBS.DB_ID "
       + join(joinsForFilter, ' ') + " where TBLS.TBL_NAME = ? and DBS.NAME = ?"
       + ((sqlFilter == null) ? "" : " " + sqlFilter) + orderForFilter;
-    Object[] params = new Object[paramsForFilter.size() + 2];
+    Object[] params = new Object[paramsForFilter.size() + 2];//设置预编译的sql值
     params[0] = tblName;
     params[1] = dbName;
     for (int i = 0; i < paramsForFilter.size(); ++i) {
@@ -179,7 +180,7 @@ class MetaStoreDirectSql {
       query.setRange(0, max.shortValue());
     }
     @SuppressWarnings("unchecked")
-    List<Object> sqlResult = (List<Object>)query.executeWithArray(params);
+    List<Object> sqlResult = (List<Object>)query.executeWithArray(params);//执行预编译sql
     long queryTime = doTrace ? System.nanoTime() : 0;
     if (sqlResult.isEmpty()) {
       timingTrace(doTrace, queryText, start, queryTime);
