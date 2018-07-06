@@ -44,14 +44,21 @@ import org.apache.hadoop.io.Text;
  * @see org.apache.hadoop.hive.ql.udf.generic.GenericUDF
  * 
  * SELECT id, CONCAT_WS(',', COLLECT_SET(pic)) FROM tbl GROUP BY id
- * ¿ÉÒÔ½«COLLECT_SET(pic)²úÉúµÄpicÊı×é,Ê¹ÓÃ,ºÅ²ğ·Ö³ÉÒ»¸ö×Ö·û´®
+ * å¯ä»¥å°†COLLECT_SET(pic)äº§ç”Ÿçš„picæ•°ç»„,ä½¿ç”¨,å·æ‹†åˆ†æˆä¸€ä¸ªå­—ç¬¦ä¸²
  * 
  * 
  * returns the concatenation of the strings separated by the separator.
- * ±íÊ¾·µ»ØÒ»¸öÊ¹ÓÃ²ğ·Ö·û´®ÁªµÄ×Ö·û´®
+ * è¡¨ç¤ºè¿”å›ä¸€ä¸ªä½¿ç”¨æ‹†åˆ†ç¬¦ä¸²è”çš„å­—ç¬¦ä¸²
  * 
- * ÀıÈçELECT concat_ws('.', 'www', array('facebook', 'com')) FROM src LIMIT 1
- * ·µ»Øwww.facebook.com
+ * ä¾‹å¦‚ELECT concat_ws('.', 'www', array('facebook', 'com')) FROM src LIMIT 1
+ * è¿”å›www.facebook.com
+ 
+ æ³¨æ„:
+ 1.å‚æ•°åªèƒ½æ˜¯å­—ç¬¦ä¸²æˆ–è€…æ•°ç»„ç±»å‹
+ 2.å¦‚æœå­—ç¬¦ä¸²æˆ–è€…æ•°ç»„ä¸­æœ‰null,åˆ™å°†ä¼šå°†å…¶è¿‡æ»¤æ‰
+ æ¯”å¦‚
+ åŸå§‹æ•°æ®100010	100020	100032	NULL	100051	NULL	110022
+ æœ€åè¿”å›å€¼ concat_ws('--'), 100010--100020--100032--100051--110022
  */
 @Description(name = "concat_ws",
     value = "_FUNC_(separator, [string | array(string)]+) - "
@@ -61,11 +68,11 @@ import org.apache.hadoop.io.Text;
     + "  'www.facebook.com'")
 public class GenericUDFConcatWS extends GenericUDF {
 	
-  private transient ObjectInspector[] argumentOIs;//²ÎÊıÀàĞÍ¼¯ºÏ
+  private transient ObjectInspector[] argumentOIs;//å‚æ•°ç±»å‹é›†åˆ
 
   @Override
   public ObjectInspector initialize(ObjectInspector[] arguments) throws UDFArgumentException {
-	//²ÎÊı²»ÄÜĞ¡ÓÚ2,ÒòÎªµÚÒ»¸öÊÇ·Ö¸ô·û,µÚ¶ş¸öÊÇ×Ö·û´®»òÕßÊı×é,¼´µÈ´ı±»²ğ·ÖµÄ¼¯ºÏ
+	//å‚æ•°ä¸èƒ½å°äº2,å› ä¸ºç¬¬ä¸€ä¸ªæ˜¯åˆ†éš”ç¬¦,ç¬¬äºŒä¸ªæ˜¯å­—ç¬¦ä¸²æˆ–è€…æ•°ç»„,å³ç­‰å¾…è¢«æ‹†åˆ†çš„é›†åˆ
     if (arguments.length < 2) {
       throw new UDFArgumentLengthException(
           "The function CONCAT_WS(separator,[string | array(string)]+) "
@@ -73,7 +80,7 @@ public class GenericUDFConcatWS extends GenericUDF {
     }
 
     // check if argument is a string or an array of strings
-    //Ğ£Ñé²ÎÊıÊÇ·ñÊÇString»òÕßarray<String>ÀàĞÍµÄ,·ñÔòÅ×Òì³£
+    //æ ¡éªŒå‚æ•°æ˜¯å¦æ˜¯Stringæˆ–è€…array<String>ç±»å‹çš„,å¦åˆ™æŠ›å¼‚å¸¸
     for (int i = 0; i < arguments.length; i++) {
       switch(arguments[i].getCategory()) {
         case LIST:
@@ -82,11 +89,11 @@ public class GenericUDFConcatWS extends GenericUDF {
             break;
           }
         case PRIMITIVE:
-          if (isStringOrVoidType(arguments[i])) {//ÔÊĞíÍ¨¹ı
+          if (isStringOrVoidType(arguments[i])) {//å…è®¸é€šè¿‡
           break;
           }
         default:
-        	//²ÎÊıÀàĞÍ±ØĞëÊÇString,»òÕßarrat<String>ÀàĞÍµÄ,·ñÔòÅ×Òì³£
+        	//å‚æ•°ç±»å‹å¿…é¡»æ˜¯String,æˆ–è€…arrat<String>ç±»å‹çš„,å¦åˆ™æŠ›å¼‚å¸¸
           throw new UDFArgumentTypeException(i, "Argument " + (i + 1)
             + " of function CONCAT_WS must be \"" + serdeConstants.STRING_TYPE_NAME
             + " or " + serdeConstants.LIST_TYPE_NAME + "<" + serdeConstants.STRING_TYPE_NAME
@@ -98,7 +105,7 @@ public class GenericUDFConcatWS extends GenericUDF {
     return PrimitiveObjectInspectorFactory.writableStringObjectInspector;
   }
 
-  //StringºÍvoidÀàĞÍµÄÔÊĞíÍ¨¹ı
+  //Stringå’Œvoidç±»å‹çš„å…è®¸é€šè¿‡
   protected boolean isStringOrVoidType(ObjectInspector oi) {
     if (oi.getCategory() == Category.PRIMITIVE) {
       if (PrimitiveGrouping.STRING_GROUP
@@ -111,31 +118,31 @@ public class GenericUDFConcatWS extends GenericUDF {
     return false;
   }
 
-  //×îÖÕ½á¹û
+  //æœ€ç»ˆç»“æœ
   private final Text resultText = new Text();
 
-  //×·¼ÓËùÓĞµÄ²ÎÊı,×·¼Ó³É×Ö·û´®
+  //è¿½åŠ æ‰€æœ‰çš„å‚æ•°,è¿½åŠ æˆå­—ç¬¦ä¸²
   @Override
   public Object evaluate(DeferredObject[] arguments) throws HiveException {
     if (arguments[0].get() == null) {
       return null;
     }
     
-    //»ñÈ¡²ğ·Ö×Ö·û´®
-    //½«arguments[0].get()µÚÒ»¸ö²ÎÊıµÄÖµ,×ª»»³ÉargumentOIs[0]ÀàĞÍ,¼´StringÀàĞÍµÄ×Ö·û´®
+    //è·å–æ‹†åˆ†å­—ç¬¦ä¸²
+    //å°†arguments[0].get()ç¬¬ä¸€ä¸ªå‚æ•°çš„å€¼,è½¬æ¢æˆargumentOIs[0]ç±»å‹,å³Stringç±»å‹çš„å­—ç¬¦ä¸²
     String separator = PrimitiveObjectInspectorUtils.getString(
         arguments[0].get(), (PrimitiveObjectInspector)argumentOIs[0]);
 
     StringBuilder sb = new StringBuilder();
     boolean first = true;
-    for (int i = 1; i < arguments.length; i++) {//Ñ­»·Ã¿Ò»¸öµÈ´ıÌí¼ÓµÄ¼¯ºÏ
+    for (int i = 1; i < arguments.length; i++) {//å¾ªç¯æ¯ä¸€ä¸ªç­‰å¾…æ·»åŠ çš„é›†åˆ
       if (arguments[i].get() != null) {
         if (first) {
           first = false;
         } else {
           sb.append(separator);
         }
-        if (argumentOIs[i].getCategory().equals(Category.LIST)) {//Ìí¼ÓÒ»¸öarray
+        if (argumentOIs[i].getCategory().equals(Category.LIST)) {//æ·»åŠ ä¸€ä¸ªarray
           Object strArray = arguments[i].get();
           ListObjectInspector strArrayOI = (ListObjectInspector) argumentOIs[i];
           boolean strArrayFirst = true;
@@ -147,7 +154,7 @@ public class GenericUDFConcatWS extends GenericUDF {
             }
             sb.append(strArrayOI.getListElement(strArray, j));
           }
-        } else {//×·¼Ó×Ö·û´®Öµ
+        } else {//è¿½åŠ å­—ç¬¦ä¸²å€¼
           sb.append(PrimitiveObjectInspectorUtils.getString(
               arguments[i].get(), (PrimitiveObjectInspector)argumentOIs[i]));
         }
