@@ -35,14 +35,14 @@ import org.apache.hadoop.io.BytesWritable;
 
 /**
  * GenericUDFConcat.
- * ½«²ÎÊı¼¯ºÏÁ¬½Ó³É´®
+ * å°†å‚æ•°é›†åˆè¿æ¥æˆä¸²
  * 
- * ÀıÈç:
- * SELECT concat('abc', 'def') FROM src LIMIT 1,·µ»Øabcdef
- * 
- * ×¢Òâ:
- * 1.Èç¹ûÓĞÈÎÒâÒ»¸ö×Ö·ûÊÇnull,Ôò·µ»Ønull
- * 2.½ö½öÖ§³ÖjavaµÄ»ù´¡ÀàĞÍ×÷Îª²ÎÊı
+ * ä¾‹å¦‚:
+ * SELECT concat('abc', 'def') FROM src LIMIT 1,è¿”å›abcdef
+ * select concat('abc', null,'def')  è¿”å›å€¼æ˜¯null,åŸå› æ˜¯ä»»ä½•ä¸nullæ“ä½œçš„ç»“æœéƒ½æ˜¯null,å¯ä»¥è¿™ä¹ˆç†è§£ï¼Œå¦‚æœæƒ³è¿‡æ»¤null,åˆ™ä½¿ç”¨cancat_wsæ–¹å¼
+ * æ³¨æ„:
+ * 1.å¦‚æœæœ‰ä»»æ„ä¸€ä¸ªå­—ç¬¦æ˜¯null,åˆ™è¿”å›null
+ * 2.ä»…ä»…æ”¯æŒjavaçš„åŸºç¡€ç±»å‹ä½œä¸ºå‚æ•°
  */
 @Description(name = "concat",
 value = "_FUNC_(str1, str2, ... strN) - returns the concatenation of str1, str2, ... strN or "+
@@ -55,7 +55,7 @@ extended = "Returns NULL if any argument is NULL.\n"
 public class GenericUDFConcat extends GenericUDF {
   private transient ObjectInspector[] argumentOIs;
   private transient StringConverter[] stringConverters;
-  private transient PrimitiveCategory returnType = PrimitiveCategory.STRING;//·µ»ØÀàĞÍ,Ä¬ÈÏÊÇStringÀàĞÍ
+  private transient PrimitiveCategory returnType = PrimitiveCategory.STRING;//è¿”å›ç±»å‹,é»˜è®¤æ˜¯Stringç±»å‹
   private transient BytesWritable[] bw;
   private transient GenericUDFUtils.StringHelper returnHelper;
 
@@ -63,26 +63,26 @@ public class GenericUDFConcat extends GenericUDF {
   public ObjectInspector initialize(ObjectInspector[] arguments) throws UDFArgumentException {
 
     // Loop through all the inputs to determine the appropriate return type/length.
-    // Either all arguments are binary, or all columns are non-binary.ËùÓĞµÄ²ÎÊıÀàĞÍ±ØĞëÒ»ÖÂ,ÒªÃ´ÊÇ¶ş½øÖÆ£¬ÒªÃ´ÊÇ·Ç¶ş½øÖÆ
+    // Either all arguments are binary, or all columns are non-binary.æ‰€æœ‰çš„å‚æ•°ç±»å‹å¿…é¡»ä¸€è‡´,è¦ä¹ˆæ˜¯äºŒè¿›åˆ¶ï¼Œè¦ä¹ˆæ˜¯éäºŒè¿›åˆ¶
     // Return type:
-    //  All VARCHAR inputs: return VARCHAR ËùÓĞµÄÊäÈëÊÇverchar,Ôò·µ»Øverchar
-    //  All BINARY inputs: return BINARY ËùÓĞµÄÊäÈëÊÇBINARY,Ôò·µ»ØBINARY
-    //  Otherwise return STRING  ÆäËûµÄÊäÈë,Ôò·µ»Ø×Ö·û´®
+    //  All VARCHAR inputs: return VARCHAR æ‰€æœ‰çš„è¾“å…¥æ˜¯verchar,åˆ™è¿”å›verchar
+    //  All BINARY inputs: return BINARY æ‰€æœ‰çš„è¾“å…¥æ˜¯BINARY,åˆ™è¿”å›BINARY
+    //  Otherwise return STRING  å…¶ä»–çš„è¾“å…¥,åˆ™è¿”å›å­—ç¬¦ä¸²
     argumentOIs = arguments;
 
     PrimitiveCategory currentCategory;
     PrimitiveObjectInspector poi;
-    boolean fixedLengthReturnValue = true;//·µ»ØÖµÊÇ·ñ¹Ì¶¨
-    int returnLength = 0;  // Only for char/varchar return types ½ö½öÊ¹ÓÃÔÚchar/varcharµÄ·µ»ØÖµÖĞ
+    boolean fixedLengthReturnValue = true;//è¿”å›å€¼æ˜¯å¦å›ºå®š
+    int returnLength = 0;  // Only for char/varchar return types ä»…ä»…ä½¿ç”¨åœ¨char/varcharçš„è¿”å›å€¼ä¸­
     for (int idx = 0; idx < arguments.length; ++idx) {
       
-      //Ğ£Ñé½ö½öÖ§³ÖjavaµÄ»ù´¡ÀàĞÍ×÷Îª²ÎÊı
+      //æ ¡éªŒä»…ä»…æ”¯æŒjavaçš„åŸºç¡€ç±»å‹ä½œä¸ºå‚æ•°
       if (arguments[idx].getCategory() != Category.PRIMITIVE) {
         throw new UDFArgumentException("CONCAT only takes primitive arguments");
       }
       poi = (PrimitiveObjectInspector)arguments[idx];
       currentCategory = poi.getPrimitiveCategory();
-      if (idx == 0) {//µÚÒ»¸ö²ÎÊıÀàĞÍ¾ÍÊÇ·µ»ØµÄÀàĞÍ
+      if (idx == 0) {//ç¬¬ä¸€ä¸ªå‚æ•°ç±»å‹å°±æ˜¯è¿”å›çš„ç±»å‹
         returnType = currentCategory;
       }
       
@@ -161,7 +161,7 @@ public class GenericUDFConcat extends GenericUDF {
   }
 
   /**
-   * ½«¶ş½øÖÆÊı×éÊı¾İ×ªÈëµ½Ò»¸öBytesWritableÖĞ
+   * å°†äºŒè¿›åˆ¶æ•°ç»„æ•°æ®è½¬å…¥åˆ°ä¸€ä¸ªBytesWritableä¸­
    */
   public Object binaryEvaluate(DeferredObject[] arguments) throws HiveException {
     int len = 0;
@@ -185,9 +185,9 @@ public class GenericUDFConcat extends GenericUDF {
   }
 
   /**
-   * ½«String²ÎÊı¼¯ºÏ×ª»»³ÉÒ»¸öString
+   * å°†Stringå‚æ•°é›†åˆè½¬æ¢æˆä¸€ä¸ªString
    * 
-   * Èç¹ûÓĞÒ»¸ö²ÎÊıÊÇnull,Ôò·µ»ØÖµ¾ÍÊÇnull
+   * å¦‚æœæœ‰ä¸€ä¸ªå‚æ•°æ˜¯null,åˆ™è¿”å›å€¼å°±æ˜¯null
    */
   public String stringEvaluate(DeferredObject[] arguments) throws HiveException {
     StringBuilder sb = new StringBuilder();
