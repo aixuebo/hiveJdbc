@@ -46,7 +46,10 @@ import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoUtils;
     + " second delimiter sperates key and value. If only one parameter is given, default"
     + " delimiters are used: ',' as delimiter1 and '=' as delimiter2.")
 public class GenericUDFStringToMap extends GenericUDF {
+    
+  //拆分后的结果存储到map中
   private final HashMap<Object, Object> ret = new HashMap<Object, Object>();
+    //分别是字符串,soi_de1表示用什么拆分成多个元素,默认是逗号。。soi_de2表示用什么拆分一个元素,默认是冒号
   private transient Converter soi_text, soi_de1 = null, soi_de2 = null;
   final static String default_de1 = ",";
   final static String default_de2 = ":";
@@ -73,11 +76,13 @@ public class GenericUDFStringToMap extends GenericUDF {
           PrimitiveObjectInspectorFactory.javaStringObjectInspector);
     }
 
+      //返回Map<String,String>形式的结果
     return ObjectInspectorFactory.getStandardMapObjectInspector(
         PrimitiveObjectInspectorFactory.javaStringObjectInspector,
         PrimitiveObjectInspectorFactory.javaStringObjectInspector);
   }
 
+    //返回值是HashMap<Object, Object>
   @Override
   public Object evaluate(DeferredObject[] arguments) throws HiveException {
     ret.clear();
