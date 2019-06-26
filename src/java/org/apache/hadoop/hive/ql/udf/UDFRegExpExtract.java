@@ -28,10 +28,14 @@ import org.apache.hadoop.hive.ql.exec.UDF;
 /**
  * UDF to extract a specific group identified by a java regex. Note that if a
  * regexp has a backslash ('\'), then need to specify '\\' For example,
- * Ê¹ÓÃÕıÔò±í´ïÊ½³éÈ¡Ö¸¶¨×Ö·û´®ÖĞÆ¥ÅäµÄ¹Ø¼üĞÅÏ¢,·µ»ØÄ³Ò»¸öÆ¥ÅäµÄĞÅÏ¢
- * regexp_extract(string,regexp,index) ·µ»ØÆ¥ÅäÕıÔò±í´ïÊ½µÄµÚindex¸ögroup,Ä¬ÈÏindex¿ÉÒÔÊ¡ÂÔ,Ä¬ÈÏÎª1
- * ÀıÈç
- * regexp_extract('100-200', '(\\d+)-(\\d+)', 1) will return '100'  Àı×Ó´Ó100-200ÖĞ»ñÈ¡µÚÒ»¸ö·Ö×é100
+ * ä½¿ç”¨æ­£åˆ™è¡¨è¾¾å¼æŠ½å–æŒ‡å®šå­—ç¬¦ä¸²ä¸­åŒ¹é…çš„å…³é”®ä¿¡æ¯,è¿”å›æŸä¸€ä¸ªåŒ¹é…çš„ä¿¡æ¯
+ * regexp_extract(string,regexp,index) è¿”å›åŒ¹é…æ­£åˆ™è¡¨è¾¾å¼çš„ç¬¬indexä¸ªgroup,é»˜è®¤indexå¯ä»¥çœç•¥,é»˜è®¤ä¸º1
+ * ä¾‹å¦‚
+ * regexp_extract('100-200', '(\\d+)-(\\d+)', 1) will return '100'  ä¾‹å­ä»100-200ä¸­è·å–ç¬¬ä¸€ä¸ªåˆ†ç»„100
+
+message = "[å­—æ®µå˜æ›´] xxxx: => 5.5;[å­—æ®µå˜æ›´] ";
+String str = evaluate(message,"xxxx\\: \\=> (.*)\\;",1);  è¿”å›5.5
+æ­£åˆ™è¡¨è¾¾å¼ ä¸çŸ¥é“ä¸ºä»€ä¹ˆè¦å¯¹; : =è¿›è¡Œè½¬ä¹‰ï¼Œå¦‚æœçº¯javaæ˜¯ä¸éœ€è¦çš„ï¼Œä½†æ˜¯hiveä¼ è¿›æ¥å°±æŠ¥é”™ï¼Œéœ€è¦è½¬ä¹‰ã€‚
  */
 @Description(name = "regexp_extract",
     value = "_FUNC_(str, regexp[, idx]) - extracts a group that matches regexp",
@@ -47,9 +51,9 @@ public class UDFRegExpExtract extends UDF {
 
   /**
    * 
-   * @param s ×Ö·û´®
-   * @param regex ´ø()×é³ÉµÄ·Ö×éºÃµÄÕıÔò±í´ïÊ½
-   * @param extractIndex ×îÖÕ»ñÈ¡µÄÊÇµÚ¼¸¸ö·Ö×éÖµ,×îĞ¡ÖµÒÔ1¿ªÊ¼¼ÆËã
+   * @param s å­—ç¬¦ä¸²
+   * @param regex å¸¦()ç»„æˆçš„åˆ†ç»„å¥½çš„æ­£åˆ™è¡¨è¾¾å¼
+   * @param extractIndex æœ€ç»ˆè·å–çš„æ˜¯ç¬¬å‡ ä¸ªåˆ†ç»„å€¼,æœ€å°å€¼ä»¥1å¼€å§‹è®¡ç®—
    * @return
    */
   public String evaluate(String s, String regex, Integer extractIndex) {
