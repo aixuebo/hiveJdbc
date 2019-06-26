@@ -27,10 +27,13 @@ import org.apache.hadoop.io.Text;
 
 /**
  * UDFRegExpReplace.
- * ½«È«²¿·ûºÏÕıÔò±í´ïÊ½µÄµØ·½¶¼Ìæ»»³ÉÖ¸¶¨Öµ
+ * å°†å…¨éƒ¨ç¬¦åˆæ­£åˆ™è¡¨è¾¾å¼çš„åœ°æ–¹éƒ½æ›¿æ¢æˆæŒ‡å®šå€¼
  * 
- * regexp_replace('100-200', '(\\d+)', 'num') ·µ»ØÖµnum-num,½«ËùÓĞµÄÕûÊıÌæ»»³Énum×Ö·û´®
- select regexp_replace('Android|TencentMarket                   |1.0|863908023110224|MI 2S|89860112819017265751|863908023110224|wifi', '\\s+','|') ½«\t×ª»»³É|
+ * regexp_replace('100-200', '(\\d+)', 'num') è¿”å›å€¼num-num,å°†æ‰€æœ‰çš„æ•´æ•°æ›¿æ¢æˆnumå­—ç¬¦ä¸²
+ select regexp_replace('Android|TencentMarket                   |1.0|863908023110224|MI 2S|89860112819017265751|863908023110224|wifi', '\\s+','|') å°†\tè½¬æ¢æˆ|
+ 
+ regexp_replace(xxx, '(\\s*|/)', '') å–æ¶ˆxxxå­—æ®µé‡Œé¢çš„æ‰€æœ‰ç©ºæ ¼å’Œ/å†…å®¹
+
  */
 @Description(name = "regexp_replace",
     value = "_FUNC_(str, regexp, rep) - replace all substrings of str that "
@@ -39,11 +42,11 @@ import org.apache.hadoop.io.Text;
     + "  'num-num'")
 public class UDFRegExpReplace extends UDF {
 
-  private final Text lastRegex = new Text();//ÉÏÒ»´ÎµÄÕıÔò±í´ïÊ½,ÒÔÊ¹ÆäÖØ¸´Ê¹ÓÃ
-  private Pattern p = null;//ÕıÔò±í´ïÊ½
+  private final Text lastRegex = new Text();//ä¸Šä¸€æ¬¡çš„æ­£åˆ™è¡¨è¾¾å¼,ä»¥ä½¿å…¶é‡å¤ä½¿ç”¨
+  private Pattern p = null;//æ­£åˆ™è¡¨è¾¾å¼
 
-  private final Text lastReplacement = new Text();//ÉÏÒ»´ÎÒª±»Ìæ»»µÄ×Ö·û´®»º´æ
-  private String replacementString = "";//ÉÏÒ»´ÎÒª±»Ìæ»»µÄ×Ö·û´®»º´æ
+  private final Text lastReplacement = new Text();//ä¸Šä¸€æ¬¡è¦è¢«æ›¿æ¢çš„å­—ç¬¦ä¸²ç¼“å­˜
+  private String replacementString = "";//ä¸Šä¸€æ¬¡è¦è¢«æ›¿æ¢çš„å­—ç¬¦ä¸²ç¼“å­˜
 
   private Text result = new Text();
 
@@ -52,9 +55,9 @@ public class UDFRegExpReplace extends UDF {
 
   /**
    * 
-   * @param s ×Ö·û´®
-   * @param regex ÕıÔò±í´ïÊ½
-   * @param replacement ·ûºÏÕıÔò±í´ïÊ½µÄµØ·½Ìæ»»³Éreplacement
+   * @param s å­—ç¬¦ä¸²
+   * @param regex æ­£åˆ™è¡¨è¾¾å¼
+   * @param replacement ç¬¦åˆæ­£åˆ™è¡¨è¾¾å¼çš„åœ°æ–¹æ›¿æ¢æˆreplacement
    * @return
    */
   public Text evaluate(Text s, Text regex, Text replacement) {
@@ -66,7 +69,7 @@ public class UDFRegExpReplace extends UDF {
       lastRegex.set(regex);
       p = Pattern.compile(regex.toString());
     }
-    //×Ö·û´®ÓëÆ¥ÅäÕıÔò±í´ïÊ½
+    //å­—ç¬¦ä¸²ä¸åŒ¹é…æ­£åˆ™è¡¨è¾¾å¼
     Matcher m = p.matcher(s.toString());
     // If the replacement is changed, make sure we redo toString again.
     if (!replacement.equals(lastReplacement)) {
