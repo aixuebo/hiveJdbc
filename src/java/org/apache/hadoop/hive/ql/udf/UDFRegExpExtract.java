@@ -36,6 +36,12 @@ import org.apache.hadoop.hive.ql.exec.UDF;
 message = "[字段变更] xxxx: => 5.5;[字段变更] ";
 String str = evaluate(message,"xxxx\\: \\=> (.*)\\;",1);  返回5.5
 正则表达式 不知道为什么要对; : =进行转义，如果纯java是不需要的，但是hive传进来就报错，需要转义。
+
+
+提取正数或者小数部分内容
+		message = "[字段变更] xxxx: => 5.5;[字段变更] ";
+		String str = evaluate(message,"xxxx\\: \\=> (\\d+(\\.\\d+)?)",1);
+		System.out.println(str);
  */
 @Description(name = "regexp_extract",
     value = "_FUNC_(str, regexp[, idx]) - extracts a group that matches regexp",
