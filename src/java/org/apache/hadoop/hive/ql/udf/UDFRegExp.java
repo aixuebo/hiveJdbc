@@ -30,8 +30,15 @@ import org.apache.hadoop.io.Text;
 
 /**
  * UDFRegExp.
- * rlike(string,regexp) У��string�Ƿ�ƥ���������ʽ
- * regexp(string,regexp) У��string�Ƿ�ƥ���������ʽ
+ * rlike(string,regexp) 校验string是否匹配正则表达式
+ * regexp(string,regexp) 校验string是否匹配正则表达式
+ * 常用语where条件中,因为regexp返回值是boolean类型,因此where条件中true满足条件的将会被返回
+ demo:
+ regexp:匹配[1,12,3]字符串中[1,开头   ,1]结尾  ,1,中间的情况  
+   String regex = "\\[1,|,1\\|,1,]";
+   String str = "[12,200,1,300,12]";
+   regexp(str,regex)
+   where regexp(字段,"\\[1,|,1\\|,1,]")
  */
 @Description(name = "rlike,regexp",
     value = "str _FUNC_ regexp - Returns true if str matches regexp and "
