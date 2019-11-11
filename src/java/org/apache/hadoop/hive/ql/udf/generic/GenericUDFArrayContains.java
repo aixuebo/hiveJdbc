@@ -53,6 +53,7 @@ public class GenericUDFArrayContains extends GenericUDF {
   public ObjectInspector initialize(ObjectInspector[] arguments)
       throws UDFArgumentException {
 
+      //校验参数必须是2个,否则抛异常。第一个参数是数组
     // Check if two arguments were passed
     if (arguments.length != ARG_COUNT) {
       throw new UDFArgumentException(
@@ -60,7 +61,7 @@ public class GenericUDFArrayContains extends GenericUDF {
               + ARG_COUNT + " arguments.");
     }
 
-    // Check if ARRAY_IDX argument is of category LIST
+    // Check if ARRAY_IDX argument is of category LIST 第一个参数一定是数组,否则抛异常
     if (!arguments[ARRAY_IDX].getCategory().equals(Category.LIST)) {
       throw new UDFArgumentTypeException(ARRAY_IDX,
           "\"" + org.apache.hadoop.hive.serde.serdeConstants.LIST_TYPE_NAME + "\" "
@@ -71,11 +72,12 @@ public class GenericUDFArrayContains extends GenericUDF {
 
     arrayOI = (ListObjectInspector) arguments[ARRAY_IDX];
     arrayElementOI = arrayOI.getListElementObjectInspector();
-
+  
+    //第二个参数类型
     valueOI = arguments[VALUE_IDX];
 
     // Check if list element and value are of same type
-    if (!ObjectInspectorUtils.compareTypes(arrayElementOI, valueOI)) {
+    if (!ObjectInspectorUtils.compareTypes(arrayElementOI, valueOI)) {//第二个参数类型 一定是第一个参数数组元素的类型相同,否则抛异常
       throw new UDFArgumentTypeException(VALUE_IDX,
           "\"" + arrayElementOI.getTypeName() + "\""
           + " expected at function ARRAY_CONTAINS, but "
@@ -84,7 +86,7 @@ public class GenericUDFArrayContains extends GenericUDF {
     }
 
     // Check if the comparison is supported for this type
-    if (!ObjectInspectorUtils.compareSupported(valueOI)) {
+    if (!ObjectInspectorUtils.compareSupported(valueOI)) { //校验第二个参数类型必须合法支持的类型,否则抛异常
       throw new UDFArgumentException("The function " + FUNC_NAME
           + " does not support comparison for "
           + "\"" + valueOI.getTypeName() + "\""
@@ -103,22 +105,22 @@ public class GenericUDFArrayContains extends GenericUDF {
 
     result.set(false);
 
-    Object array = arguments[ARRAY_IDX].get();
-    Object value = arguments[VALUE_IDX].get();
+    Object array = arguments[ARRAY_IDX].get();//数组
+    Object value = arguments[VALUE_IDX].get();//要查找的值
 
-    int arrayLength = arrayOI.getListLength(array);
+    int arrayLength = arrayOI.getListLength(array); //数组长度
 
     // Check if array is null or empty or value is null
-    if (value == null || arrayLength <= 0) {
+    if (value == null || arrayLength <= 0) { //直接返回false
       return result;
     }
 
     // Compare the value to each element of array until a match is found
-    for (int i=0; i<arrayLength; ++i) {
-      Object listElement = arrayOI.getListElement(array, i);
+    for (int i=0; i<arrayLength; ++i) { //循环数组每一个元素
+      Object listElement = arrayOI.getListElement(array, i);//获取每一个数组内的元素
       if (listElement != null) {
         if (ObjectInspectorUtils.compare(value, valueOI,
-            listElement, arrayElementOI) == 0) {
+            listElement, arrayElementOI) == 0) {//比较是否数组的元素 和 value是相同的,相同的则返回true
           result.set(true);
           break;
         }
