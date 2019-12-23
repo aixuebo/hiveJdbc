@@ -36,19 +36,20 @@ import org.apache.hadoop.io.LongWritable;
 
 /**
  * deterministic version of UDFUnixTimeStamp. enforces argument
- * ��һ���ַ���ת����ʱ���long
- * ��һ��������ʱ���ַ���
- * �ڶ��������ǿ�ѡ��,Ĭ����yyyy-MM-dd HH:mm:ss,���ַ���ʱ��ĸ�ʽ
+ * 将一个字符串转换成时间戳long---注意 输出的时间戳是10位的,而不是13位的
+ * 第一个参数是可以转换成时间戳的参数,可能的参数有 date类型的字符串参数、date类型、时间戳对象本身
+ * 第二个参数是可选的,默认是yyyy-MM-dd HH:mm:ss,即字符串时间的格式
  */
 @Description(name = "to_unix_timestamp",
     value = "_FUNC_(date[, pattern]) - Returns the UNIX timestamp",
     extended = "Converts the specified time to number of seconds since 1970-01-01.")
 public class GenericUDFToUnixTimeStamp extends GenericUDF {
 
-  private transient StringObjectInspector intputTextOI;
-  private transient DateObjectInspector inputDateOI;
-  private transient TimestampObjectInspector inputTimestampOI;
-  private transient StringObjectInspector patternOI;
+  private transient StringObjectInspector intputTextOI;//输入是日期类型的字符串时的参数时使用
+  private transient DateObjectInspector inputDateOI;//输入是date类型的参数时使用
+  private transient TimestampObjectInspector inputTimestampOI;//输入是时间戳类型时使用
+	
+  private transient StringObjectInspector patternOI;//如果输入是字符串类型的日期,则需要匹配字符串类型的日期格式,默认是yyyy-MM-dd HH:mm:ss
 
   private String lasPattern = "yyyy-MM-dd HH:mm:ss";
   private transient final SimpleDateFormat formatter = new SimpleDateFormat(lasPattern);
