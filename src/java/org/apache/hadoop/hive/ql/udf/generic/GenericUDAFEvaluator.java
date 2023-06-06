@@ -186,9 +186,12 @@ public abstract class GenericUDAFEvaluator implements Closeable {
    * row.
    * 
    * @param agg
-   *          The object to store the aggregation result.
+   *          The object to store the aggregation result. 用于存储聚合结果的中间对象
    * @param parameters
-   *          The row, can be inspected by the OIs passed in init().
+   *          The row, can be inspected by the OIs passed in init().如果聚合函数需要若干个参数时，该数组表示每一个参数值
+   * 更新聚合函数内容，当一行数据读取后，需要更新聚合结果
+   *
+   * 用于key,list<value>时，处理每一个value阶段，都会调用该函数
    */
   public void aggregate(AggregationBuffer agg, Object[] parameters) throws HiveException {
     if (mode == Mode.PARTIAL1 || mode == Mode.COMPLETE) {
@@ -205,10 +208,11 @@ public abstract class GenericUDAFEvaluator implements Closeable {
    * 
    * @param agg
    *          The object to store the aggregation result.
+   * 当key所有的list<value>都执行完,需要对agg聚合的结果转换成具体的值，用于传输时，调研该函数
    */
   public Object evaluate(AggregationBuffer agg) throws HiveException {
     if (mode == Mode.PARTIAL1 || mode == Mode.PARTIAL2) {
-      return terminatePartial(agg);
+      return terminatePartial(agg);//map阶段的combine,与最终的结果返回值是不一样的，所以需要两个不同的terminate函数
     } else {
       return terminate(agg);
     }
@@ -216,9 +220,10 @@ public abstract class GenericUDAFEvaluator implements Closeable {
 
   /**
    * Iterate through original data.
-   * 迭代通过每一个原始的数据
+   * 如何进行聚合，参数agg表示聚合对象的临时存储容器，比如假设是set函数，则agg就是内存set
    * @param parameters
-   *          The objects of parameters.原始数据的参数集合
+   *          The objects of parameters.聚合函数可能需要参数，此时parameters就表示聚合函数需要的参数信息
+   * 读取一行数据后，进行一次聚合操作。注意：只有聚合操作，不需要返回值。
    *          
    */
   public abstract void iterate(AggregationBuffer agg, Object[] parameters) throws HiveException;

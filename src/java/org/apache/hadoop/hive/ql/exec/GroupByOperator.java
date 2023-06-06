@@ -145,7 +145,7 @@ public class GroupByOperator extends Operator<GroupByDesc> implements
   private long maxMemory;
   private float memoryThreshold;
 
-  private boolean groupingSetsPresent;
+  private boolean groupingSetsPresent;//是否存在grouping set语法
   private int groupingSetsPosition;
   private List<Integer> groupingSets;
   private List<FastBitSet> groupingSetsBitSet;
@@ -189,17 +189,19 @@ public class GroupByOperator extends Operator<GroupByDesc> implements
     heartbeatInterval = HiveConf.getIntVar(hconf,
         HiveConf.ConfVars.HIVESENDHEARTBEAT);
     countAfterReport = 0;
-    groupingSetsPresent = conf.isGroupingSetsPresent();
-    ObjectInspector rowInspector = inputObjInspectors[0];
+    groupingSetsPresent = conf.isGroupingSetsPresent();//是否存在grouping set语法
+    ObjectInspector rowInspector = inputObjInspectors[0]; //输入类型
 
-    // init keyFields
-    int numKeys = conf.getKeys().size();
+    // init keyFields  初始化所有的group by key信息
+    int numKeys = conf.getKeys().size();//group by的字段
 
-    keyFields = new ExprNodeEvaluator[numKeys];
-    keyObjectInspectors = new ObjectInspector[numKeys];
-    currentKeyObjectInspectors = new ObjectInspector[numKeys];
+    keyFields = new ExprNodeEvaluator[numKeys];//表达式 以及 对应的返回值 (表达式包含常量、某一个具体的字段、UDF等)
+    keyObjectInspectors = new ObjectInspector[numKeys];//返回值类型 java类型
+    currentKeyObjectInspectors = new ObjectInspector[numKeys];//期望返回的是java类型还是WRITABLE类型
     for (int i = 0; i < numKeys; i++) {
       keyFields[i] = ExprNodeEvaluatorFactory.get(conf.getKeys().get(i));
+      //每一个表达式进行初始化，因为表达式可能是函数 xxx(字段1,字段2),因此函数需要知道输入类型，输出类型。即将row传入进去初始化即可
+      //设置 并且 返回每一个函数的返回值
       keyObjectInspectors[i] = keyFields[i].initialize(rowInspector);
       currentKeyObjectInspectors[i] = ObjectInspectorUtils
         .getStandardObjectInspector(keyObjectInspectors[i],
@@ -253,17 +255,23 @@ public class GroupByOperator extends Operator<GroupByDesc> implements
         }
       }
     }
-    // init aggregationParameterFields
-    ArrayList<AggregationDesc> aggrs = conf.getAggregators();
+    // init aggregationParameterFields 初始化聚合字段
+    ArrayList<AggregationDesc> aggrs = conf.getAggregators();//所有的聚合字段
+
+    //四个组合，聚合函数需要的 参数表达式、java类型返回值、WRITABLE类型返回值、具体的value值
+    //每一个聚合函数表达式的参数 都是 表达式集合 以及 对应的返回值 (表达式包含常量、某一个具体的字段、UDF等)
+    //二维数组，第一个维度表示每一个聚合函数，第二个维度表示 每一个聚合函数中的 参数集合 ，参数对应的又是一个表达式
     aggregationParameterFields = new ExprNodeEvaluator[aggrs.size()][];
-    aggregationParameterObjectInspectors = new ObjectInspector[aggrs.size()][];
-    aggregationParameterStandardObjectInspectors = new ObjectInspector[aggrs.size()][];
-    aggregationParameterObjects = new Object[aggrs.size()][];
-    aggregationIsDistinct = new boolean[aggrs.size()];
+    aggregationParameterObjectInspectors = new ObjectInspector[aggrs.size()][];//初始化该参数表达式，返回java的返回值
+    aggregationParameterStandardObjectInspectors = new ObjectInspector[aggrs.size()][];//参数表达式对应的java返回值，转换成WRITABLE类型
+    aggregationParameterObjects = new Object[aggrs.size()][];//存储聚合函数最后每一个参数的真实值。
+
+    aggregationIsDistinct = new boolean[aggrs.size()];//该聚合函数是否是count distinct方式聚合
+
     for (int i = 0; i < aggrs.size(); i++) {
-      AggregationDesc aggr = aggrs.get(i);
-      ArrayList<ExprNodeDesc> parameters = aggr.getParameters();
-      aggregationParameterFields[i] = new ExprNodeEvaluator[parameters.size()];
+      AggregationDesc aggr = aggrs.get(i);//聚合函数
+      ArrayList<ExprNodeDesc> parameters = aggr.getParameters();//聚合函数中的表达式集合
+      aggregationParameterFields[i] = new ExprNodeEvaluator[parameters.size()];//参数表达式
       aggregationParameterObjectInspectors[i] = new ObjectInspector[parameters
           .size()];
       aggregationParameterStandardObjectInspectors[i] = new ObjectInspector[parameters
@@ -271,9 +279,11 @@ public class GroupByOperator extends Operator<GroupByDesc> implements
       aggregationParameterObjects[i] = new Object[parameters.size()];
       for (int j = 0; j < parameters.size(); j++) {
         aggregationParameterFields[i][j] = ExprNodeEvaluatorFactory
-            .get(parameters.get(j));
+            .get(parameters.get(j));//参数表达式
         aggregationParameterObjectInspectors[i][j] = aggregationParameterFields[i][j]
             .initialize(rowInspector);
+
+        //一般情况代码走不到这里来
         if (unionExprEval != null) {
           String[] names = parameters.get(j).getExprString().split("\\.");
           // parameters of the form : KEY.colx:t.coly
@@ -326,14 +336,17 @@ public class GroupByOperator extends Operator<GroupByDesc> implements
     }
 
     // init aggregationClasses
+    //对聚合函数进行UDAF包装
+    //每一个聚会函数占用一个数组位置
     aggregationEvaluators = new GenericUDAFEvaluator[conf.getAggregators()
         .size()];
     for (int i = 0; i < aggregationEvaluators.length; i++) {
       AggregationDesc agg = conf.getAggregators().get(i);
-      aggregationEvaluators[i] = agg.getGenericUDAFEvaluator();
+      aggregationEvaluators[i] = agg.getGenericUDAFEvaluator();//获取每一个聚合函数 该如何计算聚合
     }
 
     // init objectInspectors
+    // 计算整个group by的输出结果类型
     int totalFields = keyFields.length + aggregationEvaluators.length;
     objectInspectors = new ArrayList<ObjectInspector>(totalFields);
     for (ExprNodeEvaluator keyField : keyFields) {
@@ -583,33 +596,34 @@ public class GroupByOperator extends Operator<GroupByDesc> implements
    * the caller, and this function can be independent of that. The client should
    * always notify whether it is a different row or not.
    *
-   * @param aggs the aggregations to be evaluated
+   * @param aggs the aggregations to be evaluated 数组表示每一个聚合函数的中间值存储容器
    *
-   * @param row the row being processed
+   * @param row the row being processed 待处理的一行数据
    *
-   * @param rowInspector the inspector for the row
+   * @param rowInspector the inspector for the row 待处理的一行数据的schema信息
    *
-   * @param hashAggr whether hash aggregation is being performed or not
+   * @param hashAggr whether hash aggregation is being performed or not 是否hash方式进行group by操作，除了hash还有sort方式
    *
-   * @param newEntryForHashAggr only valid if it is a hash aggregation, whether
-   * it is a new entry or not
+   * @param newEntryForHashAggr only valid if it is a hash aggregation, whether it is a new entry or not 只有当hash算法时，该参数才有价值，即表示此时处理的key是否第一个出现在hash里
+   *
    */
   protected void updateAggregations(AggregationBuffer[] aggs, Object row,
       ObjectInspector rowInspector, boolean hashAggr,
-      boolean newEntryForHashAggr, Object[][] lastInvoke) throws HiveException {
+      boolean newEntryForHashAggr, Object[][] lastInvoke) //lastInvoke用于存储每一个聚合函数的具体参数值(最后出现的内容)
+          throws HiveException {
     if (unionExprEval == null) {
-      for (int ai = 0; ai < aggs.length; ai++) {
+      for (int ai = 0; ai < aggs.length; ai++) {//循环每一个聚合函数
         // Calculate the parameters
-        Object[] o = new Object[aggregationParameterFields[ai].length];
-        for (int pi = 0; pi < aggregationParameterFields[ai].length; pi++) {
-          o[pi] = aggregationParameterFields[ai][pi].evaluate(row);
+        Object[] o = new Object[aggregationParameterFields[ai].length];//存储该聚合函数的参数value结果
+        for (int pi = 0; pi < aggregationParameterFields[ai].length; pi++) {//循环每一个参数
+          o[pi] = aggregationParameterFields[ai][pi].evaluate(row);//返回每一个参数具体的值
         }
 
         // Update the aggregations.
-        if (aggregationIsDistinct[ai]) {
+        if (aggregationIsDistinct[ai]) {//如果是count distinct函数
           if (hashAggr) {
-            if (newEntryForHashAggr) {
-              aggregationEvaluators[ai].aggregate(aggs[ai], o);
+            if (newEntryForHashAggr) {//hash方式时，只有第一次时候更新即可
+              aggregationEvaluators[ai].aggregate(aggs[ai], o);//聚合函数中间存储对象 以及 参数值数组
             }
           } else {
             if (lastInvoke[ai] == null) {
@@ -617,8 +631,8 @@ public class GroupByOperator extends Operator<GroupByDesc> implements
             }
             if (ObjectInspectorUtils.compare(o,
                 aggregationParameterObjectInspectors[ai], lastInvoke[ai],
-                aggregationParameterStandardObjectInspectors[ai]) != 0) {
-              aggregationEvaluators[ai].aggregate(aggs[ai], o);
+                aggregationParameterStandardObjectInspectors[ai]) != 0) {//因为是distinct操作，因此出现过一次，则不需要再计算了
+              aggregationEvaluators[ai].aggregate(aggs[ai], o);//聚合函数处理
               for (int pi = 0; pi < o.length; pi++) {
                 lastInvoke[ai][pi] = ObjectInspectorUtils.copyToStandardObject(
                     o[pi], aggregationParameterObjectInspectors[ai][pi],
@@ -850,6 +864,7 @@ public class GroupByOperator extends Operator<GroupByDesc> implements
     //boolean keysAreEqual = (currentKeys != null && newKeys != null)?
     //  newKeyStructEqualComparer.areEqual(currentKeys, newKeys) : false;
 
+    //true表示key没有被替换
     boolean keysAreEqual = (currentKeys != null && newKeys != null)?
         newKeys.equals(currentKeys) : false;
 
@@ -867,7 +882,7 @@ public class GroupByOperator extends Operator<GroupByDesc> implements
     }
 
     // Need to update the keys?
-    if (currentKeys == null || !keysAreEqual) {
+    if (currentKeys == null || !keysAreEqual) {//需要更新key的逻辑代码块
       if (currentKeys == null) {
         currentKeys = newKeys.copyKey();
       } else {
@@ -1030,7 +1045,7 @@ public class GroupByOperator extends Operator<GroupByDesc> implements
 
   /**
    * Forward a record of keys and aggregation results.
-   *
+   * 当一个key对应的list<value>处理完成后，需要切换到下一个key时，需要对agg中间结果转换成一个结果
    * @param keys
    *          The keys in the record
    * @throws HiveException
